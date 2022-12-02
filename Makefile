@@ -1,42 +1,41 @@
 CXX = g++
-INCLUDE_DIR = -I./include
+INCLUDE_DIR = -I./include -Igfalibs/include
 WARNINGS = -Wall -Wextra
 
-CXXFLAGS = -g -std=gnu++14 -O3 $(INCLUDE_DIR) $(WARNINGS)
+CXXFLAGS = -g -std=gnu++14 -O3 $(INCLUDE_DIR) $(WARNINGS) $(CFLAGS)
 
-TARGET = mytool
+TARGET = kreeq
 BUILD = build/bin
 SOURCE = src
 INCLUDE = include
-LDFLAGS :=
+BINDIR := $(BUILD)/.o
 
-SUBMODULE1_SUBDIR := $(CURDIR)/submodule1
-SUBMODULE1_LIBSFILES := $(GFASTATS_SUBDIR)/$(SOURCE)/* $(SUBMODULE1_SUBDIR)/$(INCLUDE)/*
+LIBS = -lz
+LDFLAGS := -pthread
 
-SUBMODULE2_SUBDIR := $(CURDIR)/submodule2
-SUBMODULE2_LIBSFILES := $(GFALIGN_SUBDIR)/$(SOURCE)/* $(SUBMODULE2_SUBDIR)/$(INCLUDE)/*
+#gfalibs
+GFALIBS_DIR := $(CURDIR)/gfalibs
 
-main: $(SOURCE)/main.cpp $(SUBMODULE1_LIBSFILES) $(SUBMODULE2_LIBSFILES) | $(BUILD)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SOURCE)/main.cpp -o $(BUILD)/$(TARGET)
+OBJS := main input
+BINS := $(addprefix $(BINDIR)/, $(OBJS))
 
-$(SUBMODULE1_LIBSFILES): submodule1
-	@# Do nothing
-	
-$(SUBMODULE2_LIBSFILES): submodule2
-	@# Do nothing
+head: $(BINS) gfalibs | $(BUILD)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(GFALIBS_DIR)/*.o $(LIBS)
 
-.PHONY: submodule1
-submodule1:
-	$(MAKE) -j -C $(SUBMODULE1_SUBDIR)
-	
-.PHONY: submodule2
-submodule2:
-	$(MAKE) -j -C $(SUBMODULE2_SUBDIR)
+$(OBJS): %: $(BINDIR)/%
+	@
+$(BINDIR)%: $(SOURCE)/%.cpp $(INCLUDE)/%.h | $(BINDIR)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $(SOURCE)/$(notdir $@).cpp -o $@
+
+.PHONY: gfalibs
+gfalibs:
+	$(MAKE) -j -C $(GFALIBS_DIR) CXXFLAGS="$(CXXFLAGS)"
 	
 $(BUILD):
 	-mkdir -p $@
+
+$(BINDIR):
+	-mkdir -p $@
 	
 clean:
-	$(MAKE) -j -C $(SUBMODULE1_SUBDIR) clean
-	$(MAKE) -j -C $(SUBMODULE2_SUBDIR) clean
 	$(RM) -r build

@@ -1,2 +1,2 @@
-# rdeval
-seamless read analysis
+# kreeq
+k-mer analysis quality evaluation tool

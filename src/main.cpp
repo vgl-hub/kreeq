@@ -1,4 +1,26 @@
-#include <main.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string>
+#include <getopt.h>
+#include <fstream>
+
+#include "global.h"
+#include "log.h"
+#include "uid-generator.h"
+
+#include <parallel_hashmap/phmap.h>
+
+#include "bed.h"
+#include "struct.h"
+#include "functions.h"
+#include "gfa-lines.h"
+#include "gfa.h"
+#include "stream-obj.h"
+
+#include "input.h"
+#include "ktree.h"
+#include "main.h"
 
 std::string version = "0.0.1";
 
@@ -43,7 +65,9 @@ int main(int argc, char **argv) {
     
     static struct option long_options[] = { // struct mapping long options
         {"input-sequence", required_argument, 0, 'f'},
-        {"cmd", no_argument, &cmd_flag, 1},
+        
+		{"verbose", no_argument, &verbose_flag, 1},
+		{"cmd", no_argument, &cmd_flag, 1},
         {"version", no_argument, 0, 'v'},
         {"help", no_argument, 0, 'h'},
 
@@ -112,7 +136,7 @@ int main(int argc, char **argv) {
                 exit(0);
         }
         
-        if    (argc == 2 || // handle various cases in which the output should include summary stats
+        if    (argc == 2 || // handle various cases in which the output should include default outputs
               (argc == 3 && pos_op == 2) ||
               (argc == 4 && pos_op == 3)) {
             
@@ -127,21 +151,19 @@ int main(int argc, char **argv) {
         printf("\n");
         
     }
-
-    StreamObj streamObj;
-    std::shared_ptr<std::istream> stream;
-    std::string newLine;
         
-    Input in;
-        
-    in.load(userInput); // load user input
-        
-    lg.verbose("User input loaded");
-        
-    threadPool.init(maxThreads); // initialize threadpool
-        
-    lg.verbose("GFA: " + userInput.iSeqFileArg);
+	Input in;
+	
+	in.load(userInput); // load user input
+	
+	lg.verbose("Loaded user input");
+	
+	InSequences inSequences; // initialize sequence collection object
+	
+	lg.verbose("Sequence object generated");
+	
+	in.read(inSequences); // read input content to inSequences container
 
     exit(EXIT_SUCCESS);
-    
+	
 }

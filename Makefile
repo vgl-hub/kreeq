@@ -39,3 +39,4 @@ $(BINDIR):
 	
 clean:
 	$(RM) -r build
+	$(MAKE) -C $(GFALIBS_DIR) clean

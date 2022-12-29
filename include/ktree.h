@@ -11,8 +11,6 @@ public:
     
     Knode(unsigned short int height, char* letter) : height(height), letter(letter) {};
     
-    void link(Knode* ptr);
-    
     Knode* contains(char c);
     
     friend class Ktree;
@@ -26,7 +24,7 @@ class Ktree {
     
 public:
     
-    Ktree(std::string* str, unsigned short int k);
+    Ktree(InSequences& inSequences, unsigned short int k);
     
     ~Ktree();
     

@@ -113,12 +113,7 @@ void Input::read(InSequences& inSequences) {
 		
 	}
 	
-	
-	std::vector<InSegment*>* segments = inSequences.getInSegments();
-	
-	std::string test = (*segments)[0]->getInSequence();
-	
-	Ktree ktree(&test, 3);
+	Ktree ktree(inSequences, userInput.kmerLen);
 	
 	threadPool.join();
     

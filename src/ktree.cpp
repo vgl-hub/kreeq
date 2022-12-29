@@ -1,29 +1,19 @@
 #include <stdlib.h>
 #include <string>
 #include <iostream>
+#include <vector>
 #include <math.h>
 
+#include <parallel_hashmap/phmap.h>
+
+#include "bed.h"
+#include "struct.h"
 #include "global.h"
+#include "uid-generator.h"
+#include "gfa-lines.h"
+#include "gfa.h"
 
 #include "ktree.h"
-
-void Knode::link(Knode* knodePtr){
-    
-    switch(*(knodePtr->letter)) {
-        case 'A':
-            this->A = knodePtr;
-            break;
-        case 'C':
-            this->C = knodePtr;
-            break;
-        case 'G':
-            this->G = knodePtr;
-            break;
-        case 'T':
-            this->T = knodePtr;
-            break;
-    }
-}
 
 Knode* Knode::contains(char c){
     
@@ -58,14 +48,14 @@ void Ktree::print2D(Knode* current, int space) {
     space += 3;
     
     // Process right children first
-    print2D(current->T, space);
-    print2D(current->G, space);
+    print2D(current->A, space);
+    print2D(current->C, space);
     
     printf("\n%*s%c\n", space-3, "", *(current->letter));
     
     // Process left children
-    print2D(current->C, space);
-    print2D(current->A, space);
+    print2D(current->G, space);
+    print2D(current->T, space);
     
     return;
     
@@ -82,18 +72,11 @@ void Ktree::addChild(Knode* current, unsigned long long int pos, unsigned short 
     
     switch (*(c+pos)) {
             
-        case 'T':
+        case 'A':
             
-            if (current->T == NULL)
-                current->T = new Knode(height, c+pos);
-            addChild(current->T, ++pos, ++height, c);
-            break;
-            
-        case 'G':
-            
-            if (current->G == NULL)
-                current->G = new Knode(height, c+pos);
-            addChild(current->G, ++pos, ++height, c);
+            if (current->A == NULL)
+                current->A = new Knode(height, c+pos);
+            addChild(current->A, ++pos, ++height, c);
             break;
             
         case 'C':
@@ -103,11 +86,18 @@ void Ktree::addChild(Knode* current, unsigned long long int pos, unsigned short 
             addChild(current->C, ++pos, ++height, c);
             break;
             
-        case 'A':
+        case 'G':
             
-            if (current->A == NULL)
-                current->A = new Knode(height, c+pos);
-            addChild(current->A, ++pos, ++height, c);
+            if (current->G == NULL)
+                current->G = new Knode(height, c+pos);
+            addChild(current->G, ++pos, ++height, c);
+            break;
+            
+        case 'T':
+            
+            if (current->T == NULL)
+                current->T = new Knode(height, c+pos);
+            addChild(current->T, ++pos, ++height, c);
             
     }
     
@@ -119,7 +109,7 @@ void Ktree::addKmer(char* c) {
     addChild(knodeRoot, 0, 0, c);
 }
 
-Ktree::Ktree(std::string* str, unsigned short int k) {
+Ktree::Ktree(InSequences& inSequences, unsigned short int k) {
     
     KtreeH = k;
     
@@ -127,11 +117,19 @@ Ktree::Ktree(std::string* str, unsigned short int k) {
     
     knodeRoot = new Knode(0, new char('0'));
     
-    unsigned long long int len = str->size()-k+1;
-
-    for (unsigned short int c = 0; c<len; ++c) {
+    std::vector<InSegment*>* segments = inSequences.getInSegments();
+    
+    for (InSegment* segment : *segments) {
         
-        addKmer(&(*str)[c]);
+        long long int len = segment->getSegmentLen()-k+1;
+        
+        char* first = segment->first();
+        
+        for (long long int c = 0; c<len; ++c) {
+            
+            addKmer(first+c);
+            
+        }
         
     }
             

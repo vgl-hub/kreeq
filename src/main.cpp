@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     
     std::string cmd;
 
-    UserInput userInput; // initialize input object
+    UserInputKreeq userInput; // initialize input object
     
     if (argc == 1) { // gfastats with no arguments
             
@@ -65,6 +65,7 @@ int main(int argc, char **argv) {
     
     static struct option long_options[] = { // struct mapping long options
         {"input-sequence", required_argument, 0, 'f'},
+		{"kmer-length", required_argument, 0, 'k'},
         
 		{"verbose", no_argument, &verbose_flag, 1},
 		{"cmd", no_argument, &cmd_flag, 1},
@@ -79,7 +80,7 @@ int main(int argc, char **argv) {
         
         int option_index = 0;
         
-        c = getopt_long(argc, argv, "-:v:f:h",
+        c = getopt_long(argc, argv, "-:f:k:v:h",
                         long_options, &option_index);
         
         if (c == -1) { // exit the loop if run out of options
@@ -119,6 +120,17 @@ int main(int argc, char **argv) {
                     userInput.iSeqFileArg = optarg;
                     
                 }
+				
+				break;
+				
+			case 'k': // kmer length
+
+				if (!isNumber(optarg)) {
+					fprintf(stderr, "input '%s' to option -%c must be a number\n", optarg, optopt);
+					return EXIT_FAILURE;
+				}
+				
+				userInput.kmerLen = atoi(optarg);
                     
                 break;
                 
@@ -131,6 +143,7 @@ int main(int argc, char **argv) {
                 printf("mytool [command]\n");
                 printf("\nOptions:\n");
                 printf("-f --input-sequence sequence input file (fasta,gfa1/2).\n");
+				printf("-k --kmer-length length of kmers.\n");
                 printf("-v --version software version.\n");
                 printf("--cmd print $0 to stdout.\n");
                 exit(0);

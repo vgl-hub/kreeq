@@ -30,7 +30,7 @@
 #include "ktree.h"
 #include "input.h"
 
-void Input::load(UserInput userInput) {
+void Input::load(UserInputKreeq userInput) {
     
     this->userInput = userInput;
     
@@ -114,14 +114,11 @@ void Input::read(InSequences& inSequences) {
 	}
 	
 	
-//	std::vector<InSegment*>* segments = inSequences.getInSegments();
-//	std::cout<<(*segments)[0]->getInSequence()<<std::endl;
+	std::vector<InSegment*>* segments = inSequences.getInSegments();
 	
-	int k = 5;
+	std::string test = (*segments)[0]->getInSequence();
 	
-	std::string test = "ACCTGCCTGAACTGATCGACTCGATCGATCGATGCTAGACT";
-	
-	Ktree ktree(&test, k);
+	Ktree ktree(&test, 3);
 	
 	threadPool.join();
     

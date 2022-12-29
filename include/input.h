@@ -1,9 +1,15 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+struct UserInputKreeq : UserInput {
+
+    unsigned short int kmerLen = 21;
+
+};
+
 class Input {
     
-    UserInput userInput;
+    UserInputKreeq userInput;
     
     //intermediates
     std::string h;
@@ -21,7 +27,7 @@ class Input {
     
 public:
     
-    void load(UserInput userInput);
+    void load(UserInputKreeq userInput);
     
     void read(InSequences& inSequence);
     

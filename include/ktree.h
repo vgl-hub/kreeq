@@ -21,18 +21,22 @@ public:
 
 class Ktree {
     
-    Knode knodeRoot;
+    Knode* knodeRoot = NULL;
     unsigned short int KtreeH = 0;
     
 public:
     
-    Ktree (std::string* str, unsigned short int k);
+    Ktree(std::string* str, unsigned short int k);
     
-    void print2D(Knode* parent, int space);
+    ~Ktree();
+    
+    void delKnodeRecurse(Knode* current);
+    
+    void print2D(Knode* current, int space);
     
     void printKtree(Knode* root);
     
-    void addChild(Knode* parent, unsigned long long int pos, unsigned short int height, char* c);
+    void addChild(Knode* current, unsigned long long int pos, unsigned short int height, char* c);
     
     void addKmer(char* c);
     

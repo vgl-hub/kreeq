@@ -113,9 +113,15 @@ void Input::read(InSequences& inSequences) {
 		
 	}
 	
-	std::vector<InSegment*>* segments = inSequences.getInSegments();
 	
-	std::cout<<(*segments)[0]->getInSequence()<<std::endl;
+//	std::vector<InSegment*>* segments = inSequences.getInSegments();
+//	std::cout<<(*segments)[0]->getInSequence()<<std::endl;
+	
+	int k = 5;
+	
+	std::string test = "ACCTGCCTGAACTGATCGACTCGATCGATCGATGCTAGACT";
+	
+	Ktree ktree(&test, k);
 	
 	threadPool.join();
     

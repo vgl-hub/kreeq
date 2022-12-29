@@ -16,7 +16,7 @@ LDFLAGS := -pthread
 #gfalibs
 GFALIBS_DIR := $(CURDIR)/gfalibs
 
-OBJS := main input
+OBJS := main input ktree
 BINS := $(addprefix $(BINDIR)/, $(OBJS))
 
 head: $(BINS) gfalibs | $(BUILD)

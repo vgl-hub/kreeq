@@ -3,15 +3,15 @@
 
 class Knode {
     
-    unsigned short int height;
-    char* letter = NULL;
-    Knode *A = NULL, *C = NULL, *G = NULL, *T = NULL;
+    unsigned char* letter = NULL;
+    Knode* children[4] = {NULL};
 
 public:
     
-    Knode(unsigned short int height, char* letter) : height(height), letter(letter) {};
+    Knode(){};
+    Knode(unsigned char* letter) : letter(letter) {};
     
-    Knode* contains(char c);
+    void set(unsigned char* c);
     
     friend class Ktree;
     
@@ -21,6 +21,31 @@ class Ktree {
     
     Knode* knodeRoot = NULL;
     unsigned short int KtreeH = 0;
+    
+    unsigned int totKmers = 0;
+    unsigned int totKmersUnique = 0;
+    
+    Knode* nodes = new Knode[1000000000];
+    unsigned long long int nodeCounter = 0;
+    
+    const unsigned char ctoi[256] = {
+        0, 1, 2, 3,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  3, 3, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 0, 4, 1,  4, 4, 4, 2,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  3, 3, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
+        4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4
+    };
     
 public:
     
@@ -36,7 +61,7 @@ public:
     
     void addChild(Knode* current, unsigned long long int pos, unsigned short int height, char* c);
     
-    void addKmer(char* c);
+    void addKmer(unsigned char* c);
     
 };
 

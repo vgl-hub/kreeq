@@ -15,31 +15,6 @@
 
 #include "ktree.h"
 
-Knode* Knode::contains(char c){
-    
-    switch(c) {
-        case 'A':
-            if (this->A != NULL)
-                return this->A;
-            break;
-        case 'C':
-            if (this->C != NULL)
-                return this->C;
-            break;
-        case 'G':
-            if (this->G != NULL)
-                return this->G;
-            break;
-        case 'T':
-            if (this->T != NULL)
-                return this->T;
-            break;
-    }
-    
-    return NULL;
-    
-}
-
 void Ktree::print2D(Knode* current, int space) {
     
     if (current == NULL)
@@ -48,65 +23,113 @@ void Ktree::print2D(Knode* current, int space) {
     space += 3;
     
     // Process right children first
-    print2D(current->A, space);
-    print2D(current->C, space);
+    print2D(current->children[0], space);
+    print2D(current->children[1], space);
     
     printf("\n%*s%c\n", space-3, "", *(current->letter));
     
     // Process left children
-    print2D(current->G, space);
-    print2D(current->T, space);
+    print2D(current->children[2], space);
+    print2D(current->children[3], space);
     
     return;
     
 }
 
 void Ktree::printKtree(Knode* root) {
+
     print2D(root, 0);
+    
 }
 
-void Ktree::addChild(Knode* current, unsigned long long int pos, unsigned short int height, char* c) {
+//void Ktree::addChild(Knode* current, unsigned long long int pos, unsigned short int height, char* c) {
+//
+//    if (height>=KtreeH)
+//        return;
+//
+//    switch (*(c+pos)) {
+//
+//        case 'A':
+//
+//            if (current->children[0] == NULL)
+//                current-> = new Knode(c+pos);
+//            addChild(current->A, ++pos, ++height, c);
+//            break;
+//
+//        case 'C':
+//
+//            if (current->C == NULL)
+//                current->C = new Knode(c+pos);
+//            addChild(current->C, ++pos, ++height, c);
+//            break;
+//
+//        case 'G':
+//
+//            if (current->G == NULL)
+//                current->G = new Knode(c+pos);
+//            addChild(current->G, ++pos, ++height, c);
+//            break;
+//
+//        case 'T':
+//
+//            if (current->T == NULL)
+//                current->T = new Knode(c+pos);
+//            addChild(current->T, ++pos, ++height, c);
+//
+//    }
+//
+//    return;
+//
+//}
+
+//void Ktree::addKmer(char* c) {
+//    addChild(knodeRoot, 0, 0, c);
+//}
+
+//void Ktree::addKmer(char* c) {
+//
+//    Knode* current = knodeRoot;
+//
+//    for (unsigned short int height = 0; height<KtreeH; height++) {
+//
+//        current = current->alphabet[*(c+height)];
+//
+//        if (current == NULL)
+//            current = new Knode(c+height);
+//        printf("%c\n", *(current->letter));
+//
+//    }
+//
+//}
+
+void Knode::set(unsigned char* c){
     
-    if (height>=KtreeH)
-        return;
+    this->letter = c;
     
-    switch (*(c+pos)) {
+}
+
+void Ktree::addKmer(unsigned char* c) {
+    
+    Knode* current = knodeRoot;
+    
+    for (unsigned short int height = 0; height<KtreeH; height++) {
+
+        if (current->children[ctoi[*(c+height)]] == NULL) {
             
-        case 'A':
+            current->children[ctoi[*(c+height)]] = &nodes[nodeCounter++];
             
-            if (current->A == NULL)
-                current->A = new Knode(height, c+pos);
-            addChild(current->A, ++pos, ++height, c);
-            break;
+            current->set(c+height);
             
-        case 'C':
+            if (height+1==KtreeH)
+                ++totKmersUnique;
             
-            if (current->C == NULL)
-                current->C = new Knode(height, c+pos);
-            addChild(current->C, ++pos, ++height, c);
-            break;
-            
-        case 'G':
-            
-            if (current->G == NULL)
-                current->G = new Knode(height, c+pos);
-            addChild(current->G, ++pos, ++height, c);
-            break;
-            
-        case 'T':
-            
-            if (current->T == NULL)
-                current->T = new Knode(height, c+pos);
-            addChild(current->T, ++pos, ++height, c);
-            
+        }
+        current = current->children[ctoi[*(c+height)]];
+        
     }
     
-    return;
+    ++totKmers;
     
-}
-
-void Ktree::addKmer(char* c) {
-    addChild(knodeRoot, 0, 0, c);
 }
 
 Ktree::Ktree(InSequences& inSequences, unsigned short int k) {
@@ -115,25 +138,35 @@ Ktree::Ktree(InSequences& inSequences, unsigned short int k) {
     
     lg.verbose("Started ktree construction");
     
-    knodeRoot = new Knode(0, new char('0'));
+    knodeRoot = new Knode(new unsigned char('0'));
     
     std::vector<InSegment*>* segments = inSequences.getInSegments();
     
     for (InSegment* segment : *segments) {
         
-        long long int len = segment->getSegmentLen()-k+1;
+        lg.verbose("Processing segment: " + segment->getSeqHeader());
         
-        char* first = segment->first();
+        if (segment->getSegmentLen()<k) {
+            lg.verbose("Segment shorted thank k. skipping");
+            continue;
+        }
         
-        for (long long int c = 0; c<len; ++c) {
-            
+        unsigned long long int len = segment->getSegmentLen()-k+1;
+
+        unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
+        
+        for (unsigned long long int c = 0; c<len; ++c) {
+
             addKmer(first+c);
             
         }
         
     }
             
-    printKtree(knodeRoot);
+//    printKtree(knodeRoot);
+    
+    std::cout<<"Total kmers: "<<totKmers<<std::endl;
+    std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;
     
 }
 
@@ -142,10 +175,10 @@ void Ktree::delKnodeRecurse(Knode* current) {
     if (current == NULL)
         return;
 
-    delKnodeRecurse(current->T);
-    delKnodeRecurse(current->G);
-    delKnodeRecurse(current->C);
-    delKnodeRecurse(current->A);
+    delKnodeRecurse(current->children[3]);
+    delKnodeRecurse(current->children[2]);
+    delKnodeRecurse(current->children[1]);
+    delKnodeRecurse(current->children[0]);
     
     delete current;
     
@@ -156,6 +189,7 @@ void Ktree::delKnodeRecurse(Knode* current) {
 Ktree::~Ktree() {
     
     delete knodeRoot->letter;
-    delKnodeRecurse(knodeRoot);
+    delete[] nodes;
+//    delKnodeRecurse(knodeRoot);
     
 }

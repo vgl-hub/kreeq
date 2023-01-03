@@ -25,9 +25,6 @@ class Ktree {
     unsigned int totKmers = 0;
     unsigned int totKmersUnique = 0;
     
-    Knode* nodes = new Knode[1000000000];
-    unsigned long long int nodeCounter = 0;
-    
     const unsigned char ctoi[256] = {
         0, 1, 2, 3,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,
         4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,

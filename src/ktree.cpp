@@ -86,22 +86,6 @@ void Ktree::printKtree(Knode* root) {
 //    addChild(knodeRoot, 0, 0, c);
 //}
 
-//void Ktree::addKmer(char* c) {
-//
-//    Knode* current = knodeRoot;
-//
-//    for (unsigned short int height = 0; height<KtreeH; height++) {
-//
-//        current = current->alphabet[*(c+height)];
-//
-//        if (current == NULL)
-//            current = new Knode(c+height);
-//        printf("%c\n", *(current->letter));
-//
-//    }
-//
-//}
-
 void Knode::set(unsigned char* c){
     
     this->letter = c;
@@ -116,9 +100,7 @@ void Ktree::addKmer(unsigned char* c) {
 
         if (current->children[ctoi[*(c+height)]] == NULL) {
             
-            current->children[ctoi[*(c+height)]] = &nodes[nodeCounter++];
-            
-            current->set(c+height);
+            current->children[ctoi[*(c+height)]] = new Knode(c+height);
             
             if (height+1==KtreeH)
                 ++totKmersUnique;
@@ -189,7 +171,6 @@ void Ktree::delKnodeRecurse(Knode* current) {
 Ktree::~Ktree() {
     
     delete knodeRoot->letter;
-    delete[] nodes;
 //    delKnodeRecurse(knodeRoot);
     
 }

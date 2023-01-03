@@ -146,7 +146,7 @@ void Input::read(InSequences& inSequences) {
 
 //	print_map(kcount);
 	
-//	Ktree ktree(inSequences, userInput.kmerLen);
+	Ktree ktree(inSequences, userInput.kmerLen);
 	
 //	std::vector<InSegment*>* segments = inSequences.getInSegments();
 //

@@ -94,7 +94,7 @@ void Ktree::addKmer(unsigned char* c) {
     
     Knode *parent = knodeRoot, *current = NULL;
     
-    unsigned short int height = 0; // height is the height we are at, pos is the height of the node
+    unsigned short int height = 0, pos = 0; // height is the offset in the node, pos is the height we are at
         
     current = parent->children[ctoi[*(c+height)]];
     
@@ -104,6 +104,7 @@ void Ktree::addKmer(unsigned char* c) {
         
         ++height;
         ++c;
+        ++pos;
         
         if(current->height==height) {
             
@@ -115,7 +116,7 @@ void Ktree::addKmer(unsigned char* c) {
             
         }
         
-        if(height>=KtreeH)
+        if(pos == KtreeH)
             return;
         
     }

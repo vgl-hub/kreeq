@@ -4,14 +4,13 @@
 class Knode {
     
     unsigned char* letter = NULL;
+    unsigned short int height = 0;
     Knode* children[4] = {NULL};
 
 public:
     
     Knode(){};
     Knode(unsigned char* letter) : letter(letter) {};
-    
-    void set(unsigned char* c);
     
     friend class Ktree;
     

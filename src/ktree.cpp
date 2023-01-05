@@ -26,7 +26,9 @@ void Ktree::print2D(Knode* current, int space) {
     print2D(current->children[0], space);
     print2D(current->children[1], space);
     
-    printf("\n%*s%c\n", space-3, "", *(current->letter));
+    unsigned int height = current->height == 0 ? 1 : current->height;
+    
+    printf("\n%*s%.*s\n", space-3, "", height, current->letter);
     
     // Process left children
     print2D(current->children[2], space);
@@ -86,31 +88,86 @@ void Ktree::printKtree(Knode* root) {
 //    addChild(knodeRoot, 0, 0, c);
 //}
 
-void Knode::set(unsigned char* c){
-    
-    this->letter = c;
-    
-}
-
 void Ktree::addKmer(unsigned char* c) {
     
-    Knode* current = knodeRoot;
+    Knode *parent = knodeRoot, *current = NULL;
     
-    for (unsigned short int height = 0; height<KtreeH; height++) {
-
-        if (current->children[ctoi[*(c+height)]] == NULL) {
+    unsigned short int height = 0; // height is the height we are at, pos is the height of the node
+        
+    current = parent->children[ctoi[*(c+height)]];
+    
+    while(current != NULL && *(current->letter+height) == *(c)) {
+        
+        std::cout<<*(current->letter+height)<<"="<<*(c)<<" height is: "<<height<<std::endl;
+        
+        ++height;
+        ++c;
+        
+        if(current->height==height) {
             
-            current->children[ctoi[*(c+height)]] = new Knode(c+height);
+            parent = current;
             
-            if (height+1==KtreeH)
-                ++totKmersUnique;
+            current = current->children[ctoi[*(c)]];
+            
+            height = 0;
             
         }
-        current = current->children[ctoi[*(c+height)]];
+        
+        if(current->height>=KtreeH)
+            return;
         
     }
     
-    ++totKmers;
+    if(current == NULL) {
+        
+        parent->children[ctoi[*(c)]] = new Knode(c);
+        current = parent->children[ctoi[*(c)]];
+        current->height = height;
+        
+        std::cout<<"created end node: "<<current->letter<<std::endl;
+        
+    }else{
+        
+        std::cout<<*(current->letter+height)<<"!="<<*(c)<<" height is: "<<height<<std::endl;
+        
+        if(current->height > height) { // case we need to branch and inherit children
+            
+            Knode* child = new Knode; // create a new child node for current
+            
+            memcpy(child->children, current->children, sizeof(current->children)); // the new child inherits the parent's children
+            
+            child->letter = current->letter+height; // the child starts at the branch
+            
+            for (size_t i = 0; i < 4; i++) {current->children[i] = NULL;}// erase current childrens
+            
+            current->children[ctoi[*(current->letter+height)]] = child; // make the new child a children of current
+            
+            std::cout<<"created branch: "<<current->children[ctoi[*(current->letter+height)]]->letter<<std::endl;
+            
+            if (current->children[ctoi[*(c)]] == NULL)
+                current->children[ctoi[*(c)]] = new Knode(c); // new node
+
+            std::cout<<"created branch: "<<current->children[ctoi[*(c)]]->letter<<std::endl;
+            
+        }else{
+            
+            if (current->children[ctoi[*(current->letter+height)]] == NULL)
+                current->children[ctoi[*(current->letter+height)]] = new Knode(current->letter+height); // original node
+            
+            std::cout<<"created branch: "<<current->children[ctoi[*(current->letter+height)]]->letter<<std::endl;
+            
+            if (current->children[ctoi[*(c)]] == NULL)
+                current->children[ctoi[*(c)]] = new Knode(c); // new node
+
+            std::cout<<"created branch: "<<current->children[ctoi[*(c)]]->letter<<std::endl;
+            
+        }
+        
+        current->height = height;
+        
+    }
+    
+    ++totKmersUnique;
     
 }
 
@@ -126,10 +183,8 @@ Ktree::Ktree(InSequences& inSequences, unsigned short int k) {
     
     for (InSegment* segment : *segments) {
         
-        lg.verbose("Processing segment: " + segment->getSeqHeader());
-        
         if (segment->getSegmentLen()<k) {
-            lg.verbose("Segment shorted thank k. skipping");
+            lg.verbose("Segment " + segment->getSeqHeader() + " shorted thank k. skipping");
             continue;
         }
         
@@ -143,9 +198,13 @@ Ktree::Ktree(InSequences& inSequences, unsigned short int k) {
             
         }
         
+        totKmers += len;
+        
+        lg.verbose("Processed segment: " + segment->getSeqHeader());
+        
     }
             
-//    printKtree(knodeRoot);
+    printKtree(knodeRoot);
     
     std::cout<<"Total kmers: "<<totKmers<<std::endl;
     std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;

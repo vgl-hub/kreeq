@@ -208,7 +208,7 @@ Ktree::Ktree(InSequences& inSequences, unsigned short int k) {
         
     }
             
-    printKtree(knodeRoot);
+//    printKtree(knodeRoot);
     
     std::cout<<"Total kmers: "<<totKmers<<std::endl;
     std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;

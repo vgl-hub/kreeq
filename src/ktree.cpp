@@ -26,9 +26,11 @@ void Ktree::print2D(Knode* current, int space) {
     print2D(current->children[0], space);
     print2D(current->children[1], space);
     
+    // print extended tree
     unsigned int height = current->height == 0 ? 1 : current->height;
-    
     printf("\n%*s%.*s\n", space-3, "", height, current->letter);
+    // print one level
+//    printf("\n%*s%c\n", space-3, "", *(current->letter));
     
     // Process left children
     print2D(current->children[2], space);
@@ -98,7 +100,7 @@ void Ktree::addKmer(unsigned char* c) {
     
     while(current != NULL && *(current->letter+height) == *(c)) {
         
-        std::cout<<*(current->letter+height)<<"="<<*(c)<<" height is: "<<height<<std::endl;
+//        std::cout<<*(current->letter+height)<<"="<<*(c)<<" height is: "<<height<<std::endl;
         
         ++height;
         ++c;
@@ -113,7 +115,7 @@ void Ktree::addKmer(unsigned char* c) {
             
         }
         
-        if(current->height>=KtreeH)
+        if(height>=KtreeH)
             return;
         
     }
@@ -124,11 +126,9 @@ void Ktree::addKmer(unsigned char* c) {
         current = parent->children[ctoi[*(c)]];
         current->height = height;
         
-        std::cout<<"created end node: "<<current->letter<<std::endl;
-        
     }else{
         
-        std::cout<<*(current->letter+height)<<"!="<<*(c)<<" height is: "<<height<<std::endl;
+//        std::cout<<*(current->letter+height)<<"!="<<*(c)<<" height is: "<<height<<std::endl;
         
         if(current->height > height) { // case we need to branch and inherit children
             
@@ -142,24 +142,24 @@ void Ktree::addKmer(unsigned char* c) {
             
             current->children[ctoi[*(current->letter+height)]] = child; // make the new child a children of current
             
-            std::cout<<"created branch: "<<current->children[ctoi[*(current->letter+height)]]->letter<<std::endl;
+//            std::cout<<"created branch: "<<*current->children[ctoi[*(current->letter+height)]]->letter<<std::endl;
             
             if (current->children[ctoi[*(c)]] == NULL)
                 current->children[ctoi[*(c)]] = new Knode(c); // new node
 
-            std::cout<<"created branch: "<<current->children[ctoi[*(c)]]->letter<<std::endl;
+//            std::cout<<"created branch: "<<*current->children[ctoi[*(c)]]->letter<<std::endl;
             
         }else{
             
             if (current->children[ctoi[*(current->letter+height)]] == NULL)
                 current->children[ctoi[*(current->letter+height)]] = new Knode(current->letter+height); // original node
             
-            std::cout<<"created branch: "<<current->children[ctoi[*(current->letter+height)]]->letter<<std::endl;
+//            std::cout<<"created branch: "<<*current->children[ctoi[*(current->letter+height)]]->letter<<std::endl;
             
             if (current->children[ctoi[*(c)]] == NULL)
                 current->children[ctoi[*(c)]] = new Knode(c); // new node
 
-            std::cout<<"created branch: "<<current->children[ctoi[*(c)]]->letter<<std::endl;
+//            std::cout<<"created branch: "<<*current->children[ctoi[*(c)]]->letter<<std::endl;
             
         }
         
@@ -194,7 +194,10 @@ Ktree::Ktree(InSequences& inSequences, unsigned short int k) {
         
         for (unsigned long long int c = 0; c<len; ++c) {
 
+//            printf("adding kmer: %.*s\n", 6, first+c);
             addKmer(first+c);
+            
+//            printKtree(knodeRoot);
             
         }
         

@@ -30,14 +30,14 @@
 #include "ktree.h"
 #include "input.h"
 
-//inline size_t hash(const char * string)
-//{
-//    size_t result = 0;
-//    for(unsigned short int c = 0; c<15; ++c) {
-//        result = result * 31 + *string++;
-//    }
-//    return result;
-//}
+inline size_t Input::hash(const char * string)
+{
+    size_t result = 0;
+    for(unsigned short int c = 0; c<userInput.kmerLen; ++c) {
+        result = result * 31 + *string++;
+    }
+    return result;
+}
 
 void Input::load(UserInputKreeq userInput) {
     
@@ -122,31 +122,29 @@ void Input::read(InSequences& inSequences) {
 		
 	}
 	
-//	phmap::flat_hash_map<unsigned long long int, unsigned long long int> kcount;
-//
-//	std::vector<InSegment*>* segments = inSequences.getInSegments();
-//
-//	const short int k = userInput.kmerLen;
-//
-//	for (InSegment* segment : *segments) {
-//
-//		long long int len = segment->getSegmentLen()-k+1;
-//
-//		char* first = segment->first();
-//
-//		for (long long int c = 0; c<len; ++c) {
-//
-//			++kcount[hash(first+c)];
-//
-//		}
-//        
-//        lg.verbose("Processed segment: " + segment->getSeqHeader());
-//
-//	}
+	phmap::flat_hash_map<unsigned long long int, unsigned long long int> kcount;
 
-//	print_map(kcount);
+	std::vector<InSegment*>* segments = inSequences.getInSegments();
+
+	for (InSegment* segment : *segments) {
+
+		long long int len = segment->getSegmentLen()-userInput.kmerLen+1;
+
+		char* first = segment->first();
+
+		for (long long int c = 0; c<len; ++c) {
+
+			++kcount[hash(first+c)];
+
+		}
+        
+        lg.verbose("Processed segment: " + segment->getSeqHeader());
+
+	}
+
+	print_map(kcount);
 	
-	Ktree ktree(inSequences, userInput.kmerLen);
+//	Ktree ktree(inSequences, userInput.kmerLen);
 	
 //	std::vector<InSegment*>* segments = inSequences.getInSegments();
 //

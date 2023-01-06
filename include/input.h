@@ -31,6 +31,8 @@ public:
     
     void read(InSequences& inSequence);
     
+    inline size_t hash(const char * string);
+    
 };
 
 #endif /* INPUT_H */

@@ -130,11 +130,14 @@ void Ktree::addKmer(unsigned char* c) {
         if (pos+1 == KtreeH)
             return;
         
-        if(current == NULL || *(current->letter+height++) != *(c++))
+        if(current == NULL || *(current->letter+height) != *(c))
             break;
         
 //        std::cout<<*(current->letter+height)<<"="<<*(c)<<" height is: "<<height<<" pos is: "<<pos<<"current height is: "<<current->height<<std::endl;
-
+        
+        ++height;
+        
+        ++c;
         
 //        std::cout<<*(current->letter+height)<<"="<<*(c)<<" height is: "<<height<<" pos is: "<<pos<<"current height is: "<<current->height<<std::endl;
         

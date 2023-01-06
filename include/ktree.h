@@ -51,6 +51,8 @@ public:
     
     void delKnodeRecurse(Knode* current);
     
+    void DFS(Knode* current);
+    
     void print2D(Knode* current, int space);
     
     void printKtree(Knode* root);

@@ -25,6 +25,8 @@ class Input {
     
     std::shared_ptr<std::istream> stream;
     
+    unsigned int totKmers = 0;
+    
 public:
     
     void load(UserInputKreeq userInput);

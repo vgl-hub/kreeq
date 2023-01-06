@@ -139,8 +139,13 @@ void Input::read(InSequences& inSequences) {
 		}
         
         lg.verbose("Processed segment: " + segment->getSeqHeader());
+        
+        ++totKmers;
 
 	}
+
+    std::cout<<"Total kmers: "<<totKmers<<std::endl;
+    std::cout<<"Unique kmers: "<<kcount.size()<<std::endl;
 
 	print_map(kcount);
 	

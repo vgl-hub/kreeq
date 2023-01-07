@@ -29,7 +29,7 @@ class Input {
     
     unsigned long long int totKmers = 0;
     
-    static const unsigned char constexpr ctoi[256] = {
+    const unsigned char ctoi[256] = {
           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,

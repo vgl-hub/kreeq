@@ -130,9 +130,14 @@ void Input::read(InSequences& inSequences) {
     
     k = userInput.kmerLen;
     
-    phmap::parallel_flat_hash_map<unsigned long long int, unsigned long long int> kcount;
+    nthash::NtHash nth("TGACTGATCGAGTCGTACTAG", 1, k);
+    while (nth.roll()) {
+         std::cout<<nth.hashes()<<std::endl
+    }
 
 	for (InSegment* segment : *segments) {
+        
+        phmap::flat_hash_map<unsigned long long int, unsigned long long int> kcount;
         
         if (segment->getSegmentLen()<k)
             continue;
@@ -158,22 +163,22 @@ void Input::read(InSequences& inSequences) {
         lg.verbose("Processed segment: " + segment->getSeqHeader());
         
         delete[] str;
+        
+//        unsigned long long int totKmersUnique = 0;
+//        
+//        for (unsigned long long int c = 0; c<pow(4,k); ++c) {
+//            
+//            if(kcount[c] > 0){
+//                totKmers += kcount[c];
+//                ++totKmersUnique;
+//            }
+//
+//        }
+//
+//        std::cout<<"Total kmers: "<<totKmers<<std::endl;
+//        std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;
 
 	}
-    
-    unsigned long long int totKmersUnique = 0;
-    
-    for (unsigned long long int c = 0; c<pow(4,k); ++c) {
-        
-        if(kcount[c] > 0){
-            totKmers += kcount[c];
-            ++totKmersUnique;
-        }
-
-    }
-
-    std::cout<<"Total kmers: "<<totKmers<<std::endl;
-    std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;
 
 //	print_map(kcount);
 	

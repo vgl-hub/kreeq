@@ -130,7 +130,7 @@ void Input::read(InSequences& inSequences) {
     
     k = userInput.kmerLen;
     
-    unsigned int* kcount = new unsigned int[pow(4,k)]();
+    unsigned int* kcount = new unsigned int[(int)pow(4,k)]();
 
 	for (InSegment* segment : *segments) {
         

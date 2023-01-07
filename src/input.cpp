@@ -36,7 +36,7 @@ inline size_t Input::hash(unsigned short int *kmer)
     size_t result = 0;
     for(unsigned short int c = 0; c<k; c++) {
         
-        result += *kmer++ * pow(4,c);
+        result += *kmer+c * pow(4,c);
     }
     return result;
 }
@@ -151,7 +151,7 @@ void Input::read(InSequences& inSequences) {
 
         for (unsigned long long int c = 0; c<len; ++c){
             
-            ++kcount[hash(str++)];
+            ++kcount[hash(str+c)];
             
         }
         

@@ -31,11 +31,12 @@
 #include "ktree.h"
 #include "input.h"
 
-inline size_t Input::hash(const char * string)
+inline size_t Input::hash(unsigned short int *kmer)
 {
     size_t result = 0;
-    for(unsigned short int c = 0; c<k; ++c) {
-        result += *string++ * pow(4,c);
+    for(unsigned short int c = 0; c<k; c++) {
+        
+        result += *kmer++ * pow(4,c);
     }
     return result;
 }
@@ -129,44 +130,47 @@ void Input::read(InSequences& inSequences) {
     
     k = userInput.kmerLen;
     
-    unsigned long long int totContigLen = inSequences.getTotContigLen();
-    
-    unsigned int* kcount = new unsigned int[totContigLen]();
+    unsigned int* kcount = new unsigned int[pow(4,k)]();
 
 	for (InSegment* segment : *segments) {
-
-		long long int len = segment->getSegmentLen()-userInput.kmerLen+1;
         
-        std::string bitSegment = segment->getInSequence();
+        if (segment->getSegmentLen()<k)
+            continue;
+
+        unsigned long long int len = segment->getSegmentLen()-k+1;
         
-        for (char& c : bitSegment)
-            c = ctoi[(unsigned char)c];
+        unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
         
-        char* first = &bitSegment.front();
+        unsigned short int* str = new unsigned short int[segment->getSegmentLen()];
+        
+        for (unsigned long long int i = 0; i < len+k-1; i++){
+            
+            str[i] = ctoi[*(first+i)];
+            
+        }
 
-		for (long long int c = 0; c<len; ++c) {
-
-			++kcount[hash(first++)];
-
-		}
+        for (unsigned long long int c = 0; c<len; ++c){
+            
+            ++kcount[hash(str++)];
+            
+        }
         
         lg.verbose("Processed segment: " + segment->getSeqHeader());
-        
-        ++totKmers;
 
 	}
     
-    std::cout<<"Total kmers: "<<totKmers<<std::endl;
-    
     unsigned long long int totKmersUnique = 0;
     
-    for (unsigned long long int c = 0; c<totContigLen; ++c) {
+    for (unsigned long long int c = 0; c<pow(4,k); ++c) {
         
-        if(kcount[c] > 0)
+        if(kcount[c] > 0){
+            totKmers += kcount[c];
             ++totKmersUnique;
-        
+        }
+
     }
 
+    std::cout<<"Total kmers: "<<totKmers<<std::endl;
     std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;
     
     delete[] kcount;

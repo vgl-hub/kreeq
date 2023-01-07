@@ -130,7 +130,7 @@ void Input::read(InSequences& inSequences) {
     
     k = userInput.kmerLen;
     
-    unsigned int* kcount = new unsigned int[(int)pow(4,k)]();
+    unsigned int* kcount = new unsigned int[(unsigned long long int)pow(4,k)]();
 
 	for (InSegment* segment : *segments) {
         
@@ -156,6 +156,8 @@ void Input::read(InSequences& inSequences) {
         }
         
         lg.verbose("Processed segment: " + segment->getSeqHeader());
+        
+        delete[] str;
 
 	}
     

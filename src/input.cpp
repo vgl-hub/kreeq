@@ -6,6 +6,7 @@
 #include <vector>
 #include <queue>
 #include <stack>
+#include <math.h>
 
 #include <iostream>
 #include <fstream>
@@ -33,8 +34,8 @@
 inline size_t Input::hash(const char * string)
 {
     size_t result = 0;
-    for(unsigned short int c = 0; c<userInput.kmerLen; ++c) {
-        result = result * 31 + *string++;
+    for(unsigned short int c = 0; c<k; ++c) {
+        result += *string++ * pow(4,c);
     }
     return result;
 }
@@ -121,20 +122,31 @@ void Input::read(InSequences& inSequences) {
 		if(verbose_flag) {std::cerr<<"\n";};
 		
 	}
-	
-	phmap::flat_hash_map<unsigned long long int, unsigned long long int> kcount;
 
 	std::vector<InSegment*>* segments = inSequences.getInSegments();
+    
+    inSequences.updateStats();
+    
+    k = userInput.kmerLen;
+    
+    unsigned long long int totContigLen = inSequences.getTotContigLen();
+    
+    unsigned int* kcount = new unsigned int[totContigLen]();
 
 	for (InSegment* segment : *segments) {
 
 		long long int len = segment->getSegmentLen()-userInput.kmerLen+1;
-
-		char* first = segment->first();
+        
+        std::string bitSegment = segment->getInSequence();
+        
+        for (char& c : bitSegment)
+            c = ctoi[(unsigned char)c];
+        
+        char* first = &bitSegment.front();
 
 		for (long long int c = 0; c<len; ++c) {
 
-			++kcount[hash(first+c)];
+			++kcount[hash(first++)];
 
 		}
         
@@ -143,11 +155,23 @@ void Input::read(InSequences& inSequences) {
         ++totKmers;
 
 	}
-
+    
     std::cout<<"Total kmers: "<<totKmers<<std::endl;
-    std::cout<<"Unique kmers: "<<kcount.size()<<std::endl;
+    
+    unsigned long long int totKmersUnique = 0;
+    
+    for (unsigned long long int c = 0; c<totContigLen; ++c) {
+        
+        if(kcount[c] > 0)
+            ++totKmersUnique;
+        
+    }
 
-	print_map(kcount);
+    std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;
+    
+    delete[] kcount;
+
+//	print_map(kcount);
 	
 //	Ktree ktree(inSequences, userInput.kmerLen);
 	

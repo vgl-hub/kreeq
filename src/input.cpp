@@ -130,7 +130,7 @@ void Input::read(InSequences& inSequences) {
     
     k = userInput.kmerLen;
     
-    unsigned int* kcount = new unsigned int[(unsigned long long int)pow(4,k)]();
+    phmap::parallel_flat_hash_map<unsigned long long int, unsigned long long int> kcount;
 
 	for (InSegment* segment : *segments) {
         
@@ -174,8 +174,6 @@ void Input::read(InSequences& inSequences) {
 
     std::cout<<"Total kmers: "<<totKmers<<std::endl;
     std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;
-    
-    delete[] kcount;
 
 //	print_map(kcount);
 	

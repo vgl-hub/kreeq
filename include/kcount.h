@@ -9,7 +9,7 @@ class Kcount {
     
     unsigned long long int totKmersUnique = 0;
     
-    const unsigned int mapCount = pow(4,k/4);
+    const unsigned int mapCount = k < 28 ? pow(4,k/4) : pow(4,6);
 
     std::vector<unsigned long long int>* buff = new std::vector<unsigned long long int>[mapCount];
     

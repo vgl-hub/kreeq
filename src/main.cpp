@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
         
         int option_index = 0;
         
-        c = getopt_long(argc, argv, "-:f:k:v:h",
+        c = getopt_long(argc, argv, "-:f:k:j:v:h",
                         long_options, &option_index);
         
         if (c == -1) { // exit the loop if run out of options
@@ -134,8 +134,12 @@ int main(int argc, char **argv) {
                     
                 break;
                 
+            case 'j': // max threads
+                maxThreads = atoi(optarg);
+                break;
+                
             case 'v': // software version
-                printf("mytool v%s\n", version.c_str());
+                printf("kreeq v%s\n", version.c_str());
                 printf("Giulio Formenti giulio.formenti@gmail.com\n");
                 exit(0);
                 
@@ -144,6 +148,7 @@ int main(int argc, char **argv) {
                 printf("\nOptions:\n");
                 printf("-f --input-sequence sequence input file (fasta,gfa1/2).\n");
 				printf("-k --kmer-length length of kmers.\n");
+                printf("-j --threads <n> numbers of threads (default: max).\n");
                 printf("-v --version software version.\n");
                 printf("--cmd print $0 to stdout.\n");
                 exit(0);

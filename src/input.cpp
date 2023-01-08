@@ -31,8 +31,7 @@
 #include "ktree.h"
 #include "input.h"
 
-inline size_t Input::hash(unsigned short int *kmer)
-{
+inline size_t Input::hash(unsigned short int *kmer) {
     size_t result = 0;
     for(unsigned short int c = 0; c<k; c++) {
         
@@ -41,103 +40,15 @@ inline size_t Input::hash(unsigned short int *kmer)
     return result;
 }
 
-void Input::load(UserInputKreeq userInput) {
+bool Input::threadedInsert(std::vector<InSegment*>& segments, unsigned short int thread_idx) {
     
-    this->userInput = userInput;
-    
-}
+    unsigned short int mapCount = 16;
 
-
-void Input::read(InSequences& inSequences) {
+    unsigned long long int moduloMap = (unsigned long long int) pow(4,k) / mapCount;
     
-    if (userInput.iSeqFileArg.empty()) {return;}
-	
-	threadPool.init(maxThreads); // initialize threadpool
+    unsigned short int moduloThread = mapCount / (threadPool.totalThreads() - 1);
     
-    stream = streamObj.openStream(userInput, 'f');
-	
-	if (!userInput.iSeqFileArg.empty() || userInput.pipeType == 'f') {
-		
-		StreamObj streamObj;
-		
-		stream = streamObj.openStream(userInput, 'f');
-		
-		if (stream) {
-			
-			switch (stream->peek()) {
-					
-				case '>': {
-					
-					stream->get();
-					
-					while (getline(*stream, newLine)) {
-						
-						h = std::string(strtok(strdup(newLine.c_str())," ")); //process header line
-						c = strtok(NULL,""); //read comment
-						
-						seqHeader = h;
-						
-						if (c != NULL) {
-							
-							seqComment = std::string(c);
-							
-						}
-						
-						std::string* inSequence = new std::string;
-						
-						getline(*stream, *inSequence, '>');
-						
-						lg.verbose("Individual fasta sequence read");
-						
-						Sequence* sequence = new Sequence{seqHeader, seqComment, inSequence, NULL};
-							
-						sequence->seqPos = seqPos; // remember the order
-						
-						inSequences.appendSequence(sequence);
-						
-						seqPos++;
-						
-					}
-					
-					break;
-					
-				}
-					
-			}
-			
-		}
-		
-	}
-		
-    jobWait(threadPool);
-	
-	if(verbose_flag) {std::cerr<<"\n\n";};
-	
-	std::vector<Log> logs = inSequences.getLogs();
-	
-	//consolidate log
-	for (auto it = logs.begin(); it != logs.end(); it++) {
-	 
-		it->print();
-		logs.erase(it--);
-		if(verbose_flag) {std::cerr<<"\n";};
-		
-	}
-
-	std::vector<InSegment*>* segments = inSequences.getInSegments();
-    
-    inSequences.updateStats();
-    
-    k = userInput.kmerLen;
-    
-    nthash::NtHash nth("TGACTGATCGAGTCGTACTAG", 1, k);
-    while (nth.roll()) {
-         std::cout<<nth.hashes()<<std::endl
-    }
-
-	for (InSegment* segment : *segments) {
-        
-        phmap::flat_hash_map<unsigned long long int, unsigned long long int> kcount;
+    for (InSegment* segment : segments) {
         
         if (segment->getSegmentLen()<k)
             continue;
@@ -153,76 +64,146 @@ void Input::read(InSequences& inSequences) {
             str[i] = ctoi[*(first+i)];
             
         }
-
+        
         for (unsigned long long int c = 0; c<len; ++c){
             
-            ++kcount[hash(str+c)];
+            unsigned long long int value = hash(str+c);
+            
+            unsigned long long int map = value / moduloMap;
+            
+            if (map / moduloThread == thread_idx) // if the key belongs to this thread
+                ++kcount[map][value];
+            
+//            std::cout<<value<<" "<<map<<" "<<moduloMap<<" "<<moduloThread<<" "<<map / moduloThread <<"="<<thread_idx<<std::endl;
             
         }
         
         lg.verbose("Processed segment: " + segment->getSeqHeader());
         
         delete[] str;
-        
-//        unsigned long long int totKmersUnique = 0;
-//        
-//        for (unsigned long long int c = 0; c<pow(4,k); ++c) {
-//            
-//            if(kcount[c] > 0){
-//                totKmers += kcount[c];
-//                ++totKmersUnique;
-//            }
-//
-//        }
-//
-//        std::cout<<"Total kmers: "<<totKmers<<std::endl;
-//        std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;
 
-	}
+    }
+    
+    return true;
+
+}
+
+void Input::load(UserInputKreeq userInput) {
+    
+    this->userInput = userInput;
+    
+}
+
+
+void Input::read(InSequences& inSequences) {
+    
+    if (userInput.iSeqFileArg.empty()) {return;}
+    
+    threadPool.init(maxThreads); // initialize threadpool
+    
+    stream = streamObj.openStream(userInput, 'f');
+    
+    if (!userInput.iSeqFileArg.empty() || userInput.pipeType == 'f') {
+        
+        StreamObj streamObj;
+        
+        stream = streamObj.openStream(userInput, 'f');
+        
+        if (stream) {
+            
+            switch (stream->peek()) {
+                    
+                case '>': {
+                    
+                    stream->get();
+                    
+                    while (getline(*stream, newLine)) {
+                        
+                        h = std::string(strtok(strdup(newLine.c_str())," ")); //process header line
+                        c = strtok(NULL,""); //read comment
+                        
+                        seqHeader = h;
+                        
+                        if (c != NULL) {
+                            
+                            seqComment = std::string(c);
+                            
+                        }
+                        
+                        std::string* inSequence = new std::string;
+                        
+                        getline(*stream, *inSequence, '>');
+                        
+                        lg.verbose("Individual fasta sequence read");
+                        
+                        Sequence* sequence = new Sequence{seqHeader, seqComment, inSequence, NULL};
+                        
+                        sequence->seqPos = seqPos; // remember the order
+                        
+                        inSequences.appendSequence(sequence);
+                        
+                        seqPos++;
+                        
+                    }
+                    
+                    break;
+                    
+                }
+                    
+            }
+            
+        }
+        
+    }
+    
+    jobWait(threadPool);
+    
+    if(verbose_flag) {std::cerr<<"\n\n";};
+    
+    std::vector<Log> logs = inSequences.getLogs();
+    
+    //consolidate log
+    for (auto it = logs.begin(); it != logs.end(); it++) {
+        
+        it->print();
+        logs.erase(it--);
+        if(verbose_flag) {std::cerr<<"\n";};
+        
+    }
+    
+    std::vector<InSegment*>* segments = inSequences.getInSegments();
+    
+    inSequences.updateStats();
+    
+    k = userInput.kmerLen;
+    
+    for(unsigned short int t = 0; t<threadPool.totalThreads(); t++)
+        threadPool.queueJob([=]{ return threadedInsert(*segments, t); });
+    
+    jobWait(threadPool);
+    
+    unsigned long long int totKmersUnique = 0;
+    
+    for (unsigned short int m = 0; m < 16; m++) {
+        
+        std::cout<<"map: "<<m<<std::endl;
+        print_map(kcount[m]);
+
+        for (auto const& pair : kcount[m]) {
+
+            if(pair.second > 0){
+                totKmers += pair.second;
+                ++totKmersUnique;
+            }
+
+        }
+
+    }
+
+    std::cout<<"Total kmers: "<<totKmers<<std::endl;
+    std::cout<<"Unique kmers: "<<totKmersUnique<<std::endl;
 
 //	print_map(kcount);
-	
-//	Ktree ktree(inSequences, userInput.kmerLen);
-	
-//	std::vector<InSegment*>* segments = inSequences.getInSegments();
-//
-//	std::vector<Knode*> nodes;
-//
-//	const short int k = userInput.kmerLen;
-//
-//	unsigned long long i = 0;
-//
-//	for (InSegment* segment : *segments) {
-//
-//		lg.verbose("Processing segment: " + segment->getSeqHeader());
-//
-//		unsigned long long int len = segment->getSegmentLen()-k+1;
-//
-//		std::string* seq = segment->getInSequencePtr();
-//
-//		char* first = segment->first();
-//
-//		for (unsigned long long int c = 0; c<len; ++c) {
-//
-//			std::string kmer_for = seq->substr(c, k);
-//
-//			Knode* fw = new Knode(first+c);
-//
-//			Knode* rc = new Knode(first+c);
-//
-//			for (unsigned short int j = 0; j<k; ++j) {
-//
-//				++i;
-//
-//			}
-//
-//			delete fw, delete rc;
-//
-//		}
-//
-//	}
-//
-//	std::cout<<nodes.size()<<" "<<i<<std::endl;
 	
 	threadPool.join();
     

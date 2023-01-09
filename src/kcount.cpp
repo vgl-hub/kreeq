@@ -29,7 +29,9 @@ bool Kcount::countBuff(buf64* buf, phmap::flat_hash_map<uint64_t, uint64_t>& map
 //    only if sorted table is needed:
 //    std::sort(buff.begin(), buff.end());
     
-    for (uint64_t c = 0; c<buf->pos; c++)
+    uint64_t len = buf->pos;
+    
+    for (uint64_t c = 0; c<len; c++)
         ++map[buf->seq[c]];
     
     return true;

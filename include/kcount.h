@@ -2,7 +2,7 @@
 #define KCOUNT_H
 
 struct buf64 {
-    uint64_t pos = 0, size = 2;
+    uint64_t pos = 0, size = 100000;
     uint64_t *seq = new uint64_t[size];
 };
 

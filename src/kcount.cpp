@@ -18,7 +18,7 @@
 inline uint64_t Kcount::hash(uint8_t *kmer) {
     uint64_t result = 0;
     for(uint8_t c = 0; c<k; c++)
-        result += *kmer++ * (uint64_t) exp(c*log(4));
+        result += *kmer++ * pows[c];
     
     return result;
 }

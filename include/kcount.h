@@ -15,6 +15,8 @@ class Kcount {
     uint64_t totKmersUnique = 0;
     
     const uint64_t mapCount = k < 28 ? pow(4,k/4) : pow(4,6);
+    
+    uint64_t* pows = new uint64_t[k];
 
     buf64* buf = new buf64[mapCount];
     
@@ -42,6 +44,9 @@ class Kcount {
 public:
     
     Kcount(std::vector<InSegment*>* segments, uint8_t k) : k(k) {
+        
+        for(uint8_t p = 0; p<k; p++)
+            pows[p] = (uint64_t) pow(4,p);
         
         count(segments);
         

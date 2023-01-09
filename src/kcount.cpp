@@ -15,14 +15,6 @@
 
 #include "kcount.h"
 
-inline uint64_t Kcount::hash(uint8_t *kmer) {
-    uint64_t result = 0;
-    for(uint8_t c = 0; c<k; c++)
-        result += *kmer++ * (uint64_t) pow(4,c);
-    
-    return result;
-}
-
 bool Kcount::countBuff(buf64* buf, phmap::flat_hash_map<uint64_t, uint64_t>& map) {
 
 //    only if sorted table is needed:
@@ -80,7 +72,12 @@ void Kcount::count(std::vector<InSegment*>* segments) {
         
         for (uint64_t c = 0; c<len; ++c){
             
-            uint64_t value = hash(str+c);
+            uint64_t value = 0;
+            
+            uint8_t* kmer = str+c;
+            
+            for(uint8_t i = 0; i<k; i++)
+                value += *kmer++ * (uint64_t) pow(4,i);
             
             uint64_t i = value / moduloMap;
             

@@ -1,19 +1,24 @@
 #ifndef KCOUNT_H
 #define KCOUNT_H
 
+struct buf64 {
+    uint64_t pos = 0, size = 2;
+    uint64_t *seq = new uint64_t[size];
+};
+
 class Kcount {
 
-    unsigned short int k;
+    uint8_t k;
     
-    unsigned long long int totKmers = 0;
+    uint64_t totKmers = 0;
     
-    unsigned long long int totKmersUnique = 0;
+    uint64_t totKmersUnique = 0;
     
-    const unsigned int mapCount = k < 28 ? pow(4,k/4) : pow(4,6);
+    const uint16_t mapCount = k < 28 ? pow(4,k/4) : pow(4,6);
 
-    std::vector<unsigned long long int>* buff = new std::vector<unsigned long long int>[mapCount];
+    buf64* buf = new buf64[mapCount];
     
-    phmap::flat_hash_map<unsigned long long int, unsigned long long int>* map = new phmap::flat_hash_map<unsigned long long int, unsigned long long int>[mapCount];
+    phmap::flat_hash_map<uint64_t, uint64_t>* map = new phmap::flat_hash_map<uint64_t, uint64_t>[mapCount];
     
     const unsigned char ctoi[256] = {
           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -36,7 +41,7 @@ class Kcount {
     
 public:
     
-    Kcount(std::vector<InSegment*>* segments, unsigned short int k) : k(k) {
+    Kcount(std::vector<InSegment*>* segments, uint8_t k) : k(k) {
         
         count(segments);
         
@@ -44,16 +49,22 @@ public:
     
     void count(std::vector<InSegment*>* segments);
     
-    inline size_t hash(unsigned short int * string);
+    inline size_t hash(uint8_t* string);
     
-    bool countBuff(std::vector<unsigned long long int>& buff, phmap::flat_hash_map<unsigned long long int, unsigned long long int>& map);
+    bool countBuff(buf64* buf, phmap::flat_hash_map<uint64_t, uint64_t>& map);
     
-    bool countUnique(phmap::flat_hash_map<unsigned long long int, unsigned long long int>& map);
+    bool countUnique(phmap::flat_hash_map<uint64_t, uint64_t>& map);
+    
+    void resizeBuff(buf64* buff);
     
     ~Kcount(){
         
         delete[] map;
-        delete[] buff;
+        
+        for(uint16_t i = 0; i<mapCount; i++)
+            delete[] buf[i].seq;
+        
+        delete[] buf;
         
     }
 

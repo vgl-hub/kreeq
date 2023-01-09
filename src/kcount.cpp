@@ -64,23 +64,31 @@ void Kcount::count(std::vector<InSegment*>* segments) {
         if (segment->getSegmentLen()<k)
             continue;
         
+        lg.verbose("start");
+        
         uint64_t len = segment->getSegmentLen()-k+1;
         
         totKmers += len;
         
-        std::string sequence = segment->getInSequence();
+        unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
         
         uint8_t* str = new uint8_t[segment->getSegmentLen()];
         
         for (uint64_t i = 0; i < len+k-1; i++){
             
-            str[i] = ctoi[(unsigned int)sequence[i]];
+            str[i] = ctoi[*(first+i)];
             
         }
         
+        lg.verbose("after conversion");
+        
         for (uint64_t c = 0; c<len; ++c){
             
+            lg.verbose("before hashing");
+            
             uint64_t value = hash(str+c);
+            
+            lg.verbose("after hashing");
             
             uint64_t i = value / moduloMap;
             
@@ -100,6 +108,8 @@ void Kcount::count(std::vector<InSegment*>* segments) {
             }
             
             b->seq[b->pos++] = value;
+            
+            lg.verbose("after insertion");
                         
         }
         

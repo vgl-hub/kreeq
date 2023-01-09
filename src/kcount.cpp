@@ -15,12 +15,11 @@
 
 #include "kcount.h"
 
-inline size_t Kcount::hash(uint8_t *kmer) {
-    size_t result = 0;
-    for(uint8_t c = 0; c<k; c++) {
-        
-        result += *kmer++ * pow(4,c);
-    }
+inline uint64_t Kcount::hash(uint8_t *kmer) {
+    uint64_t result = 0;
+    for(uint8_t c = 0; c<k; c++)
+        result += *kmer++ * (uint64_t) pow(4,c);
+    
     return result;
 }
 
@@ -40,10 +39,7 @@ bool Kcount::countBuff(buf64* buf, phmap::flat_hash_map<uint64_t, uint64_t>& map
 
 bool Kcount::countUnique(phmap::flat_hash_map<uint64_t, uint64_t>& map) {
     
-    uint64_t KmersUnique = 0;
-    
-    for (auto const &pair: map)
-        ++KmersUnique;
+    uint64_t KmersUnique = std::distance(map.begin(), map.end());
     
     std::unique_lock<std::mutex> lck (mtx, std::defer_lock);
     
@@ -86,13 +82,13 @@ void Kcount::count(std::vector<InSegment*>* segments) {
             
             uint64_t value = hash(str+c);
             
-            uint16_t i = value / moduloMap;
+            uint64_t i = value / moduloMap;
             
             buf64* b = &buf[i];
             
             if (b->pos == b->size) {
                 
-                size_t newSize = b->size * 2;
+                uint64_t newSize = b->size * 2;
                 uint64_t* bufNew = new uint64_t[newSize];
 
                 memcpy(bufNew, b->seq, b->size*sizeof(uint64_t));
@@ -104,7 +100,7 @@ void Kcount::count(std::vector<InSegment*>* segments) {
             }
             
             b->seq[b->pos++] = value;
-            
+                        
         }
         
         delete[] str;
@@ -113,14 +109,18 @@ void Kcount::count(std::vector<InSegment*>* segments) {
         
     }
     
-    for(uint8_t m = 0; m<mapCount; m++)
+    lg.verbose("Populating maps");
+    
+    for(uint16_t m = 0; m<mapCount; m++)
         threadPool.queueJob([=]{ return countBuff(&buf[m], map[m]); });
     
     jobWait(threadPool);
     
     if(verbose_flag) {std::cerr<<"\n\n";};
     
-    for(uint8_t m = 0; m<mapCount; m++)
+    lg.verbose("Counting unique kmers");
+    
+    for(uint16_t m = 0; m<mapCount; m++)
         threadPool.queueJob([=]{ return countUnique(map[m]); });
     
     jobWait(threadPool);

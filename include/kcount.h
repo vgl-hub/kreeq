@@ -14,13 +14,13 @@ class Kcount {
     
     uint64_t totKmersUnique = 0;
     
-    const uint16_t mapCount = k < 28 ? pow(4,k/4) : pow(4,6);
+    const uint64_t mapCount = k < 28 ? pow(4,k/4) : pow(4,6);
 
     buf64* buf = new buf64[mapCount];
     
     phmap::flat_hash_map<uint64_t, uint64_t>* map = new phmap::flat_hash_map<uint64_t, uint64_t>[mapCount];
     
-    const unsigned char ctoi[256] = {
+    const uint8_t ctoi[256] = {
           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
           4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -49,7 +49,7 @@ public:
     
     void count(std::vector<InSegment*>* segments);
     
-    inline size_t hash(uint8_t* string);
+    inline uint64_t hash(uint8_t* string);
     
     bool countBuff(buf64* buf, phmap::flat_hash_map<uint64_t, uint64_t>& map);
     

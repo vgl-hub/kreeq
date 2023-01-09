@@ -78,18 +78,22 @@ void Kcount::count(std::vector<InSegment*>* segments) {
             
         }
         
+        uint64_t value, i, newSize;
+        buf64* b;
+        uint64_t* bufNew;
+        
         for (uint64_t c = 0; c<len; ++c){
             
-            uint64_t value = hash(str+c);
+            value = hash(str+c);
             
-            uint64_t i = value / moduloMap;
+            i = value / moduloMap;
             
-            buf64* b = &buf[i];
+            b = &buf[i];
             
             if (b->pos == b->size) {
                 
-                uint64_t newSize = b->size * 2;
-                uint64_t* bufNew = new uint64_t[newSize];
+                newSize = b->size * 2;
+                bufNew = new uint64_t[newSize];
 
                 memcpy(bufNew, b->seq, b->size*sizeof(uint64_t));
 

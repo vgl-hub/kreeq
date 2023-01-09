@@ -64,8 +64,6 @@ void Kcount::count(std::vector<InSegment*>* segments) {
         if (segment->getSegmentLen()<k)
             continue;
         
-        lg.verbose("start");
-        
         uint64_t len = segment->getSegmentLen()-k+1;
         
         totKmers += len;
@@ -80,15 +78,9 @@ void Kcount::count(std::vector<InSegment*>* segments) {
             
         }
         
-        lg.verbose("after conversion");
-        
         for (uint64_t c = 0; c<len; ++c){
             
-            lg.verbose("before hashing");
-            
             uint64_t value = hash(str+c);
-            
-            lg.verbose("after hashing");
             
             uint64_t i = value / moduloMap;
             
@@ -108,8 +100,6 @@ void Kcount::count(std::vector<InSegment*>* segments) {
             }
             
             b->seq[b->pos++] = value;
-            
-            lg.verbose("after insertion");
                         
         }
         

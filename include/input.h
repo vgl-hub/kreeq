@@ -3,7 +3,7 @@
 
 struct UserInputKreeq : UserInput {
 
-    unsigned short int kmerLen = 21;
+    uint8_t kmerLen = 21;
     std::string outFile = "";
 
 };

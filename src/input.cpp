@@ -27,6 +27,7 @@
 #include "stream-obj.h"
 #include "input-gfa.h"
 
+#include "kreeq.h"
 #include "kmer.h"
 #include "input.h"
 
@@ -42,15 +43,15 @@ void Input::read(bool mode) {
     
     if (mode == 0) {
         
-        Kmap<UserInputKreeq, uint64_t> kcount(userInput.kmerLen);
+        Kpos knav(userInput.kmerLen);
         
         lg.verbose("Kmer object generated");
         
-        kcount.convert(userInput);
+        knav.convert(userInput);
         
-        kcount.count();
+        knav.validate(userInput);
         
-        kcount.report(userInput);
+        knav.report(userInput);
         
     }else{
         

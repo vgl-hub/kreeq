@@ -16,16 +16,22 @@ LDFLAGS := -pthread
 #gfalibs
 GFALIBS_DIR := $(CURDIR)/gfalibs
 
-OBJS := main input
-BINS := $(addprefix $(BINDIR)/, $(OBJS))
+SOURCES := main input kreeq
+OBJECTS := $(addprefix $(BINDIR)/, $(SOURCES))
 
-head: $(BINS) gfalibs | $(BUILD)
+head: $(OBJECTS) gfalibs | $(BUILD)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(GFALIBS_DIR)/*.o $(LIBS)
+
+debug: CXXFLAGS += -DDEBUG
+debug: CCFLAGS += -DDEBUG
+debug: head
+
+all: head
 
 $(OBJS): %: $(BINDIR)/%
 	@
-$(BINDIR)%: $(SOURCE)/%.cpp $(INCLUDE)/%.h | $(BINDIR)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $(SOURCE)/$(notdir $@).cpp -o $@
+$(BINDIR)%: $(SOURCE)/%.cpp $(INCLUDE)/%.h $(GFALIBS_DIR)/include/*.h Makefile | $(BINDIR)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $< -o $@
 
 .PHONY: gfalibs
 gfalibs:

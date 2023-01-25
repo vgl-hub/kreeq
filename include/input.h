@@ -10,7 +10,7 @@ struct UserInputKreeq : UserInput {
 
 class Input {
     
-    UserInput userInput;
+    UserInputKreeq userInput;
     
     //intermediates
     std::string h;
@@ -26,7 +26,7 @@ class Input {
     
 public:
     
-    void load(UserInput userInput);
+    void load(UserInputKreeq userInput);
     
     void read(bool mode);
     

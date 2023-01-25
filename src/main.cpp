@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     
     std::string cmd;
 
-    UserInput userInput; // initialize input object
+    UserInputKreeq userInput; // initialize input object
     
     if (argc == 1) { // gfastats with no arguments
             

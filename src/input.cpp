@@ -30,7 +30,7 @@
 #include "kmer.h"
 #include "input.h"
 
-void Input::load(UserInput userInput) {
+void Input::load(UserInputKreeq userInput) {
     
     this->userInput = userInput;
     

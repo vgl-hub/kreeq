@@ -22,14 +22,13 @@
 #include "gfa-lines.h"
 #include "threadpool.h"
 #include "gfa.h"
-#include "sak.h" // swiss army knife
-#include "zlib.h"
 #include "stream-obj.h"
 #include "input-gfa.h"
+#include "fastx.h"
 
-#include "kreeq.h"
-#include "kmer.h"
 #include "input.h"
+#include "kmer.h"
+#include "kreeq.h"
 
 void Input::load(UserInputKreeq userInput) {
     
@@ -44,10 +43,10 @@ void Input::read(bool mode) {
     if (mode == 0) {
         
         Kpos knav(userInput.kmerLen);
-        
-        lg.verbose("Kmer object generated");
-        
-        knav.convert(userInput);
+            
+        lg.verbose("Loading input sequences");
+        loadSequences(userInput, &knav);
+        lg.verbose("Sequences loaded and hashed");
         
         knav.validate(userInput);
         

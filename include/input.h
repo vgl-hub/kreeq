@@ -11,19 +11,7 @@ struct UserInputKreeq : UserInput {
 class Input {
     
     UserInputKreeq userInput;
-    
-    //intermediates
-    std::string h;
-    
-    // stream read variable definition
-    std::string firstLine;
-    
-    std::string newLine, seqHeader, seqComment, line, bedHeader;
-    
-    StreamObj streamObj;
-    
-    std::shared_ptr<std::istream> stream;
-    
+        
 public:
     
     void load(UserInputKreeq userInput);

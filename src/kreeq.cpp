@@ -32,28 +32,6 @@ bool Kpos::traverseInReads(Sequences* readBatch) { // traverse the read
     
 }
 
-void Kpos::appendSequence(Sequence* sequence) { // method to append a new sequence from a fasta
-        
-    threadPool.queueJob([=]{ return inSequences.traverseInSequence(sequence); });
-    
-    if(verbose_flag) {std::cerr<<"\n";};
-    
-    std::unique_lock<std::mutex> lck (mtx, std::defer_lock);
-    
-    lck.lock();
-    
-    for (auto it = logs.begin(); it != logs.end(); it++) {
-     
-        it->print();
-        logs.erase(it--);
-        if(verbose_flag) {std::cerr<<"\n";};
-        
-    }
-    
-    lck.unlock();
-    
-}
-
 void Kpos::validate(UserInputKreeq userInput) {
     
     lg.verbose("Navigating with " + std::to_string(mapCount) + " maps");

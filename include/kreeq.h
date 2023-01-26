@@ -19,9 +19,7 @@ class Kpos : public Kmap<UserInputKreeq, std::vector<pos>> {
 public:
     
     bool convert(UserInputKreeq userInput);
-    
-    void appendSequence(Sequence* sequence);
-    
+   
     bool traverseInReads(Sequences* readBatch);
     
     void hashSequences(Sequences* readBatch);

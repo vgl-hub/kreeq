@@ -46,9 +46,11 @@ void Input::read(bool mode) {
             
         lg.verbose("Loading input sequences");
         loadSequences(userInput, &knav);
-        lg.verbose("Sequences loaded and hashed");
+        lg.verbose("Sequences loaded");
         
-        knav.validate(userInput);
+        knav.hashSegments();
+        
+        knav.index();
         
         knav.report(userInput);
         

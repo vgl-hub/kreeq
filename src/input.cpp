@@ -36,26 +36,43 @@ void Input::load(UserInputKreeq userInput) {
     
 }
 
-void Input::read(bool mode) {
+void Input::read(bool mode, InSequences& inSequences) {
     
     if (userInput.iSeqFileArg.empty()) {return;}
     
     if (mode == 0) {
         
-        Kpos knav(userInput.kmerLen);
-            
-        lg.verbose("Loading input sequences");
-        loadSequences(userInput, &knav);
-        lg.verbose("Sequences loaded");
+        DBG knav(userInput.kmerLen);
         
-        knav.hashSegments();
+        lg.verbose("Loading input reads");
         
-        knav.index();
+        unsigned int numFiles = userInput.iReadFileArg.size();
         
-        knav.report(userInput);
+        for (unsigned int i = 0; i < numFiles; i++)
+            loadSequences(userInput, &knav, 'r', &i);
+        
+        lg.verbose("Reads loaded");
+        
+        knav.build();
+        
+        knav.validateSequences(inSequences);
         
     }else{
         
     }
     
+}
+
+void Input::read(InSequences& inSequences) {
+    
+    if (userInput.iSeqFileArg.empty()) {return;}
+    
+    stream = streamObj.openStream(userInput, 'f');
+    
+    readGFA(inSequences, userInput, stream);
+
+    jobWait(threadPool);
+    
+    inSequences.updateStats();
+
 }

@@ -11,12 +11,18 @@ struct UserInputKreeq : UserInput {
 class Input {
     
     UserInputKreeq userInput;
+    
+    StreamObj streamObj;
+    
+    std::shared_ptr<std::istream> stream;
         
 public:
     
     void load(UserInputKreeq userInput);
     
-    void read(bool mode);
+    void read(bool mode, InSequences& inSequences);
+    
+    void read(InSequences& inSequences);
     
 };
 

@@ -78,6 +78,7 @@ int main(int argc, char **argv) {
         
         static struct option long_options[] = { // struct mapping long options
             {"input-sequence", required_argument, 0, 'f'},
+            {"input-reads", required_argument, 0, 'r'},
             {"kmer-length", required_argument, 0, 'k'},
             
             {"verbose", no_argument, &verbose_flag, 1},
@@ -93,7 +94,7 @@ int main(int argc, char **argv) {
             
             int option_index = 0;
             
-            c = getopt_long(argc, argv, "-:f:k:j:v:h",
+            c = getopt_long(argc, argv, "-:f:r:k:j:v:h",
                             long_options, &option_index);
             
             if (c == -1) { // exit the loop if run out of options
@@ -150,6 +151,28 @@ int main(int argc, char **argv) {
                 case 'j': // max threads
                     maxThreads = atoi(optarg);
                     break;
+
+                case 'r': // input reads
+                    
+                    if (isPipe && userInput.pipeType == 'n') { // check whether input is from pipe and that pipe input was not already set
+                    
+                        userInput.pipeType = 'r'; // pipe input is a sequence
+                    
+                    }else{ // input is a regular file
+                        
+                        optind--;
+                        for( ;optind < argc && *argv[optind] != '-' && !isInt(argv[optind]); optind++){
+                            
+                            ifFileExists(argv[optind]);
+                            userInput.iReadFileArg.push_back(argv[optind]);
+                            
+                        }
+                        
+                        stats_flag = true;
+                        
+                    }
+                        
+                    break;
                     
                 case 'v': // software version
                     printf("kreeq v%s\n", version.c_str());
@@ -160,6 +183,7 @@ int main(int argc, char **argv) {
                     printf("kreeq [command]\n");
                     printf("\nOptions:\n");
                     printf("-f --input-sequence sequence input file (fasta,gfa1/2).\n");
+                    printf("-r --input-reads read input files (fastq).\n");
                     printf("-k --kmer-length length of kmers.\n");
                     printf("-j --threads <n> numbers of threads (default: max).\n");
                     printf("-v --version software version.\n");
@@ -198,7 +222,12 @@ int main(int argc, char **argv) {
     
     threadPool.init(maxThreads); // initialize threadpool
     
-    in.read(mode); // read input
+    lg.verbose("Loading input sequences");
+    InSequences inSequences; // initialize sequence collection object
+    in.read(inSequences);
+    lg.verbose("Sequences loaded");
+    
+    in.read(mode, inSequences); // read input
         
     threadPool.join(); // join threads
 

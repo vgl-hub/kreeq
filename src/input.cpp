@@ -40,22 +40,22 @@ void Input::read(bool mode, InSequences& inSequences) {
     
     if (userInput.iSeqFileArg.empty()) {return;}
     
-    if (mode == 0) {
+    if (mode == 0) { // sequence validation
         
-        DBG knav(userInput.kmerLen);
+        DBG knav(userInput.kmerLen); // navigational kmerdb
         
         lg.verbose("Loading input reads");
         
-        unsigned int numFiles = userInput.iReadFileArg.size();
+        unsigned int numFiles = userInput.iReadFileArg.size(); // number of input files
         
-        for (unsigned int i = 0; i < numFiles; i++)
-            loadSequences(userInput, &knav, 'r', &i);
+        for (unsigned int i = 0; i < numFiles; i++) // load each input file in the kmerdb
+            loadKmers(userInput, &knav, 'r', &i);
         
         lg.verbose("Reads loaded");
         
-        knav.build();
+        knav.finalize(); // populate the hash table
         
-        knav.validateSequences(inSequences);
+        knav.validateSequences(inSequences); // validate the input sequence
         
     }else{
         
@@ -67,12 +67,12 @@ void Input::read(InSequences& inSequences) {
     
     if (userInput.iSeqFileArg.empty()) {return;}
     
-    stream = streamObj.openStream(userInput, 'f');
+    stream = streamObj.openStream(userInput, 'f'); // open file
     
-    readGFA(inSequences, userInput, stream);
+    readGFA(inSequences, userInput, stream); // read file to sequence
 
     jobWait(threadPool);
     
-    inSequences.updateStats();
+    inSequences.updateStats(); // compute summary statistics
 
 }

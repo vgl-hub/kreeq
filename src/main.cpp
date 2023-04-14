@@ -9,7 +9,7 @@
 #include "log.h"
 #include "uid-generator.h"
 
-#include <parallel_hashmap/phmap.h>
+#include "parallel_hashmap/phmap.h"
 
 #include "bed.h"
 #include "struct.h"
@@ -45,7 +45,7 @@ Log lg;
 
 void printHelp() {
     
-    printf("kreeq [command]\n-h for additional help.\n");
+    printf("kreeq [mode]\n-h for additional help.\n");
     printf("\nModes:\n");
     printf("validate\n");
     exit(0);
@@ -224,10 +224,10 @@ int main(int argc, char **argv) {
     
     lg.verbose("Loading input sequences");
     InSequences inSequences; // initialize sequence collection object
-    in.read(inSequences);
+    in.read(inSequences); // read input genome
     lg.verbose("Sequences loaded");
     
-    in.read(mode, inSequences); // read input
+    in.read(mode, inSequences); // read input reads
         
     threadPool.join(); // join threads
 

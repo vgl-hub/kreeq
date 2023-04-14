@@ -6,7 +6,7 @@
 #include <math.h>
 #include <functional>
 
-#include <parallel_hashmap/phmap.h>
+#include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"
 
 #include "bed.h"
@@ -22,284 +22,106 @@
 #include "kmer.h"
 #include "kreeq.h"
 
-double kmerQV(uint64_t errorKmers, uint64_t totalKmers, uint8_t k){
+double kmerQV(uint64_t errorKmers, uint64_t totalKmers, uint8_t k){ // compute QV from error kmers
     
     return -10*log10(1 - pow(1 - (double) errorKmers/totalKmers, (double) 1/k));
     
 }
 
-bool Kpos::traverseInReads(Sequences* readBatch) { // traverse the read
-
-//    hashSequences(readBatch);
-//
-    delete readBatch;
-
-    return true;
-    
-}
-
-void Kpos::index() {
-    
-    lg.verbose("Navigating with " + std::to_string(mapCount) + " maps");
-    
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return joinBuff(m); });
-    
-    jobWait(threadPool);
-    
-    lg.verbose("Compute summary statistics");
-    
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return histogram(map[m]); });
-    
-    jobWait(threadPool);
-    
-    uint64_t missing = pow(4,k)-totKmersDistinct;
-    
-    lg.verbose("Total: " + std::to_string(totKmers) + "\n" +
-               "Unique: " + std::to_string(totKmersUnique) + "\n" +
-               "Distinct: " + std::to_string(totKmersDistinct) + "\n" +
-               "Missing: " + std::to_string(missing) + "\n");
-    
-}
-
-bool Kpos::joinBuff(uint16_t m) {
-    
-    Buf<Gkmer>* thisBuf;
-    phmap::flat_hash_map<uint64_t, std::vector<Gkmer*>>* thisMap;
-    
-    for(Buf<Gkmer>* buf : buffers) {
-        
-        thisBuf = &buf[m];
-        thisMap = &map[m];
-        uint64_t len = thisBuf->pos;
-        
-        for (uint64_t c = 0; c<len; ++c)
-            (*thisMap)[thisBuf->seq[c].hash].push_back(&thisBuf->seq[c]);
-        
-        delete[] thisBuf->seq;
-        
-    }
-    
-    return true;
-    
-    
-}
-
-bool Kpos::histogram(phmap::flat_hash_map<uint64_t, std::vector<Gkmer*>>& map) {
-    
-    uint64_t kmersUnique = 0, kmersDistinct = 0;
-    phmap::flat_hash_map<uint64_t, uint64_t> hist;
-    
-    for (auto pair : map) {
-        
-        if (pair.second.size() == 1)
-            ++kmersUnique;
-        
-        ++kmersDistinct;
-        ++hist[pair.second.size()];
-        
-    }
-    
-    std::unique_lock<std::mutex> lck(mtx);
-    totKmersUnique += kmersUnique;
-    totKmersDistinct += kmersDistinct;
-    
-    for (auto pair : hist) {
-        
-        histogram1[pair.first] += pair.second;
-        totKmers += pair.first * pair.second;
-        
-    }
-    
-    return true;
-    
-}
-
-void Kpos::report(UserInputKreeq userInput) {
-    
-    const static phmap::flat_hash_map<std::string,int> string_to_case{
-        {"stats",1},
-
-    };
-    
-    std::string ext = "stdout";
-    
-    if (userInput.outFile != "")
-        ext = getFileExt("." + userInput.outFile);
-    
-    lg.verbose("Writing ouput: " + ext);
-    
-    // here we create a smart pointer to handle any kind of output stream
-    std::unique_ptr<std::ostream> ostream;
-    
-    switch (string_to_case.count(ext) ? string_to_case.at(ext) : 0) {
-            
-        case 1: { // .stats
-            
-            std::ofstream ofs(userInput.outFile);
-            
-            ostream = std::make_unique<std::ostream>(ofs.rdbuf());
-            
-            *ostream<<"\nTotal: "<<totKmers<<"\n";
-            *ostream<<"Unique: "<<totKmersUnique<<"\n";
-            *ostream<<"Distinct: "<<totKmersDistinct<<"\n";
-            uint64_t missing = pow(4,k)-totKmersDistinct;
-            *ostream<<"Missing: "<<missing<<"\n";
-            
-            ofs.close();
-            
-            break;
-            
-        }
-        default: {
-            
-        }
-            
-    }
-    
-}
-
-void Kpos::hashSegments() {
-    
-    std::vector<InSegment*>* segments = inSequences.getInSegments();
-    Buf<Gkmer>* buf = new Buf<Gkmer>[mapCount];
-    
-    for (InSegment* segment : *segments) {
-        
-        uint64_t len = segment->getSegmentLen(), kcount = len-k+1;
-        
-        if (len<k)
-            continue;
-        
-        unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
-        uint8_t* str = new uint8_t[len];
-        
-        for (uint64_t i = 0; i<len; ++i)
-            str[i] = ctoi[*(first+i)];
-        
-        Gkmer* gkmer;
-        uint64_t key, i, newSize;
-        Buf<Gkmer>* b;
-        Gkmer* bufNew;
-        
-        for (uint64_t c = 0; c<kcount; ++c){
-            
-            key = hash(str+c);
-            i = key / moduloMap;
-            b = &buf[i];
-            
-            if (b->pos == b->size) {
-                
-                newSize = b->size * 2;
-                bufNew = new Gkmer[newSize];
-
-                memcpy(bufNew, b->seq, b->size*sizeof(uint64_t));
-
-                b->size = newSize;
-                delete [] b->seq;
-                b->seq = bufNew;
-
-            }
-            
-            gkmer = &b->seq[b->pos++];
-            gkmer->base = first+c;
-            gkmer->hash = key;
-            gkmer->sUId = segment->getuId();
-                        
-        }
-        
-        delete[] str;
-        
-        lg.verbose("Processed segment: " + segment->getSeqHeader());
-        
-    }
-    
-    std::unique_lock<std::mutex> lck(mtx);
-    
-    buffers.push_back(buf);
-    
-}
-
-bool DBG::traverseInReads(Sequences* readBatch) { // traverse the read
+bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
 
     hashSequences(readBatch);
-
+    
     delete readBatch;
-
+    
     return true;
     
 }
 
-void DBG::hashSequences(Sequences* readBatch) {
+void DBG::hashSequences(std::string* readBatch) {
     
     Log threadLog;
     
-    threadLog.setId(readBatch->batchN);
-    
     Buf<DBGkmer>* buf = new Buf<DBGkmer>[mapCount];
+        
+    uint64_t len = readBatch->size();
     
-    for (Sequence* sequence : readBatch->sequences) {
+    if (len<k)
+        return;
+    
+    unsigned char* first = (unsigned char*) readBatch->c_str();
+    
+    uint8_t* str = new uint8_t[len];
+    uint64_t e = 0;
+    
+    for (uint64_t p = 0; p<len; ++p) {
         
-        uint64_t len = sequence->sequence->size(), kcount = len-k+1;
+        str[p] = ctoi[*(first+p)];
         
-        if (len<k)
-            continue;
-        
-        unsigned char* first = (unsigned char*)sequence->sequence->c_str();
-        
-        uint8_t* str = new uint8_t[len];
-        
-        for (uint64_t i = 0; i<len; ++i){
+        if (str[p] > 3 || p+1 == len){
             
-            str[i] = ctoi[*(first+i)];
-            
-        }
-        
-        DBGkmer* dbgkmer;
-        uint64_t key, i, newSize;
-        Buf<DBGkmer>* b;
-        DBGkmer* bufNew;
-        bool isFw = false;
-        bool *isFwPtr = &isFw;
-        
-        for (uint64_t c = 0; c<kcount; ++c){
-            
-            key = hash(str+c, isFwPtr);
-            
-            i = key / moduloMap;
-            
-            b = &buf[i];
-            
-            if (b->pos == b->size) {
-                
-                newSize = b->size * 2;
-                bufNew = new DBGkmer[newSize];
-
-                memcpy(bufNew, b->seq, b->size*sizeof(uint64_t));
-
-                b->size = newSize;
-                delete [] b->seq;
-                b->seq = bufNew;
-
+            if (p+1 == len && str[p] < 4) { // end of sequence, adjust indexes
+                ++e;
+                ++p;
             }
             
-            dbgkmer = &b->seq[b->pos++];
+            if (e < k) { // beginning/end of a sequence or kmer too short, nothing to be done
+                e = 0;
+                continue;
+            }
             
-            if (isFwPtr)
-                dbgkmer->fw[*(str+c+k)] = true;
-            else
-                dbgkmer->bw[*(str+c+k)] = true;
+            uint64_t kcount = e-k+1;
             
-            dbgkmer->hash = key;
-                        
+            DBGkmer* dbgkmer;
+            uint64_t key, i, newSize;
+            Buf<DBGkmer>* b;
+            DBGkmer* bufNew;
+            bool isFw = false;
+            bool *isFwPtr = &isFw;
+            
+            for (uint64_t c = 0; c<kcount; ++c){
+                
+                key = hash(str+c+p-e);
+                i = key / moduloMap;
+                b = &buf[i];
+                
+                if (b->pos == b->size) {
+                    
+                    newSize = b->size * 2;
+                    bufNew = new DBGkmer[newSize];
+                    
+                    memcpy(bufNew, b->seq, b->size*sizeof(DBGkmer));
+                    
+                    b->size = newSize;
+                    delete[] b->seq;
+                    b->seq = bufNew;
+                    
+                }
+                
+                dbgkmer = &b->seq[b->pos++];
+                
+                if (isFwPtr)
+                    dbgkmer->fw[*(str+c+k)] = true;
+                else
+                    dbgkmer->bw[*(str+c+k)] = true;
+                
+                dbgkmer->hash = key;
+                
+            }
+            
+            e = 0;
+            
+        }else{
+            
+            ++e;
+            
         }
         
-        delete[] str;
-        
-        threadLog.add("Processed sequence: " + sequence->header);
-        
     }
+    
+    delete[] str;
+        
+//        threadLog.add("Processed sequence: " + sequence->header);
     
     std::unique_lock<std::mutex> lck(mtx);
     
@@ -309,12 +131,12 @@ void DBG::hashSequences(Sequences* readBatch) {
     
 }
 
-void DBG::build() {
+void DBG::finalize() {
     
     lg.verbose("Navigating with " + std::to_string(mapCount) + " maps");
     
     for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return joinBuff(m); });
+        countBuffs(m);
     
     jobWait(threadPool);
     
@@ -335,34 +157,102 @@ void DBG::build() {
     
 }
 
-bool DBG::joinBuff(uint16_t m) {
+void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
+    
+    for (unsigned int i = 0; i<buffers.size(); ++i) { // for each buffer
+        
+        unsigned int counter = 0;
+        
+        for(uint16_t m = 0; m<mapCount; ++m) { // for each map
+            
+            Buf<DBGkmer>* thisBuf = &buffers[i][m];
+            
+            if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
+                
+                mapsInUse[m] = true;
+                threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
+                
+            }
+            
+            if(thisBuf->seq == NULL){
+                
+                ++counter; // keeps track of the buffers that were processed so far
+                
+                if (counter == mapCount) {
+                    lg.verbose("Jobs waiting/running: " + std::to_string(threadPool.queueSize()) + "/" + std::to_string(threadPool.running()) + " memory used/total: " + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+                    buffers.erase(buffers.begin() + i);
+                }
+                
+            }
+
+        }
+        
+    }
+
+}
+
+bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
     
     Buf<DBGkmer>* thisBuf;
+    
     phmap::flat_hash_map<uint64_t, DBGkmer>* thisMap;
     
     for(Buf<DBGkmer>* buf : buffers) {
-        
+            
         thisBuf = &buf[m];
-        thisMap = &map[m];
-        uint64_t len = thisBuf->pos;
+        
+        if (thisBuf->seq != NULL) {
+            
+            thisMap = &map[m];
+            uint64_t len = thisBuf->pos;
+            
+            DBGkmer* dbgkmer;
+            
+            for (uint64_t c = 0; c<len; ++c) {
+                
+                dbgkmer = &(*thisMap)[thisBuf->seq[c].hash];
+                ++dbgkmer->cov;
+                
+            }
+            
+            delete[] thisBuf->seq;
+            thisBuf->seq = NULL;
+            
+        }
+        
+    }
+    
+    return true;
+
+}
+
+bool DBG::countBuff(Buf<DBGkmer>* thisBuf, uint16_t m) { // counts a single buffer
+    
+    if (thisBuf->seq != NULL) { // sanity check that this buffer was not already processed
+        
+        phmap::flat_hash_map<uint64_t, DBGkmer>* thisMap = &map[m]; // the map associated to this buffer
+        
+        uint64_t len = thisBuf->pos; // how many positions in the buffer have data
         
         DBGkmer* dbgkmer;
         
         for (uint64_t c = 0; c<len; ++c) {
             
             dbgkmer = &(*thisMap)[thisBuf->seq[c].hash];
-            
             ++dbgkmer->cov;
             
         }
         
-        delete[] thisBuf->seq;
+        delete[] thisBuf->seq; // delete the buffer
+        thisBuf->seq = NULL; // set its sequence to the null pointer in case its checked again
         
     }
     
+    std::unique_lock<std::mutex> lck(mtx); // release the map
+    mapsInUse[m] = false;
+    
     return true;
-    
-    
+
 }
 
 bool DBG::histogram(uint16_t m) {
@@ -386,7 +276,7 @@ bool DBG::histogram(uint16_t m) {
     
     for (auto pair : hist) {
         
-        histogram1[pair.first] += pair.second;
+        finalHistogram[pair.first] += pair.second;
         totKmers += pair.first * pair.second;
         
     }
@@ -455,13 +345,13 @@ bool DBG::validateSegment(InSegment* segment) {
         
         if (map[i][key].cov == 0) {
             errorKmers.push_back(c);
-            threadLog.add(segment->getInSequence().substr(c, k) + " is an invalid kmer. Cov is: " + std::to_string(map[i][key].cov));
+            threadLog.add(segment->getInSequence().substr(c, k) + " is an invalid kmer.");
         }
     
     }
     
     threadLog.add("Processed segment: " + segment->getSeqHeader());
-    threadLog.add("Found " + std::to_string(errorKmers.size()) + " error kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(errorKmers.size(), kcount, k)) + ")");
+    threadLog.add("Found " + std::to_string(errorKmers.size()) + " missing kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(errorKmers.size(), kcount, k)) + ")");
     
     delete[] str;
     

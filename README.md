@@ -1,7 +1,7 @@
 # kreeq
 k-mer analysis quality evaluation tool
 
-**kreeq** is a single fast kmer-based QV computation tool for genome assemblies. It computes both the kmers and the QV on the fly. The kmer counting capabilities are inherited from (https://github.com/vgl-hub/kcount) kcount 
+**kreeq** is a single fast kmer-based QV computation tool for genome assemblies. It computes both the kmers and the QV on the fly. The kmer counting capabilities are inherited from [kcount](https://github.com/vgl-hub/kcount) 
 
 ## Installation
 

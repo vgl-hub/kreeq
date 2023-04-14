@@ -30,7 +30,7 @@
 #include "kmer.h"
 #include "kreeq.h"
 
-void Input::load(UserInputKreeq userInput) {
+void Input::loadInput(UserInputKreeq userInput) {
     
     this->userInput = userInput;
     
@@ -63,13 +63,123 @@ void Input::read(bool mode, InSequences& inSequences) {
     
 }
 
-void Input::read(InSequences& inSequences) {
+void Input::loadSequences(InSequences& inSequences) {
     
     if (userInput.iSeqFileArg.empty()) {return;}
     
+    //intermediates
+    std::string h;
+    char* c;
+    
+    // stream read variable definition
+    std::string firstLine;
+    unsigned int seqPos = 0; // to keep track of the original sequence order
+    
+    std::string newLine, seqHeader, seqComment, line, bedHeader;
+    
     stream = streamObj.openStream(userInput, 'f'); // open file
     
-    readGFA(inSequences, userInput, stream); // read file to sequence
+    if (stream) {
+        
+        switch (stream->peek()) {
+                
+            case '>': {
+                
+                stream->get();
+                
+                while (getline(*stream, newLine)) {
+                    
+                    h = std::string(strtok(strdup(newLine.c_str())," ")); //process header line
+                    c = strtok(NULL,""); //read comment
+                    
+                    seqHeader = h;
+                    
+                    if (c != NULL) {
+                        
+                        seqComment = std::string(c);
+                        
+                    }
+                    
+                    std::string* inSequence = new std::string;
+                    
+                    getline(*stream, *inSequence, '>');
+                    
+                    lg.verbose("Individual fasta sequence read");
+                    
+                    Sequence* sequence = new Sequence {seqHeader, seqComment, inSequence};
+                    
+                    if (sequence != NULL) {
+                        
+                        sequence->seqPos = seqPos; // remember the order
+                        
+                        inSequences.appendSequence(sequence);
+                        
+                        seqPos++;
+                        
+                    }
+                    
+                }
+                
+                break;
+            }
+            case '@': {
+                
+                while (getline(*stream, newLine)) { // file input
+                    
+                    newLine.erase(0, 1);
+                    
+                    h = std::string(strtok(strdup(newLine.c_str())," ")); //process header line
+                    c = strtok(NULL,""); //read comment
+                    
+                    seqHeader = h;
+                    
+                    if (c != NULL) {
+                        
+                        seqComment = std::string(c);
+                        
+                    }
+                    
+                    std::string* inSequence = new std::string;
+                    getline(*stream, *inSequence);
+                    
+                    getline(*stream, newLine);
+                    
+                    std::string* inSequenceQuality = new std::string;
+                    getline(*stream, *inSequenceQuality);
+                    
+                    Sequence* sequence = new Sequence {seqHeader, seqComment, inSequence, inSequenceQuality};
+                    
+                    if (sequence != NULL) {
+                        
+                        sequence->seqPos = seqPos; // remember the order
+                    
+                        inSequences.appendSequence(sequence);
+                        
+                        seqPos++;
+                        
+                    }
+                    
+                }
+                
+                break;
+                
+            }
+            default: {
+                
+                readGFA(inSequences, userInput, stream);
+                
+            }
+            
+        }
+        
+        lg.verbose("End of file");
+            
+    }else{
+
+        fprintf(stderr, "Stream not successful: %s", userInput.iSeqFileArg.c_str());
+        exit(1);
+
+    }
 
     jobWait(threadPool);
     

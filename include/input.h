@@ -18,11 +18,11 @@ class Input {
         
 public:
     
-    void load(UserInputKreeq userInput);
+    void loadInput(UserInputKreeq userInput);
+    
+    void loadSequences(InSequences& inSequences);
     
     void read(bool mode, InSequences& inSequences);
-    
-    void read(InSequences& inSequences);
     
 };
 

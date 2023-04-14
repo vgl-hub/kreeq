@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
     
     Input in;
     
-    in.load(userInput); // load user input
+    in.loadInput(userInput); // load user input
     
     lg.verbose("Loaded user input");
     
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
     
     lg.verbose("Loading input sequences");
     InSequences inSequences; // initialize sequence collection object
-    in.read(inSequences); // read input genome
+    in.loadSequences(inSequences); // read input genome
     lg.verbose("Sequences loaded");
     
     in.read(mode, inSequences); // read input reads

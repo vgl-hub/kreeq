@@ -136,7 +136,7 @@ void DBG::finalize() {
     lg.verbose("Navigating with " + std::to_string(mapCount) + " maps");
     
     for(uint16_t m = 0; m<mapCount; ++m)
-        countBuffs(m);
+        threadPool.queueJob([=]{ return countBuffs(m); });
     
     jobWait(threadPool);
     

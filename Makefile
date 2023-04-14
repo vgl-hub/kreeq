@@ -5,6 +5,7 @@ WARNINGS = -Wall -Wextra
 CXXFLAGS = -g -std=gnu++14 -O3 $(INCLUDE_DIR) $(WARNINGS) $(CFLAGS)
 
 TARGET = kreeq
+TEST_TARGET = validate
 BUILD = build/bin
 SOURCE = src
 INCLUDE = include
@@ -16,7 +17,7 @@ LDFLAGS := -pthread
 #gfalibs
 GFALIBS_DIR := $(CURDIR)/gfalibs
 
-SOURCES := main input kreeq
+SOURCES := main input kreeq validate
 OBJECTS := $(addprefix $(BINDIR)/, $(SOURCES))
 
 head: $(OBJECTS) gfalibs | $(BUILD)
@@ -25,6 +26,9 @@ head: $(OBJECTS) gfalibs | $(BUILD)
 debug: CXXFLAGS += -DDEBUG
 debug: CCFLAGS += -DDEBUG
 debug: head
+
+validate: | $(BUILD)
+	$(CXX) $(CXXFLAGS) -o $(BUILD)/$(TARGET)-$(TEST_TARGET) $(SOURCE)/$(TEST_TARGET).cpp $(LIBS)
 
 all: head
 

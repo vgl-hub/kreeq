@@ -1,9 +1,0 @@
-H	VN:Z:1.2
-S	sequence1.1	GATGCATCTAG
-S	sequence4.1	AGATGCACTGG
-S	sequence3.1	GTGCATCATAA
-S	sequence2.1	TATCATCTATG
-P	sequence1	sequence1.1+	*	CM:Z:- 1 error (6:G>A)
-P	sequence2	sequence2.1+	*	CM:Z:- 1 error (6:G>A)
-P	sequence3	sequence3.1+	*	CM:Z:- 1 error (6:G>A)
-P	sequence4	sequence4.1+	*	CM:Z:- 1 error (6:G>A)

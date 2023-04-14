@@ -291,7 +291,7 @@ void DBG::validateSequences(InSequences& inSequences) {
     
     for (InSegment* segment : *segments) {
         
-        validateSegment(segment);
+        threadPool.queueJob([=]{ return validateSegment(segment); });
         
         std::unique_lock<std::mutex> lck(mtx);
         for (auto it = logs.begin(); it != logs.end(); it++) {
@@ -345,7 +345,7 @@ bool DBG::validateSegment(InSegment* segment) {
         
         if (map[i][key].cov == 0) {
             errorKmers.push_back(c);
-            threadLog.add(segment->getInSequence().substr(c, k) + " is an invalid kmer.");
+            //threadLog.add(segment->getInSequence().substr(c, k) + " is an invalid kmer.");
         }
     
     }

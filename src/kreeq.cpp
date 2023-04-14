@@ -291,7 +291,7 @@ void DBG::validateSequences(InSequences& inSequences) {
     
     for (InSegment* segment : *segments) {
         
-        threadPool.queueJob([=]{ return validateSegment(segment); });
+        validateSegment(segment);
         
         std::unique_lock<std::mutex> lck(mtx);
         for (auto it = logs.begin(); it != logs.end(); it++) {

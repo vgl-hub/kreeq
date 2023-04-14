@@ -17,7 +17,7 @@ LDFLAGS := -pthread
 #gfalibs
 GFALIBS_DIR := $(CURDIR)/gfalibs
 
-SOURCES := main input kreeq validate
+SOURCES := main input kreeq
 OBJECTS := $(addprefix $(BINDIR)/, $(SOURCES))
 
 head: $(OBJECTS) gfalibs | $(BUILD)
@@ -27,10 +27,7 @@ debug: CXXFLAGS += -DDEBUG
 debug: CCFLAGS += -DDEBUG
 debug: head
 
-validate: | $(BUILD)
-	$(CXX) $(CXXFLAGS) -o $(BUILD)/$(TARGET)-$(TEST_TARGET) $(SOURCE)/$(TEST_TARGET).cpp $(LIBS)
-
-all: head
+all: head validate
 
 $(OBJS): %: $(BINDIR)/%
 	@
@@ -40,6 +37,9 @@ $(BINDIR)%: $(SOURCE)/%.cpp $(INCLUDE)/%.h $(GFALIBS_DIR)/include/*.h Makefile |
 .PHONY: gfalibs
 gfalibs:
 	$(MAKE) -j -C $(GFALIBS_DIR) CXXFLAGS="$(CXXFLAGS)"
+
+validate: | $(BUILD)
+	$(CXX) $(CXXFLAGS) -o $(BUILD)/$(TARGET)-$(TEST_TARGET) $(SOURCE)/$(TEST_TARGET).cpp $(LIBS)
 	
 $(BUILD):
 	-mkdir -p $@

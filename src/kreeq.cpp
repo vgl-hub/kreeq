@@ -343,7 +343,7 @@ bool DBG::validateSegment(InSegment* segment) {
         key = hash(str+c);
         i = key / moduloMap;
         
-        if (map[i][key].cov == 0) {
+        if (map[i].find(key) == map[i].end()) {
             errorKmers.push_back(c);
             //threadLog.add(segment->getInSequence().substr(c, k) + " is an invalid kmer.");
         }

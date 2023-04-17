@@ -193,32 +193,8 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
     
-    for(Buf<DBGkmer>* buf : buffers) {
-            
-        Buf<DBGkmer> &thisBuf = buf[m];
-        
-        if (thisBuf.seq != NULL) {
-            
-            phmap::flat_hash_map<uint64_t, DBGkmer> &thisMap = map[m];
-            uint64_t len = thisBuf.pos;
-            
-            for (uint64_t c = 0; c<len; ++c) {
-                
-                DBGkmer &dbgkmerBuf = thisBuf.seq[c];
-                DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
-                
-                //dbgkmer. dbgkmerBuf // update connection weights
-                
-                ++dbgkmerMap.cov; // increase kmer coverage
-                
-            }
-            
-            delete[] thisBuf.seq;
-            thisBuf.seq = NULL;
-            
-        }
-        
-    }
+    for(Buf<DBGkmer>* buf : buffers)
+        countBuff(&buf[m], m);
     
     return true;
 

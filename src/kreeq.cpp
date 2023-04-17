@@ -216,8 +216,11 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
             DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
             
             for (uint64_t w = 0; w<4; ++w) { // update weights
-                dbgkmerMap.fw[w] += dbgkmerBuf.fw[w];
-                dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
+                
+                if (255 - dbgkmerMap.fw[w] >= dbgkmerBuf.fw[w])
+                    dbgkmerMap.fw[w] += dbgkmerBuf.fw[w];
+                if (255 - dbgkmerMap.bw[w] >= dbgkmerBuf.bw[w])
+                    dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
             }
             
             ++dbgkmerMap.cov; // increase kmer coverage

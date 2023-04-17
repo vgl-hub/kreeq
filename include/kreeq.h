@@ -4,8 +4,7 @@
 struct DBGkmer {
     
     uint64_t hash = 0;
-    bool fw[4] = {false}, bw[4] = {false};
-    unsigned int cov = 0;
+    uint8_t cov = 0, fw[4] = {0}, bw[4] = {0};
     
 };
 
@@ -19,7 +18,7 @@ public:
     
     std::vector<Log> logs;
     
-    void hashSequences(std::string* readBatch);
+    void hashSequences(std::string *readBatch);
     
     void finalize();
     
@@ -29,15 +28,15 @@ public:
     
     void validateSequences(InSequences &inSequences);
     
-    bool validateSegment(InSegment* segment);
+    bool validateSegment(InSegment *segment);
     
     bool countBuffs(uint16_t m);
     
-    bool countBuff(Buf<DBGkmer>* thisBuf, uint16_t m);
+    bool countBuff(Buf<DBGkmer> *thisBuf, uint16_t m);
     
     void consolidate();
     
-    bool traverseInReads(std::string* readBatch);
+    bool traverseInReads(std::string *readBatch);
     
 };
 

@@ -101,9 +101,9 @@ void DBG::hashSequences(std::string* readBatch) {
                 dbgkmer = &b->seq[b->pos++];
                 
                 if (isFwPtr)
-                    dbgkmer->fw[*(str+c+k)] = true;
+                    dbgkmer->fw[*(str+c+k)] = 1;
                 else
-                    dbgkmer->bw[*(str+c+k)] = true;
+                    dbgkmer->bw[*(str+c+k)] = 1;
                 
                 dbgkmer->hash = key;
                 
@@ -165,7 +165,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
         
         for(uint16_t m = 0; m<mapCount; ++m) { // for each map
             
-            Buf<DBGkmer>* thisBuf = &buffers[i][m];
+            Buf<DBGkmer> *thisBuf = &buffers[i][m];
             
             if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
                 
@@ -193,30 +193,28 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
     
-    Buf<DBGkmer>* thisBuf;
-    
-    phmap::flat_hash_map<uint64_t, DBGkmer>* thisMap;
-    
     for(Buf<DBGkmer>* buf : buffers) {
             
-        thisBuf = &buf[m];
+        Buf<DBGkmer> &thisBuf = buf[m];
         
-        if (thisBuf->seq != NULL) {
+        if (thisBuf.seq != NULL) {
             
-            thisMap = &map[m];
-            uint64_t len = thisBuf->pos;
-            
-            DBGkmer* dbgkmer;
+            phmap::flat_hash_map<uint64_t, DBGkmer> &thisMap = map[m];
+            uint64_t len = thisBuf.pos;
             
             for (uint64_t c = 0; c<len; ++c) {
                 
-                dbgkmer = &(*thisMap)[thisBuf->seq[c].hash];
-                ++dbgkmer->cov;
+                DBGkmer &dbgkmerBuf = thisBuf.seq[c];
+                DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
+                
+                //dbgkmer. dbgkmerBuf // update connection weights
+                
+                ++dbgkmerMap.cov; // increase kmer coverage
                 
             }
             
-            delete[] thisBuf->seq;
-            thisBuf->seq = NULL;
+            delete[] thisBuf.seq;
+            thisBuf.seq = NULL;
             
         }
         
@@ -226,25 +224,27 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
 
 }
 
-bool DBG::countBuff(Buf<DBGkmer>* thisBuf, uint16_t m) { // counts a single buffer
+bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
-    if (thisBuf->seq != NULL) { // sanity check that this buffer was not already processed
+    Buf<DBGkmer> &thisBuf = *buf;
+    
+    if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
         
-        phmap::flat_hash_map<uint64_t, DBGkmer>* thisMap = &map[m]; // the map associated to this buffer
+        phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = map[m]; // the map associated to this buffer
         
-        uint64_t len = thisBuf->pos; // how many positions in the buffer have data
-        
-        DBGkmer* dbgkmer;
+        uint64_t len = thisBuf.pos; // how many positions in the buffer have data
         
         for (uint64_t c = 0; c<len; ++c) {
             
-            dbgkmer = &(*thisMap)[thisBuf->seq[c].hash];
-            ++dbgkmer->cov;
+            DBGkmer &dbgkmerBuf = thisBuf.seq[c];
+            DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
+            
+            ++dbgkmerMap.cov; // increase kmer coverage
             
         }
         
-        delete[] thisBuf->seq; // delete the buffer
-        thisBuf->seq = NULL; // set its sequence to the null pointer in case its checked again
+        delete[] thisBuf.seq; // delete the buffer
+        thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
         
     }
     

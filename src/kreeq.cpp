@@ -5,6 +5,7 @@
 #include <vector>
 #include <math.h>
 #include <functional>
+#include <list>
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"
@@ -22,9 +23,9 @@
 #include "kmer.h"
 #include "kreeq.h"
 
-double kmerQV(uint64_t errorKmers, uint64_t totalKmers, uint8_t k){ // compute QV from error kmers
+double kmerQV(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // estimate QV from missing kmers
     
-    return -10*log10(1 - pow(1 - (double) errorKmers/totalKmers, (double) 1/k));
+    return -10*log10(1 - pow(1 - (double) missingKmers/totalKmers, (double) 1/k));
     
 }
 
@@ -271,11 +272,17 @@ bool DBG::histogram(uint16_t m) {
 
 void DBG::validateSequences(InSequences& inSequences) {
     
+    lg.verbose("Validating sequence");
+    
     std::vector<InSegment*>* segments = inSequences.getInSegments();
     
     for (InSegment* segment : *segments) {
         
-        threadPool.queueJob([=]{ return validateSegment(segment); });
+        //threadPool.queueJob([=]{ return
+        
+        validateSegment(segment);
+            
+        //});
         
         std::unique_lock<std::mutex> lck(mtx);
         for (auto it = logs.begin(); it != logs.end(); it++) {
@@ -297,9 +304,9 @@ void DBG::validateSequences(InSequences& inSequences) {
     }
     
     std::cout<<"Presence QV (k="<<std::to_string(k)<<")\n"
-             <<totErrorKmers<<"\t"
+             <<totMissingKmers<<"\t"
              <<totKcount<<"\t"
-             <<kmerQV(totErrorKmers, totKcount, k)
+             <<kmerQV(totMissingKmers, totKcount, k)
              <<std::endl;
     
 }
@@ -308,7 +315,7 @@ bool DBG::validateSegment(InSegment* segment) {
     
     Log threadLog;
     
-    std::vector<uint64_t> errorKmers;
+    std::vector<uint64_t> missingKmers;
     int64_t len = segment->getSegmentLen(), kcount = len-k+1;
     
     if (kcount<1)
@@ -322,26 +329,54 @@ bool DBG::validateSegment(InSegment* segment) {
     
     uint64_t key, i;
     
+    // kreeq QV
+    double presenceProbs[] = {0.000001, 0.01, 0.1};
+    double kmerProb = presenceProbs[0];
+    std::list<double> kmerProbs, weightsProbs;
+    std::vector<double> totProbs;
+    
+    std::cout<<segment->getSeqHeader()<<std::endl;
+    
     for (int64_t c = 0; c<kcount; ++c){
         
         key = hash(str+c);
         i = key / moduloMap;
         
-        if (map[i].find(key) == map[i].end()) {
-            errorKmers.push_back(c);
-            //threadLog.add(segment->getInSequence().substr(c, k) + " is an invalid kmer.");
-        }
+        auto it = map[i].find(key);
+        
+        if (it == map[i].end()) // merqury QV
+            missingKmers.push_back(c);
+        
+        // kreeq QV
+        double totProb = 0;
+        DBGkmer dbgkmer = it->second;
+        kmerProb = dbgkmer.cov < 3 ? presenceProbs[dbgkmer.cov] : 1;
+        std::cout<<"kcov: "<<std::to_string(dbgkmer.cov)<<" "<<std::setprecision(15)<<"prob: "<<kmerProb<<"\t";
+        
+        kmerProbs.push_back(kmerProb);
+        if (c >= k)
+            kmerProbs.pop_front();
+        
+        for (double n : kmerProbs)
+            totProb += n;
+            
+        for (double n : weightsProbs)
+            totProb *= n;
+        
+        totProbs.push_back(totProb/kmerProbs.size());
+        
+        std::cout<<"Final probability: "<<std::setprecision(15)<<std::to_string(totProb/kmerProbs.size())<<std::endl;
     
     }
     
     threadLog.add("Processed segment: " + segment->getSeqHeader());
-    threadLog.add("Found " + std::to_string(errorKmers.size()) + " missing kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(errorKmers.size(), kcount, k)) + ")");
+    threadLog.add("Found " + std::to_string(missingKmers.size()) + " missing kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(missingKmers.size(), kcount, k)) + ")");
     
     delete[] str;
     
     std::unique_lock<std::mutex> lck(mtx);
     
-    totErrorKmers += errorKmers.size();
+    totMissingKmers += missingKmers.size();
     totKcount += kcount;
     
     logs.push_back(threadLog);

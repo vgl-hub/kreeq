@@ -10,7 +10,7 @@ struct DBGkmer {
 
 class DBG : public Kmap<UserInputKreeq, DBGkmer, DBGkmer> {
     
-    uint64_t totErrorKmers = 0, totKcount = 0;
+    uint64_t totMissingKmers = 0, totKcount = 0;
 
 public:
     

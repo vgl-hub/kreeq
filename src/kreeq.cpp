@@ -6,6 +6,7 @@
 #include <math.h>
 #include <functional>
 #include <list>
+#include <iomanip>
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"

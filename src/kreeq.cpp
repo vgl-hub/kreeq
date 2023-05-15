@@ -385,3 +385,81 @@ bool DBG::validateSegment(InSegment* segment) {
     return true;
     
 }
+
+bool DBG::dumpMap(std::string prefix, uint16_t m) {
+    
+    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    
+    phmap::BinaryOutputArchive ar_out(prefix.c_str());
+    map[m].phmap_dump(ar_out);
+    
+    freeContainer(map[m]);
+    
+    return true;
+    
+}
+
+void DBG::load(UserInputKreeq& userInput) { // concurrent loading of existing hashmaps
+    
+    for(uint16_t m = 0; m<mapCount; ++m)
+        threadPool.queueJob([=]{ return loadMap(userInput.iDBGFileArg, m); });
+    
+    jobWait(threadPool);
+    
+}
+
+bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific maps
+    
+    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    
+    phmap::BinaryInputArchive ar_in(prefix.c_str());
+    map[m].phmap_load(ar_in);
+    
+    histogram(m);
+    
+    return true;
+
+}
+
+void DBG::report(UserInputKreeq& userInput) { // generates the output from the program
+    
+    const static phmap::flat_hash_map<std::string,int> string_to_case{ // different outputs available
+        {"kreeq",1}
+    };
+    
+    std::string ext = "stdout";
+    
+    if (userInput.outFile != "")
+        ext = getFileExt("." + userInput.outFile);
+    
+    lg.verbose("Writing ouput: " + ext);
+    
+    std::unique_ptr<std::ostream> ostream; // smart pointer to handle any kind of output stream
+    
+    switch (string_to_case.count(ext) ? string_to_case.at(ext) : 0) {
+        
+        default:
+        case 1: { // .kreeq
+            
+            make_dir(userInput.outFile.c_str());
+            
+            std::ofstream ofs(userInput.outFile + "/.index");
+            
+            ostream = std::make_unique<std::ostream>(ofs.rdbuf());
+            
+            *ostream<<+k<<"\n"<<mapCount<<std::endl;
+            
+            ofs.close();
+            
+            for(uint16_t m = 0; m<mapCount; ++m)
+                threadPool.queueJob([=]{ return dumpMap(userInput.outFile, m); }); // writes map to file concurrently
+            
+            jobWait(threadPool);
+            
+            break;
+            
+        }
+            
+    }
+    
+}

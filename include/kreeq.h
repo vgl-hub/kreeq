@@ -38,6 +38,14 @@ public:
     
     bool traverseInReads(std::string *readBatch);
     
+    bool dumpMap(std::string prefix, uint16_t m);
+    
+    bool loadMap(std::string prefix, uint16_t m);
+    
+    void load(UserInputKreeq& userInput);
+    
+    void report(UserInputKreeq& userInput);
+    
 };
 
 #endif /* KREEQ_H */

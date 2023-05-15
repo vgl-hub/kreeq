@@ -44,18 +44,36 @@ void Input::read(bool mode, InSequences& inSequences) {
         
         DBG knav(userInput.kmerLen); // navigational kmerdb
         
-        lg.verbose("Loading input reads");
-        
-        unsigned int numFiles = userInput.iReadFileArg.size(); // number of input files
-        
-        for (unsigned int i = 0; i < numFiles; i++) // load each input file in the kmerdb
-            loadKmers(userInput, &knav, 'r', &i);
-        
-        lg.verbose("Reads loaded");
+        if (userInput.iReadFileArg.size() > 0) {
+            
+            lg.verbose("Loading input reads");
+            
+            unsigned int numFiles = userInput.iReadFileArg.size(); // number of input files
+            
+            for (unsigned int i = 0; i < numFiles; i++) // load each input file in the kmerdb
+                loadKmers(userInput, &knav, 'r', &i);
+            
+            lg.verbose("Reads loaded");
+            
+        }else{
+            
+            std::ifstream file;
+            
+            file.open(userInput.iSeqFileArg + "/.index"); // reads the kmer length from the index file
+            std::string line;
+            
+            getline(file, line);
+            file.close();
+            
+            knav.load(userInput); // loads kmers into the new kreeqdb
+            
+        }
         
         knav.finalize(); // populate the hash table
         
         knav.validateSequences(inSequences); // validate the input sequence
+        
+        knav.report(userInput); // output
         
     }else{
         

@@ -34,7 +34,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
 
     hashSequences(readBatch);
     
-    freed = readBatch->size() * sizeof(char);
+    freed += readBatch->size() * sizeof(char);
     delete readBatch;
     
     return true;
@@ -96,6 +96,7 @@ void DBG::hashSequences(std::string* readBatch) {
                     memcpy(bufNew, b->seq, b->size*sizeof(DBGkmer));
                     
                     b->size = newSize;
+                    freed += b->size*sizeof(DBGkmer);
                     delete[] b->seq;
                     b->seq = bufNew;
                     
@@ -122,6 +123,7 @@ void DBG::hashSequences(std::string* readBatch) {
         
     }
     
+    freed += len * sizeof(uint8_t);
     delete[] str;
         
 //        threadLog.add("Processed sequence: " + sequence->header);
@@ -230,6 +232,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
             
         }
         
+        freed += thisBuf.size * sizeof(DBGkmer);
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
         
@@ -374,6 +377,7 @@ bool DBG::validateSegment(InSegment* segment) {
     threadLog.add("Processed segment: " + segment->getSeqHeader());
     threadLog.add("Found " + std::to_string(missingKmers.size()) + " missing kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(missingKmers.size(), kcount, k)) + ")");
     
+    freed += len * sizeof(uint8_t);
     delete[] str;
     
     std::unique_lock<std::mutex> lck(mtx);

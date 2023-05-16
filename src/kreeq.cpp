@@ -46,6 +46,7 @@ void DBG::hashSequences(std::string* readBatch) {
     Log threadLog;
     
     Buf<DBGkmer>* buf = new Buf<DBGkmer>[mapCount];
+    alloc += mapCount * sizeof(Buf<DBGkmer>);
         
     uint64_t len = readBatch->size();
     
@@ -55,6 +56,7 @@ void DBG::hashSequences(std::string* readBatch) {
     unsigned char* first = (unsigned char*) readBatch->c_str();
     
     uint8_t* str = new uint8_t[len];
+    alloc += len * sizeof(uint8_t);
     uint64_t e = 0;
     
     for (uint64_t p = 0; p<len; ++p) {
@@ -92,6 +94,7 @@ void DBG::hashSequences(std::string* readBatch) {
                     
                     newSize = b->size * 2;
                     bufNew = new DBGkmer[newSize];
+                    alloc += newSize * sizeof(DBGkmer);
                     
                     memcpy(bufNew, b->seq, b->size*sizeof(DBGkmer));
                     
@@ -328,6 +331,7 @@ bool DBG::validateSegment(InSegment* segment) {
     
     unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
     uint8_t* str = new uint8_t[len];
+    alloc += len * sizeof(uint8_t);
     
     for (int64_t i = 0; i<len; ++i)
         str[i] = ctoi[*(first+i)];

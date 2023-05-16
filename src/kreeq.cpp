@@ -187,7 +187,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
                 ++counter; // keeps track of the buffers that were processed so far
                 
                 if (counter == mapCount) {
-                    lg.verbose("Jobs waiting/running: " + std::to_string(threadPool.queueSize()) + "/" + std::to_string(threadPool.running()) + " memory in use/total: " + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+                    lg.verbose("Jobs waiting/running: " + std::to_string(threadPool.queueSize()) + "/" + std::to_string(threadPool.running()) + " memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
                     buffers.erase(buffers.begin() + i);
                 }
                 

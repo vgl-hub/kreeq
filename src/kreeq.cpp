@@ -34,6 +34,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
 
     hashSequences(readBatch);
     
+    freed = readBatch->size() * sizeof(char);
     delete readBatch;
     
     return true;

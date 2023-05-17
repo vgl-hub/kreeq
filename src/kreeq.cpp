@@ -184,38 +184,28 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
                 
                 ++counter; // keeps track of the buffers that were processed so far
                 
-                if (counter == mapCount) {
-                    lg.verbose("Jobs waiting/running: " + std::to_string(threadPool.queueSize()) + "/" + std::to_string(threadPool.running()) + " memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+                if (counter == mapCount)
                     buffers.erase(buffers.begin() + i);
-                    
-                    updateDBG();
-                    
-                }
                 
             }
 
         }
         
     }
+    
+    if (get_mem_inuse(3) > 50)
+        updateDBG();
 
 }
 
 void DBG::updateDBG() {
     
-    std::cout<<"we are here0"<<std::endl;
-    
     jobWait(threadPool);
-    
-    std::cout<<"we are here1"<<std::endl;
     
     for(uint16_t m = 0; m<mapCount; ++m)
         threadPool.queueJob([=]{ return updateMap(".", m); }); // updates dumped db concurrently
     
-    std::cout<<"we are here2"<<std::endl;
-    
     jobWait(threadPool);
-    
-    std::cout<<"we are here3"<<std::endl;
     
 }
 

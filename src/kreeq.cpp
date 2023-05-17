@@ -7,6 +7,7 @@
 #include <functional>
 #include <list>
 #include <iomanip>
+#include <stdio.h>
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"
@@ -139,12 +140,15 @@ void DBG::hashSequences(std::string* readBatch) {
 
 void DBG::finalize() {
     
-    lg.verbose("Navigating with " + std::to_string(mapCount) + " maps");
+    updateDBG();
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return countBuffs(m); });
+    for(uint16_t m = 0; m<mapCount; ++m) // reload
+        threadPool.queueJob([=]{ return loadMap(".", m); });
     
     jobWait(threadPool);
+    
+    for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
+        remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
     
     lg.verbose("Computing summary statistics");
     
@@ -193,7 +197,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
         
     }
     
-    if (get_mem_inuse(3) > 50)
+    if (get_mem_inuse(3) > get_mem_total(3) * 0.8)
         updateDBG();
 
 }

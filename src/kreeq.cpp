@@ -203,9 +203,15 @@ void DBG::updateDBG() {
     jobWait(threadPool);
     
     for(uint16_t m = 0; m<mapCount; ++m)
+        threadPool.queueJob([=]{ return countBuffs(m); });
+    
+    jobWait(threadPool);
+    
+    for(uint16_t m = 0; m<mapCount; ++m)
         threadPool.queueJob([=]{ return updateMap(".", m); }); // updates dumped db concurrently
     
     jobWait(threadPool);
+    
     
 }
 

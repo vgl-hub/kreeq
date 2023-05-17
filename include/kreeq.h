@@ -46,6 +46,12 @@ public:
     
     void report(UserInputKreeq& userInput);
     
+    void updateDBG();
+    
+    bool updateMap(std::string prefix, uint16_t m);
+    
+    bool unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2);
+    
 };
 
 #endif /* KREEQ_H */

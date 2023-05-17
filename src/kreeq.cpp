@@ -34,9 +34,6 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
 
     hashSequences(readBatch);
     
-    freed += readBatch->size() * sizeof(char);
-    delete readBatch;
-    
     return true;
     
 }
@@ -46,7 +43,6 @@ void DBG::hashSequences(std::string* readBatch) {
     Log threadLog;
     
     Buf<DBGkmer>* buf = new Buf<DBGkmer>[mapCount];
-    alloc += mapCount * sizeof(Buf<DBGkmer>);
         
     uint64_t len = readBatch->size();
     
@@ -56,7 +52,6 @@ void DBG::hashSequences(std::string* readBatch) {
     unsigned char* first = (unsigned char*) readBatch->c_str();
     
     uint8_t* str = new uint8_t[len];
-    alloc += len * sizeof(uint8_t);
     uint64_t e = 0;
     
     for (uint64_t p = 0; p<len; ++p) {
@@ -92,14 +87,12 @@ void DBG::hashSequences(std::string* readBatch) {
                 
                 if (b->pos == b->size) {
                     
-                    newSize = b->size * 2;
+                    newSize = b->size*2;
                     bufNew = new DBGkmer[newSize];
-                    alloc += newSize * sizeof(DBGkmer);
                     
                     memcpy(bufNew, b->seq, b->size*sizeof(DBGkmer));
                     
                     b->size = newSize;
-                    freed += b->size*sizeof(DBGkmer);
                     delete[] b->seq;
                     b->seq = bufNew;
                     
@@ -125,13 +118,18 @@ void DBG::hashSequences(std::string* readBatch) {
         }
         
     }
-    
-    freed += len * sizeof(uint8_t);
+
     delete[] str;
         
-//        threadLog.add("Processed sequence: " + sequence->header);
+    // threadLog.add("Processed sequence: " + sequence->header);
     
     std::unique_lock<std::mutex> lck(mtx);
+    
+    // track memory usage
+    for(uint64_t i = 0 ; i < mapCount ; ++i)
+        alloc += buf[i].size * sizeof(DBGkmer);
+    
+    delete readBatch;
     
     buffers.push_back(buf);
     
@@ -189,6 +187,9 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
                 if (counter == mapCount) {
                     lg.verbose("Jobs waiting/running: " + std::to_string(threadPool.queueSize()) + "/" + std::to_string(threadPool.running()) + " memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
                     buffers.erase(buffers.begin() + i);
+                    
+                    updateDBG();
+                    
                 }
                 
             }
@@ -198,6 +199,57 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
     }
 
 }
+
+void DBG::updateDBG() {
+    
+    for(uint16_t m = 0; m<mapCount; ++m)
+        threadPool.queueJob([=]{ return updateMap("/tmp", m); }); // writes map to file concurrently
+    
+}
+
+bool DBG::updateMap(std::string prefix, uint16_t m) {
+    
+    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    
+    phmap::flat_hash_map<uint64_t, DBGkmer> dumpMap;
+    phmap::BinaryInputArchive ar_in(prefix.c_str());
+    dumpMap.phmap_load(ar_in);
+    
+    unionSum(map[m], dumpMap); // merges the current map and the existing map
+    
+    phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
+    dumpMap.phmap_dump(ar_out);
+    
+    freeContainer(map[m]);
+    freeContainer(dumpMap);
+    
+    return true;
+    
+}
+
+bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2) {
+    
+    for (auto pair : map1) { // for each element in map2, find it in map1 and increase its value
+        
+        DBGkmer &dbgkmerMap = map2[pair.first]; // insert or find this kmer in the hash table
+        
+        for (uint64_t w = 0; w<4; ++w) { // update weights
+            
+            if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                dbgkmerMap.fw[w] += pair.second.fw[w];
+            if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                dbgkmerMap.bw[w] += pair.second.bw[w];
+            
+        }
+        
+        ++dbgkmerMap.cov; // increase kmer coverage
+        
+    }
+    
+    return true;
+    
+}
+
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
     
@@ -211,6 +263,8 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
 bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
     Buf<DBGkmer> &thisBuf = *buf;
+    
+    uint64_t releasedMem = 0;
     
     if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
         
@@ -235,13 +289,15 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
             
         }
         
-        freed += thisBuf.size * sizeof(DBGkmer);
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
+        releasedMem = thisBuf.size * sizeof(DBGkmer);
         
     }
     
     std::unique_lock<std::mutex> lck(mtx); // release the map
+
+    freed += releasedMem;
     mapsInUse[m] = false;
     
     return true;
@@ -331,7 +387,6 @@ bool DBG::validateSegment(InSegment* segment) {
     
     unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
     uint8_t* str = new uint8_t[len];
-    alloc += len * sizeof(uint8_t);
     
     for (int64_t i = 0; i<len; ++i)
         str[i] = ctoi[*(first+i)];
@@ -360,7 +415,7 @@ bool DBG::validateSegment(InSegment* segment) {
         double totProb = 0;
         DBGkmer dbgkmer = it->second;
         kmerProb = dbgkmer.cov < 3 ? presenceProbs[dbgkmer.cov] : 1;
-        std::cout<<"kcov: "<<std::to_string(dbgkmer.cov)<<" "<<std::setprecision(15)<<"prob: "<<kmerProb<<"\t";
+        //std::cout<<"kcov: "<<std::to_string(dbgkmer.cov)<<" "<<std::setprecision(15)<<"prob: "<<kmerProb<<"\t";
         
         kmerProbs.push_back(kmerProb);
         if (c >= k)
@@ -374,18 +429,17 @@ bool DBG::validateSegment(InSegment* segment) {
         
         totProbs.push_back(totProb/kmerProbs.size());
         
-        std::cout<<"Final probability: "<<std::setprecision(15)<<std::to_string(totProb/kmerProbs.size())<<std::endl;
+        //std::cout<<"Final probability: "<<std::setprecision(15)<<std::to_string(totProb/kmerProbs.size())<<std::endl;
     
     }
     
     threadLog.add("Processed segment: " + segment->getSeqHeader());
     threadLog.add("Found " + std::to_string(missingKmers.size()) + " missing kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(missingKmers.size(), kcount, k)) + ")");
     
-    freed += len * sizeof(uint8_t);
     delete[] str;
     
     std::unique_lock<std::mutex> lck(mtx);
-    
+
     totMissingKmers += missingKmers.size();
     totKcount += kcount;
     

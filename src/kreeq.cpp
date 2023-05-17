@@ -202,8 +202,12 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
 void DBG::updateDBG() {
     
+    jobWait(threadPool);
+    
     for(uint16_t m = 0; m<mapCount; ++m)
-        updateMap(".", m); // writes map to file concurrently
+        threadPool.queueJob([=]{ return updateMap(".", m); }); // updates dumped db concurrently
+    
+    jobWait(threadPool);
     
 }
 

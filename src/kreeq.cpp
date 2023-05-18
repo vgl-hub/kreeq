@@ -180,7 +180,8 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
             if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
                 
                 mapsInUse[m] = true;
-                threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
+                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
+                dependencies.push_back(jid);
                 
             }
             
@@ -204,17 +205,21 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
 void DBG::updateDBG() {
     
-    jobWait(threadPool);
+    jobWait(threadPool, dependencies);
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return countBuffs(m); });
+    for(uint16_t m = 0; m<mapCount; ++m) {
+        uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });
+        dependencies.push_back(jid);
+    }
     
-    jobWait(threadPool);
+    jobWait(threadPool, dependencies);
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return updateMap(".", m); }); // updates dumped db concurrently
+    for(uint16_t m = 0; m<mapCount; ++m) {
+        uint32_t jid = threadPool.queueJob([=]{ return updateMap(".", m); });
+        dependencies.push_back(jid);
+    }
     
-    jobWait(threadPool);
+    jobWait(threadPool, dependencies);
     
     
 }
@@ -411,7 +416,7 @@ bool DBG::validateSegment(InSegment* segment) {
     std::list<double> kmerProbs, weightsProbs;
     std::vector<double> totProbs;
     
-    std::cout<<segment->getSeqHeader()<<std::endl;
+    //std::cout<<segment->getSeqHeader()<<std::endl;
     
     for (int64_t c = 0; c<kcount; ++c){
         

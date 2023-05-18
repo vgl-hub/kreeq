@@ -201,6 +201,8 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
         
     }
     
+    threadPool.status();
+    
     if (get_mem_inuse(3) > get_mem_total(3) * 0.8)
         updateDBG();
 

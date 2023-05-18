@@ -210,21 +210,33 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
 void DBG::updateDBG() {
     
+    std::cout<<"we are here1"<<std::endl;
+    
     jobWait(threadPool, dependencies);
+    
+    std::cout<<"we are here2"<<std::endl;
     
     for(uint16_t m = 0; m<mapCount; ++m) {
         uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });
         dependencies.push_back(jid);
     }
     
+    std::cout<<"we are here3"<<std::endl;
+    
     jobWait(threadPool, dependencies);
+    
+    std::cout<<"we are here4"<<std::endl;
     
     for(uint16_t m = 0; m<mapCount; ++m) {
         uint32_t jid = threadPool.queueJob([=]{ return updateMap(".", m); });
         dependencies.push_back(jid);
     }
     
+    std::cout<<"we are here5"<<std::endl;
+    
     jobWait(threadPool, dependencies);
+    
+    std::cout<<"we are here6"<<std::endl;
     
 }
 

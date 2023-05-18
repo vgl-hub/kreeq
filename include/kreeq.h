@@ -20,7 +20,7 @@ public:
     
     std::vector<Log> logs;
     
-    void hashSequences(std::string *readBatch);
+    bool hashSequences(std::string *readBatch);
     
     void finalize();
     

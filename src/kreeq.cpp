@@ -33,13 +33,14 @@ double kmerQV(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // estimat
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
 
-    hashSequences(readBatch);
+    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(readBatch); });
+    dependencies.push_back(jid);
     
     return true;
     
 }
 
-void DBG::hashSequences(std::string* readBatch) {
+bool DBG::hashSequences(std::string* readBatch) {
     
     Log threadLog;
     
@@ -48,7 +49,7 @@ void DBG::hashSequences(std::string* readBatch) {
     uint64_t len = readBatch->size();
     
     if (len<k)
-        return;
+        return true;
     
     unsigned char* first = (unsigned char*) readBatch->c_str();
     
@@ -135,6 +136,8 @@ void DBG::hashSequences(std::string* readBatch) {
     buffers.push_back(buf);
     
     logs.push_back(threadLog);
+    
+    return true;
     
 }
 

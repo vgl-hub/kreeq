@@ -221,7 +221,6 @@ void DBG::updateDBG() {
     
     jobWait(threadPool, dependencies);
     
-    
 }
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
@@ -359,11 +358,11 @@ void DBG::validateSequences(InSequences& inSequences) {
     
     for (InSegment* segment : *segments) {
         
-        //threadPool.queueJob([=]{ return
+        threadPool.queueJob([=]{ return
         
         validateSegment(segment);
             
-        //});
+        });
         
         std::unique_lock<std::mutex> lck(mtx);
         for (auto it = logs.begin(); it != logs.end(); it++) {

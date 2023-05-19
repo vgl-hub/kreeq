@@ -143,10 +143,16 @@ bool DBG::hashSequences(std::string* readBatch) {
 
 void DBG::finalize() {
     
+    lg.verbose("Finalizing DBG");
+    
     updateDBG();
+    
+    lg.verbose("done");
     
     for(uint16_t m = 0; m<mapCount; ++m) // reload
         threadPool.queueJob([=]{ return loadMap(".", m); });
+    
+    lg.verbose("Waiting");
     
     jobWait(threadPool);
     

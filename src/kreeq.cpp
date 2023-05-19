@@ -5,6 +5,9 @@
 #include <vector>
 #include <math.h>
 #include <functional>
+#include <list>
+#include <iomanip>
+#include <stdio.h>
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"
@@ -22,23 +25,22 @@
 #include "kmer.h"
 #include "kreeq.h"
 
-double kmerQV(uint64_t errorKmers, uint64_t totalKmers, uint8_t k){ // compute QV from error kmers
+double kmerQV(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // estimate QV from missing kmers
     
-    return -10*log10(1 - pow(1 - (double) errorKmers/totalKmers, (double) 1/k));
+    return -10*log10(1 - pow(1 - (double) missingKmers/totalKmers, (double) 1/k));
     
 }
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
 
-    hashSequences(readBatch);
-    
-    delete readBatch;
+    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(readBatch); });
+    dependencies.push_back(jid);
     
     return true;
     
 }
 
-void DBG::hashSequences(std::string* readBatch) {
+bool DBG::hashSequences(std::string* readBatch) {
     
     Log threadLog;
     
@@ -47,7 +49,7 @@ void DBG::hashSequences(std::string* readBatch) {
     uint64_t len = readBatch->size();
     
     if (len<k)
-        return;
+        return true;
     
     unsigned char* first = (unsigned char*) readBatch->c_str();
     
@@ -87,7 +89,7 @@ void DBG::hashSequences(std::string* readBatch) {
                 
                 if (b->pos == b->size) {
                     
-                    newSize = b->size * 2;
+                    newSize = b->size*2;
                     bufNew = new DBGkmer[newSize];
                     
                     memcpy(bufNew, b->seq, b->size*sizeof(DBGkmer));
@@ -118,27 +120,51 @@ void DBG::hashSequences(std::string* readBatch) {
         }
         
     }
-    
+
     delete[] str;
         
-//        threadLog.add("Processed sequence: " + sequence->header);
+    // threadLog.add("Processed sequence: " + sequence->header);
     
     std::unique_lock<std::mutex> lck(mtx);
+    
+    // track memory usage
+    for(uint64_t i = 0 ; i < mapCount ; ++i)
+        alloc += buf[i].size * sizeof(DBGkmer);
+    
+    delete readBatch;
     
     buffers.push_back(buf);
     
     logs.push_back(threadLog);
     
+    return true;
+    
 }
 
 void DBG::finalize() {
     
-    lg.verbose("Navigating with " + std::to_string(mapCount) + " maps");
+    lg.verbose("Finalizing DBG");
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return countBuffs(m); });
-    
-    jobWait(threadPool);
+    if (tmp) {
+        
+        updateDBG();
+        
+        for(uint16_t m = 0; m<mapCount; ++m) // reload
+            threadPool.queueJob([=]{ return loadMap(".", m); });
+        
+        jobWait(threadPool);
+        
+        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
+            remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
+        
+    }else{
+        
+        for(uint16_t m = 0; m<mapCount; ++m)
+            threadPool.queueJob([=]{ return countBuffs(m); });
+        
+        jobWait(threadPool);
+        
+    }
     
     lg.verbose("Computing summary statistics");
     
@@ -170,7 +196,8 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
             if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
                 
                 mapsInUse[m] = true;
-                threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
+                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
+                dependencies.push_back(jid);
                 
             }
             
@@ -178,18 +205,89 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
                 
                 ++counter; // keeps track of the buffers that were processed so far
                 
-                if (counter == mapCount) {
-                    lg.verbose("Jobs waiting/running: " + std::to_string(threadPool.queueSize()) + "/" + std::to_string(threadPool.running()) + " memory used/total: " + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+                if (counter == mapCount)
                     buffers.erase(buffers.begin() + i);
-                }
                 
             }
 
         }
         
     }
+    
+    threadPool.status();
+    
+    if (get_mem_inuse(3) > get_mem_total(3) * 0.8) {
+        
+        updateDBG();
+        tmp = true;
+        
+    }
 
 }
+
+void DBG::updateDBG() {
+    
+    jobWait(threadPool, dependencies);
+    
+    for(uint16_t m = 0; m<mapCount; ++m) {
+        uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });
+        dependencies.push_back(jid);
+    }
+    
+    jobWait(threadPool, dependencies);
+    
+    for(uint16_t m = 0; m<mapCount; ++m) {
+        uint32_t jid = threadPool.queueJob([=]{ return updateMap(".", m); });
+        dependencies.push_back(jid);
+    }
+    
+    jobWait(threadPool, dependencies);
+    
+}
+
+bool DBG::updateMap(std::string prefix, uint16_t m) {
+    
+    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    
+    phmap::flat_hash_map<uint64_t, DBGkmer> dumpMap;
+    phmap::BinaryInputArchive ar_in(prefix.c_str());
+    dumpMap.phmap_load(ar_in);
+    
+    unionSum(map[m], dumpMap); // merges the current map and the existing map
+    
+    phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
+    dumpMap.phmap_dump(ar_out);
+    
+    freeContainer(map[m]);
+    freeContainer(dumpMap);
+    
+    return true;
+    
+}
+
+bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2) {
+    
+    for (auto pair : map1) { // for each element in map2, find it in map1 and increase its value
+        
+        DBGkmer &dbgkmerMap = map2[pair.first]; // insert or find this kmer in the hash table
+        
+        for (uint64_t w = 0; w<4; ++w) { // update weights
+            
+            if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                dbgkmerMap.fw[w] += pair.second.fw[w];
+            if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                dbgkmerMap.bw[w] += pair.second.bw[w];
+            
+        }
+        
+        dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+        
+    }
+    
+    return true;
+    
+}
+
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
     
@@ -203,6 +301,8 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
 bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
     Buf<DBGkmer> &thisBuf = *buf;
+    
+    uint64_t releasedMem = 0;
     
     if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
         
@@ -229,10 +329,13 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
         
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
+        releasedMem = thisBuf.size * sizeof(DBGkmer);
         
     }
     
     std::unique_lock<std::mutex> lck(mtx); // release the map
+
+    freed += releasedMem;
     mapsInUse[m] = false;
     
     return true;
@@ -271,11 +374,17 @@ bool DBG::histogram(uint16_t m) {
 
 void DBG::validateSequences(InSequences& inSequences) {
     
+    lg.verbose("Validating sequence");
+    
     std::vector<InSegment*>* segments = inSequences.getInSegments();
     
     for (InSegment* segment : *segments) {
         
-        threadPool.queueJob([=]{ return validateSegment(segment); });
+        threadPool.queueJob([=]{ return
+        
+        validateSegment(segment);
+            
+        });
         
         std::unique_lock<std::mutex> lck(mtx);
         for (auto it = logs.begin(); it != logs.end(); it++) {
@@ -297,9 +406,9 @@ void DBG::validateSequences(InSequences& inSequences) {
     }
     
     std::cout<<"Presence QV (k="<<std::to_string(k)<<")\n"
-             <<totErrorKmers<<"\t"
+             <<totMissingKmers<<"\t"
              <<totKcount<<"\t"
-             <<kmerQV(totErrorKmers, totKcount, k)
+             <<kmerQV(totMissingKmers, totKcount, k)
              <<std::endl;
     
 }
@@ -308,7 +417,7 @@ bool DBG::validateSegment(InSegment* segment) {
     
     Log threadLog;
     
-    std::vector<uint64_t> errorKmers;
+    std::vector<uint64_t> missingKmers;
     int64_t len = segment->getSegmentLen(), kcount = len-k+1;
     
     if (kcount<1)
@@ -322,30 +431,134 @@ bool DBG::validateSegment(InSegment* segment) {
     
     uint64_t key, i;
     
+    // kreeq QV
+    double presenceProbs[] = {0.000001, 0.01, 0.1};
+    double kmerProb = presenceProbs[0];
+    std::list<double> kmerProbs, weightsProbs;
+    std::vector<double> totProbs;
+    
+    //std::cout<<segment->getSeqHeader()<<std::endl;
+    
     for (int64_t c = 0; c<kcount; ++c){
         
         key = hash(str+c);
         i = key / moduloMap;
         
-        if (map[i].find(key) == map[i].end()) {
-            errorKmers.push_back(c);
-            //threadLog.add(segment->getInSequence().substr(c, k) + " is an invalid kmer.");
-        }
+        auto it = map[i].find(key);
+        
+        if (it == map[i].end()) // merqury QV
+            missingKmers.push_back(c);
+        
+        // kreeq QV
+        double totProb = 0;
+        DBGkmer dbgkmer = it->second;
+        kmerProb = dbgkmer.cov < 3 ? presenceProbs[dbgkmer.cov] : 1;
+        //std::cout<<"kcov: "<<std::to_string(dbgkmer.cov)<<" "<<std::setprecision(15)<<"prob: "<<kmerProb<<"\t";
+        
+        kmerProbs.push_back(kmerProb);
+        if (c >= k)
+            kmerProbs.pop_front();
+        
+        for (double n : kmerProbs)
+            totProb += n;
+            
+        for (double n : weightsProbs)
+            totProb *= n;
+        
+        totProbs.push_back(totProb/kmerProbs.size());
+        
+        //std::cout<<"Final probability: "<<std::setprecision(15)<<std::to_string(totProb/kmerProbs.size())<<std::endl;
     
     }
     
     threadLog.add("Processed segment: " + segment->getSeqHeader());
-    threadLog.add("Found " + std::to_string(errorKmers.size()) + " missing kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(errorKmers.size(), kcount, k)) + ")");
+    threadLog.add("Found " + std::to_string(missingKmers.size()) + " missing kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(missingKmers.size(), kcount, k)) + ")");
     
     delete[] str;
     
     std::unique_lock<std::mutex> lck(mtx);
-    
-    totErrorKmers += errorKmers.size();
+
+    totMissingKmers += missingKmers.size();
     totKcount += kcount;
     
     logs.push_back(threadLog);
     
     return true;
+    
+}
+
+bool DBG::dumpMap(std::string prefix, uint16_t m) {
+    
+    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    
+    phmap::BinaryOutputArchive ar_out(prefix.c_str());
+    map[m].phmap_dump(ar_out);
+    
+    freeContainer(map[m]);
+    
+    return true;
+    
+}
+
+void DBG::load(UserInputKreeq& userInput) { // concurrent loading of existing hashmaps
+    
+    for(uint16_t m = 0; m<mapCount; ++m)
+        threadPool.queueJob([=]{ return loadMap(userInput.iDBGFileArg, m); });
+    
+    jobWait(threadPool);
+    
+}
+
+bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific maps
+    
+    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    
+    phmap::BinaryInputArchive ar_in(prefix.c_str());
+    map[m].phmap_load(ar_in);
+    
+    return true;
+
+}
+
+void DBG::report(UserInputKreeq& userInput) { // generates the output from the program
+    
+    const static phmap::flat_hash_map<std::string,int> string_to_case{ // different outputs available
+        {"kreeq",1}
+    };
+    
+    std::string ext = "stdout";
+    
+    if (userInput.outFile != "")
+        ext = getFileExt("." + userInput.outFile);
+    
+    lg.verbose("Writing ouput: " + ext);
+    
+    std::unique_ptr<std::ostream> ostream; // smart pointer to handle any kind of output stream
+    
+    switch (string_to_case.count(ext) ? string_to_case.at(ext) : 0) {
+        
+        default:
+        case 1: { // .kreeq
+            
+            make_dir(userInput.outFile.c_str());
+            
+            std::ofstream ofs(userInput.outFile + "/.index");
+            
+            ostream = std::make_unique<std::ostream>(ofs.rdbuf());
+            
+            *ostream<<+k<<"\n"<<mapCount<<std::endl;
+            
+            ofs.close();
+            
+            for(uint16_t m = 0; m<mapCount; ++m)
+                threadPool.queueJob([=]{ return dumpMap(userInput.outFile, m); }); // writes map to file concurrently
+            
+            jobWait(threadPool);
+            
+            break;
+            
+        }
+            
+    }
     
 }

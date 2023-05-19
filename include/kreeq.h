@@ -10,7 +10,9 @@ struct DBGkmer {
 
 class DBG : public Kmap<UserInputKreeq, DBGkmer, DBGkmer> {
     
-    uint64_t totErrorKmers = 0, totKcount = 0;
+    uint64_t totMissingKmers = 0, totKcount = 0;
+    std::vector<uint32_t> dependencies;
+    bool tmp = false;
 
 public:
     
@@ -18,7 +20,7 @@ public:
     
     std::vector<Log> logs;
     
-    void hashSequences(std::string *readBatch);
+    bool hashSequences(std::string *readBatch);
     
     void finalize();
     
@@ -37,6 +39,20 @@ public:
     void consolidate();
     
     bool traverseInReads(std::string *readBatch);
+    
+    bool dumpMap(std::string prefix, uint16_t m);
+    
+    bool loadMap(std::string prefix, uint16_t m);
+    
+    void load(UserInputKreeq& userInput);
+    
+    void report(UserInputKreeq& userInput);
+    
+    void updateDBG();
+    
+    bool updateMap(std::string prefix, uint16_t m);
+    
+    bool unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2);
     
 };
 

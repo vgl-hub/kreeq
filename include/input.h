@@ -4,7 +4,7 @@
 struct UserInputKreeq : UserInput {
 
     uint8_t kmerLen = 21;
-    std::string outFile = "";
+    std::string outFile = "", iDBGFileArg = "";
 
 };
 

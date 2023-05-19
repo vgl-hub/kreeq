@@ -77,9 +77,11 @@ int main(int argc, char **argv) {
         mode = 0;
         
         static struct option long_options[] = { // struct mapping long options
+            {"database", required_argument, 0, 'd'},
             {"input-sequence", required_argument, 0, 'f'},
-            {"input-reads", required_argument, 0, 'r'},
             {"kmer-length", required_argument, 0, 'k'},
+            {"out-format", required_argument, 0, 'o'},
+            {"input-reads", required_argument, 0, 'r'},
             
             {"verbose", no_argument, &verbose_flag, 1},
             {"cmd", no_argument, &cmd_flag, 1},
@@ -94,7 +96,7 @@ int main(int argc, char **argv) {
             
             int option_index = 0;
             
-            c = getopt_long(argc, argv, "-:f:r:k:j:v:h",
+            c = getopt_long(argc, argv, "-:d:f:k:o:r:j:v:h",
                             long_options, &option_index);
             
             if (c == -1) { // exit the loop if run out of options
@@ -119,6 +121,21 @@ int main(int argc, char **argv) {
                     
                     //                if (strcmp(long_options[option_index].name,"line-length") == 0)
                     //                  splitLength = atoi(optarg);
+                    
+                    break;
+ 
+                case 'd': // input kreeq db
+                    
+                    if (isPipe && userInput.pipeType == 'n') { // check whether input is from pipe and that pipe input was not already set
+                        
+                        userInput.pipeType = 'f'; // pipe input is a sequence
+                        
+                    }else{ // input is a regular file
+                        
+                        ifFileExists(optarg);
+                        userInput.iDBGFileArg = optarg;
+                        
+                    }
                     
                     break;
                     
@@ -152,6 +169,11 @@ int main(int argc, char **argv) {
                     maxThreads = atoi(optarg);
                     break;
 
+                case 'o': // handle output (file or stdout)
+                    userInput.outFile = optarg;
+                    outFile_flag = 1;
+                    break;
+
                 case 'r': // input reads
                     
                     if (isPipe && userInput.pipeType == 'n') { // check whether input is from pipe and that pipe input was not already set
@@ -182,12 +204,14 @@ int main(int argc, char **argv) {
                 case 'h': // help
                     printf("kreeq [command]\n");
                     printf("\nOptions:\n");
-                    printf("-f --input-sequence sequence input file (fasta,gfa1/2).\n");
-                    printf("-r --input-reads read input files (fastq).\n");
-                    printf("-k --kmer-length length of kmers.\n");
-                    printf("-j --threads <n> numbers of threads (default: max).\n");
-                    printf("-v --version software version.\n");
-                    printf("--cmd print $0 to stdout.\n");
+                    printf("\t-d --database kreeq database to load.\n");
+                    printf("\t-f --input-sequence sequence input file (fasta,gfa1/2).\n");
+                    printf("\t-r --input-reads read input files (fastq).\n");
+                    printf("\t-k --kmer-length length of kmers.\n");
+                    printf("\t-o --out-format generates various kinds of outputs (currently supported: .hist .kc).\n");
+                    printf("\t-j --threads <n> numbers of threads (default: max).\n");
+                    printf("\t-v --version software version.\n");
+                    printf("\t--cmd print $0 to stdout.\n");
                     exit(0);
             }
             

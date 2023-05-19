@@ -145,19 +145,26 @@ void DBG::finalize() {
     
     lg.verbose("Finalizing DBG");
     
-    updateDBG();
-    
-    lg.verbose("done");
-    
-    for(uint16_t m = 0; m<mapCount; ++m) // reload
-        threadPool.queueJob([=]{ return loadMap(".", m); });
-    
-    lg.verbose("Waiting");
-    
-    jobWait(threadPool);
-    
-    for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-        remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
+    if (tmp) {
+        
+        updateDBG();
+        
+        for(uint16_t m = 0; m<mapCount; ++m) // reload
+            threadPool.queueJob([=]{ return loadMap(".", m); });
+        
+        jobWait(threadPool);
+        
+        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
+            remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
+        
+    }else{
+        
+        for(uint16_t m = 0; m<mapCount; ++m)
+            threadPool.queueJob([=]{ return countBuffs(m); });
+        
+        jobWait(threadPool);
+        
+    }
     
     lg.verbose("Computing summary statistics");
     
@@ -209,8 +216,12 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
     
     threadPool.status();
     
-    if (get_mem_inuse(3) > get_mem_total(3) * 0.8)
+    if (get_mem_inuse(3) > get_mem_total(3) * 0.8) {
+        
         updateDBG();
+        tmp = true;
+        
+    }
 
 }
 

@@ -42,7 +42,7 @@ void Input::read(bool mode, InSequences& inSequences) {
     
     if (mode == 0) { // sequence validation
         
-        DBG knav(userInput.kmerLen); // navigational kmerdb
+        DBG knav(userInput); // navigational kmerdb
         
         if (userInput.iReadFileArg.size() > 0) {
             
@@ -65,7 +65,7 @@ void Input::read(bool mode, InSequences& inSequences) {
             getline(file, line);
             file.close();
             
-            knav.load(userInput); // loads kmers into the new kreeqdb
+            knav.load(); // loads kmers into the new kreeqdb
             
         }
         
@@ -73,7 +73,7 @@ void Input::read(bool mode, InSequences& inSequences) {
         
         knav.validateSequences(inSequences); // validate the input sequence
         
-        knav.report(userInput); // output
+        knav.report(); // output
         
     }else{
         

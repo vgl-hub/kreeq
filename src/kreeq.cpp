@@ -79,11 +79,10 @@ bool DBG::hashSequences(std::string* readBatch) {
             Buf<DBGkmer>* b;
             DBGkmer* bufNew;
             bool isFw = false;
-            bool *isFwPtr = &isFw;
             
             for (uint64_t c = 0; c<kcount; ++c){
                 
-                key = hash(str+c+p-e);
+                key = hash(str+c+p-e, &isFw);
                 i = key / moduloMap;
                 b = &buf[i];
                 
@@ -102,10 +101,13 @@ bool DBG::hashSequences(std::string* readBatch) {
                 
                 dbgkmer = &b->seq[b->pos++];
                 
-                if (isFwPtr)
-                    dbgkmer->fw[*(str+c+k)] = 1;
-                else
-                    dbgkmer->bw[*(str+c+k)] = 1;
+                if (isFw){
+                    dbgkmer->fw[*(str+c+k+p-e)] = 1;
+                    dbgkmer->bw[*(str+c-1+p-e)] = 1;
+                }else{
+                    dbgkmer->fw[3-*(str+c-1+p-e)] = 1;
+                    dbgkmer->bw[3-*(str+c+k+p-e)] = 1;
+                }
                 
                 dbgkmer->hash = key;
                 
@@ -418,6 +420,7 @@ bool DBG::validateSegment(InSegment* segment) {
     Log threadLog;
     
     std::vector<uint64_t> missingKmers;
+    std::vector<uint64_t> edgeMissingKmers;
     int64_t len = segment->getSegmentLen(), kcount = len-k+1;
     
     if (kcount<1)
@@ -432,6 +435,8 @@ bool DBG::validateSegment(InSegment* segment) {
     uint64_t key, i;
     
     // kreeq QV
+    bool isFw = false;
+    
     double presenceProbs[] = {0.000001, 0.01, 0.1};
     double kmerProb = presenceProbs[0];
     std::list<double> kmerProbs, weightsProbs;
@@ -441,19 +446,52 @@ bool DBG::validateSegment(InSegment* segment) {
     
     for (int64_t c = 0; c<kcount; ++c){
         
-        key = hash(str+c);
+        key = hash(str+c, &isFw);
         i = key / moduloMap;
         
         auto it = map[i].find(key);
+        const DBGkmer *dbgkmer = (it == map[i].end() ? NULL : &it->second);
+        
+        std::cout<<"\n"<<c<<"\t"<<isFw<<std::endl;
         
         if (it == map[i].end()) // merqury QV
             missingKmers.push_back(c);
+        else if (it->second.cov < userInput.covCutOff)
+            missingKmers.push_back(c);
+        else if (dbgkmer != NULL) {
+            
+            if (isFw){
+                
+                if ((dbgkmer->fw[*(str+c+k)] == 0 || dbgkmer->bw[*(str+c-1)] == 0) && c<kcount-1){
+                    edgeMissingKmers.push_back(c);
+                    std::cout<<"edge error1"<<std::endl;
+                }
+            }else{
+                
+                if ((dbgkmer->fw[3-*(str+c-1)] == 0 || dbgkmer->bw[3-*(str+c+k)] == 0) && c>0){
+                    edgeMissingKmers.push_back(c);
+                    std::cout<<"edge error2"<<std::endl;
+                }
+            }
+            
+        }
         
         // kreeq QV
         double totProb = 0;
-        DBGkmer dbgkmer = it->second;
-        kmerProb = dbgkmer.cov < 3 ? presenceProbs[dbgkmer.cov] : 1;
-        //std::cout<<"kcov: "<<std::to_string(dbgkmer.cov)<<" "<<std::setprecision(15)<<"prob: "<<kmerProb<<"\t";
+        
+            if(dbgkmer != NULL){
+                std::cout<<std::to_string(dbgkmer->fw[0])<<","<<std::to_string(dbgkmer->fw[1])<<","<<std::to_string(dbgkmer->fw[2])<<","<<std::to_string(dbgkmer->fw[3])<<std::endl;
+                std::cout<<std::to_string(dbgkmer->bw[0])<<","<<std::to_string(dbgkmer->bw[1])<<","<<std::to_string(dbgkmer->bw[2])<<","<<std::to_string(dbgkmer->bw[3])<<std::endl;
+                if (c<kcount-1)
+                std::cout<<"next: "<<itoc[*(str+c+k)]<<std::endl;
+                if (c>0)
+                std::cout<<"prev: "<<itoc[*(str+c-1)]<<std::endl;
+            
+            
+            kmerProb = dbgkmer->cov < 3 ? presenceProbs[dbgkmer->cov] : 1;
+            //std::cout<<"kcov: "<<std::to_string(dbgkmer.cov)<<" "<<std::setprecision(15)<<"prob: "<<kmerProb<<"\t";
+        
+        }
         
         kmerProbs.push_back(kmerProb);
         if (c >= k)
@@ -472,7 +510,7 @@ bool DBG::validateSegment(InSegment* segment) {
     }
     
     threadLog.add("Processed segment: " + segment->getSeqHeader());
-    threadLog.add("Found " + std::to_string(missingKmers.size()) + " missing kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(missingKmers.size(), kcount, k)) + ")");
+    threadLog.add("Found " + std::to_string(missingKmers.size()) + "/" + std::to_string(edgeMissingKmers.size()) + " missing/disconnected kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(missingKmers.size(), kcount, k)) + ")");
     
     delete[] str;
     
@@ -500,7 +538,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     
 }
 
-void DBG::load(UserInputKreeq& userInput) { // concurrent loading of existing hashmaps
+void DBG::load() { // concurrent loading of existing hashmaps
     
     for(uint16_t m = 0; m<mapCount; ++m)
         threadPool.queueJob([=]{ return loadMap(userInput.iDBGFileArg, m); });
@@ -520,7 +558,7 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific maps
 
 }
 
-void DBG::report(UserInputKreeq& userInput) { // generates the output from the program
+void DBG::report() { // generates the output from the program
     
     const static phmap::flat_hash_map<std::string,int> string_to_case{ // different outputs available
         {"kreeq",1}

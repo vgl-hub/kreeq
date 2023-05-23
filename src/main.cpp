@@ -77,6 +77,7 @@ int main(int argc, char **argv) {
         mode = 0;
         
         static struct option long_options[] = { // struct mapping long options
+            {"coverage-cutoff", required_argument, 0, 'c'},
             {"database", required_argument, 0, 'd'},
             {"input-sequence", required_argument, 0, 'f'},
             {"kmer-length", required_argument, 0, 'k'},
@@ -96,7 +97,7 @@ int main(int argc, char **argv) {
             
             int option_index = 0;
             
-            c = getopt_long(argc, argv, "-:d:f:k:o:r:j:v:h",
+            c = getopt_long(argc, argv, "-:c:d:f:k:o:r:j:v:h",
                             long_options, &option_index);
             
             if (c == -1) { // exit the loop if run out of options
@@ -123,7 +124,18 @@ int main(int argc, char **argv) {
                     //                  splitLength = atoi(optarg);
                     
                     break;
- 
+
+                case 'c': // input kreeq db
+                    
+                    if (!isNumber(optarg)) {
+                        fprintf(stderr, "input '%s' to option -%c must be a number\n", optarg, optopt);
+                        return EXIT_FAILURE;
+                    }
+                    
+                    userInput.covCutOff = atoi(optarg);
+                    
+                    break;
+
                 case 'd': // input kreeq db
                     
                     if (isPipe && userInput.pipeType == 'n') { // check whether input is from pipe and that pipe input was not already set

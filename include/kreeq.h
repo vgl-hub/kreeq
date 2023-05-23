@@ -13,10 +13,12 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, DBGkmer> {
     uint64_t totMissingKmers = 0, totKcount = 0;
     std::vector<uint32_t> dependencies;
     bool tmp = false;
+    
+    UserInputKreeq& userInput;
 
 public:
     
-    DBG(uint8_t k) : Kmap{k} {};
+    DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {};
     
     std::vector<Log> logs;
     
@@ -44,9 +46,9 @@ public:
     
     bool loadMap(std::string prefix, uint16_t m);
     
-    void load(UserInputKreeq& userInput);
+    void load();
     
-    void report(UserInputKreeq& userInput);
+    void report();
     
     void updateDBG();
     

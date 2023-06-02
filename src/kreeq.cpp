@@ -482,9 +482,9 @@ bool DBG::validateSegment(InSegment* segment) {
         if(dbgkmer != NULL){
                 //std::cout<<std::to_string(dbgkmer->fw[0])<<","<<std::to_string(dbgkmer->fw[1])<<","<<std::to_string(dbgkmer->fw[2])<<","<<std::to_string(dbgkmer->fw[3])<<std::endl;
                 //std::cout<<std::to_string(dbgkmer->bw[0])<<","<<std::to_string(dbgkmer->bw[1])<<","<<std::to_string(dbgkmer->bw[2])<<","<<std::to_string(dbgkmer->bw[3])<<std::endl;
-                if (c<kcount-1)
+                //if (c<kcount-1)
                 //std::cout<<"next: "<<itoc[*(str+c+k)]<<std::endl;
-                if (c>0)
+                //if (c>0)
                 //std::cout<<"prev: "<<itoc[*(str+c-1)]<<std::endl;
             
             

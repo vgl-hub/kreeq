@@ -437,8 +437,8 @@ bool DBG::validateSegment(InSegment* segment) {
     // kreeq QV
     bool isFw = false;
     
-    double presenceProbs[] = {0.000001, 0.01, 0.1};
-//    double kmerProb = presenceProbs[0];
+    //double presenceProbs[] = {0.000001, 0.01, 0.1};
+    //double kmerProb = presenceProbs[0];
     std::list<double> kmerProbs, weightsProbs;
     std::vector<double> totProbs;
     

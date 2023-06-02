@@ -1,9 +1,9 @@
 validate -f testFiles/random1.gfa -r testFiles/random1.fastq
 embedded
 DBG Summary statistics:
-Total: 140
-Unique: 19
-Distinct: 79
-Missing: 4398046511025
+Total: 172
+Unique: 25
+Distinct: 96
+Missing: 4398046511008
 Presence QV (k=21)
-42	158	18.3545
+63	158	16.2099

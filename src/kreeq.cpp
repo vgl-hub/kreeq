@@ -452,7 +452,7 @@ bool DBG::validateSegment(InSegment* segment) {
         auto it = map[i].find(key);
         const DBGkmer *dbgkmer = (it == map[i].end() ? NULL : &it->second);
         
-        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
+        //std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
         
         if (it == map[i].end()) // merqury QV
             missingKmers.push_back(c);
@@ -464,13 +464,13 @@ bool DBG::validateSegment(InSegment* segment) {
                 
                 if ((dbgkmer->fw[*(str+c+k)] == 0 || dbgkmer->bw[*(str+c-1)] == 0) && c<kcount-1){
                     edgeMissingKmers.push_back(c);
-                    std::cout<<"edge error1"<<std::endl;
+                    //std::cout<<"edge error1"<<std::endl;
                 }
             }else{
                 
                 if ((dbgkmer->fw[3-*(str+c-1)] == 0 || dbgkmer->bw[3-*(str+c+k)] == 0) && c>0){
                     edgeMissingKmers.push_back(c);
-                    std::cout<<"edge error2"<<std::endl;
+                    //std::cout<<"edge error2"<<std::endl;
                 }
             }
             
@@ -480,12 +480,12 @@ bool DBG::validateSegment(InSegment* segment) {
 //        double totProb = 0;
         
         if(dbgkmer != NULL){
-                std::cout<<std::to_string(dbgkmer->fw[0])<<","<<std::to_string(dbgkmer->fw[1])<<","<<std::to_string(dbgkmer->fw[2])<<","<<std::to_string(dbgkmer->fw[3])<<std::endl;
-                std::cout<<std::to_string(dbgkmer->bw[0])<<","<<std::to_string(dbgkmer->bw[1])<<","<<std::to_string(dbgkmer->bw[2])<<","<<std::to_string(dbgkmer->bw[3])<<std::endl;
+                //std::cout<<std::to_string(dbgkmer->fw[0])<<","<<std::to_string(dbgkmer->fw[1])<<","<<std::to_string(dbgkmer->fw[2])<<","<<std::to_string(dbgkmer->fw[3])<<std::endl;
+                //std::cout<<std::to_string(dbgkmer->bw[0])<<","<<std::to_string(dbgkmer->bw[1])<<","<<std::to_string(dbgkmer->bw[2])<<","<<std::to_string(dbgkmer->bw[3])<<std::endl;
                 if (c<kcount-1)
-                std::cout<<"next: "<<itoc[*(str+c+k)]<<std::endl;
+                //std::cout<<"next: "<<itoc[*(str+c+k)]<<std::endl;
                 if (c>0)
-                std::cout<<"prev: "<<itoc[*(str+c-1)]<<std::endl;
+                //std::cout<<"prev: "<<itoc[*(str+c-1)]<<std::endl;
             
             
             //kmerProb = dbgkmer->cov < 3 ? presenceProbs[dbgkmer->cov] : 1;

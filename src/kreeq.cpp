@@ -156,8 +156,8 @@ void DBG::finalize() {
         
         jobWait(threadPool);
         
-        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
+        //for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
+        //    remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
         
     }else{
         

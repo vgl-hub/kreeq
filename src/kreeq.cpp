@@ -315,17 +315,17 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
         for (uint64_t c = 0; c<len; ++c) {
             
             DBGkmer &dbgkmerBuf = thisBuf.seq[c];
-            DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
+//            DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
+//            
+//            for (uint64_t w = 0; w<4; ++w) { // update weights
+//                
+//                if (255 - dbgkmerMap.fw[w] >= dbgkmerBuf.fw[w])
+//                    dbgkmerMap.fw[w] += dbgkmerBuf.fw[w];
+//                if (255 - dbgkmerMap.bw[w] >= dbgkmerBuf.bw[w])
+//                    dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
+//            }
             
-            for (uint64_t w = 0; w<4; ++w) { // update weights
-                
-                if (255 - dbgkmerMap.fw[w] >= dbgkmerBuf.fw[w])
-                    dbgkmerMap.fw[w] += dbgkmerBuf.fw[w];
-                if (255 - dbgkmerMap.bw[w] >= dbgkmerBuf.bw[w])
-                    dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
-            }
-            
-//            ++dbgkmerMap.cov; // increase kmer coverage
+            ++dbgkmerMap.cov; // increase kmer coverage
             
         }
         

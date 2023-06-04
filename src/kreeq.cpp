@@ -164,24 +164,24 @@ void DBG::finalize() {
         for(uint16_t m = 0; m<mapCount; ++m)
             threadPool.queueJob([=]{ return countBuffs(m); });
         
-        jobWait(threadPool);
+//        jobWait(threadPool);
         
     }
     
-//    lg.verbose("Computing summary statistics");
-//    
-//    for(uint16_t m = 0; m<mapCount; ++m)
-//        threadPool.queueJob([=]{ return histogram(m); });
-//    
-//    jobWait(threadPool);
-//    
-//    uint64_t missing = pow(4,k)-totKmersDistinct;
-//    
-//    std::cout<<"DBG Summary statistics:\n"
-//             <<"Total: "<<totKmers<<"\n"
-//             <<"Unique: "<<totKmersUnique<<"\n"
-//             <<"Distinct: "<<totKmersDistinct<<"\n"
-//             <<"Missing: "<<missing<<"\n";
+    lg.verbose("Computing summary statistics");
+    
+    for(uint16_t m = 0; m<mapCount; ++m)
+        threadPool.queueJob([=]{ return histogram(m); });
+    
+    jobWait(threadPool);
+    
+    uint64_t missing = pow(4,k)-totKmersDistinct;
+    
+    std::cout<<"DBG Summary statistics:\n"
+             <<"Total: "<<totKmers<<"\n"
+             <<"Unique: "<<totKmersUnique<<"\n"
+             <<"Distinct: "<<totKmersDistinct<<"\n"
+             <<"Missing: "<<missing<<"\n";
     
 }
 

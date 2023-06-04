@@ -312,11 +312,11 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
         
         uint64_t len = thisBuf.pos; // how many positions in the buffer have data
         
-//        for (uint64_t c = 0; c<len; ++c) {
-//            
-//            DBGkmer &dbgkmerBuf = thisBuf.seq[c];
-//            DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
-//            
+        for (uint64_t c = 0; c<len; ++c) {
+            
+            DBGkmer &dbgkmerBuf = thisBuf.seq[c];
+            DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
+            
 //            for (uint64_t w = 0; w<4; ++w) { // update weights
 //                
 //                if (255 - dbgkmerMap.fw[w] >= dbgkmerBuf.fw[w])
@@ -324,10 +324,10 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
 //                if (255 - dbgkmerMap.bw[w] >= dbgkmerBuf.bw[w])
 //                    dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
 //            }
-//            
-//            ++dbgkmerMap.cov; // increase kmer coverage
-//            
-//        }
+            
+            ++dbgkmerMap.cov; // increase kmer coverage
+            
+        }
         
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again

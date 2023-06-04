@@ -74,6 +74,10 @@ int main(int argc, char **argv) {
             printFAIL(input_file.c_str(), "runtime error");
             istream.close();
             std::ifstream errfstream;
+            
+            system("cat tmp.txt");
+            system("cat err.txt");
+            
             errfstream.open(err);
             if(!errfstream) {
                 std::cout << "    error: couldn't open err.txt" << std::endl;

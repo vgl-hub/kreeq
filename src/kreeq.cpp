@@ -161,10 +161,10 @@ void DBG::finalize() {
         
     }else{
         
-//        for(uint16_t m = 0; m<mapCount; ++m)
-//            threadPool.queueJob([=]{ return countBuffs(m); });
-//        
-//        jobWait(threadPool);
+        for(uint16_t m = 0; m<mapCount; ++m)
+            threadPool.queueJob([=]{ return countBuffs(m); });
+        
+        jobWait(threadPool);
         
     }
     
@@ -304,7 +304,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
     Buf<DBGkmer> &thisBuf = *buf;
     
-    uint64_t releasedMem = 0;
+//    uint64_t releasedMem = 0;
     
     if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
         
@@ -331,13 +331,13 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
         
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
-        releasedMem = thisBuf.size * sizeof(DBGkmer);
+//        releasedMem = thisBuf.size * sizeof(DBGkmer);
         
     }
     
     std::unique_lock<std::mutex> lck(mtx); // release the map
 
-    freed += releasedMem;
+//    freed += releasedMem;
     mapsInUse[m] = false;
     
     return true;

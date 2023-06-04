@@ -69,11 +69,11 @@ void Input::read(bool mode, InSequences& inSequences) {
             
         }
         
-        knav.finalize(); // populate the hash table
-        
-        knav.validateSequences(inSequences); // validate the input sequence
-        
-        knav.report(); // output
+//        knav.finalize(); // populate the hash table
+//        
+//        knav.validateSequences(inSequences); // validate the input sequence
+//        
+//        knav.report(); // output
         
     }else{
         

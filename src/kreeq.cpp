@@ -156,8 +156,8 @@ void DBG::finalize() {
         
         jobWait(threadPool);
         
-        //for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-        //    remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
+        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
+            remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
         
     }else{
         
@@ -168,20 +168,20 @@ void DBG::finalize() {
         
     }
     
-    lg.verbose("Computing summary statistics");
-    
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return histogram(m); });
-    
-    jobWait(threadPool);
-    
-    uint64_t missing = pow(4,k)-totKmersDistinct;
-    
-    std::cout<<"DBG Summary statistics:\n"
-             <<"Total: "<<totKmers<<"\n"
-             <<"Unique: "<<totKmersUnique<<"\n"
-             <<"Distinct: "<<totKmersDistinct<<"\n"
-             <<"Missing: "<<missing<<"\n";
+//    lg.verbose("Computing summary statistics");
+//    
+//    for(uint16_t m = 0; m<mapCount; ++m)
+//        threadPool.queueJob([=]{ return histogram(m); });
+//    
+//    jobWait(threadPool);
+//    
+//    uint64_t missing = pow(4,k)-totKmersDistinct;
+//    
+//    std::cout<<"DBG Summary statistics:\n"
+//             <<"Total: "<<totKmers<<"\n"
+//             <<"Unique: "<<totKmersUnique<<"\n"
+//             <<"Distinct: "<<totKmersDistinct<<"\n"
+//             <<"Missing: "<<missing<<"\n";
     
 }
 

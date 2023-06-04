@@ -306,12 +306,12 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
     uint64_t releasedMem = 0;
     
-//    if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
-//        
-//        phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = map[m]; // the map associated to this buffer
-//        
-//        uint64_t len = thisBuf.pos; // how many positions in the buffer have data
-//        
+    if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
+        
+        phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = map[m]; // the map associated to this buffer
+        
+        uint64_t len = thisBuf.pos; // how many positions in the buffer have data
+        
 //        for (uint64_t c = 0; c<len; ++c) {
 //            
 //            DBGkmer &dbgkmerBuf = thisBuf.seq[c];
@@ -328,12 +328,12 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
 //            ++dbgkmerMap.cov; // increase kmer coverage
 //            
 //        }
-//        
-//        delete[] thisBuf.seq; // delete the buffer
-//        thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
-//        releasedMem = thisBuf.size * sizeof(DBGkmer);
-//        
-//    }
+        
+        delete[] thisBuf.seq; // delete the buffer
+        thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
+        releasedMem = thisBuf.size * sizeof(DBGkmer);
+        
+    }
     
     std::unique_lock<std::mutex> lck(mtx); // release the map
 

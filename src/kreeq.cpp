@@ -161,9 +161,9 @@ void DBG::finalize() {
         
     }else{
         
-        for(uint16_t m = 0; m<mapCount; ++m)
-            threadPool.queueJob([=]{ return countBuffs(m); });
-        
+//        for(uint16_t m = 0; m<mapCount; ++m)
+//            threadPool.queueJob([=]{ return countBuffs(m); });
+//        
 //        jobWait(threadPool);
         
     }

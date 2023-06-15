@@ -304,13 +304,15 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
     Buf<DBGkmer> &thisBuf = *buf;
     
-    uint64_t releasedMem = 0;
+    uint64_t releasedMem = 0, initial_size = 0, final_size = 0;
     
     if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
         
         phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = map[m]; // the map associated to this buffer
         
         uint64_t len = thisBuf.pos; // how many positions in the buffer have data
+        
+        initial_size = thisMap.size();
         
         for (uint64_t c = 0; c<len; ++c) {
             
@@ -329,6 +331,8 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
             
         }
         
+        final_size = thisMap.size();
+        
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
         releasedMem = thisBuf.size * sizeof(DBGkmer);
@@ -337,6 +341,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
     std::unique_lock<std::mutex> lck(mtx); // release the map
 
+    alloc += (final_size - initial_size) * (sizeof(DBGkmer) + sizeof(uint64_t));
     freed += releasedMem;
     mapsInUse[m] = false;
     

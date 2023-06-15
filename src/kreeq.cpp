@@ -572,6 +572,8 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific maps
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     map[m].phmap_load(ar_in);
     
+    alloc = map[m].size() * (sizeof(DBGkmer) + sizeof(uint64_t));
+    
     return true;
 
 }

@@ -25,9 +25,9 @@
 #include "kmer.h"
 #include "kreeq.h"
 
-double kmerQV(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // estimate QV from missing kmers
+double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // estimate QV from missing kmers
     
-    return -10*log10(1 - pow(1 - (double) missingKmers/totalKmers, (double) 1/k));
+    return 1 - pow(1 - (double) missingKmers/totalKmers, (double) 1/k);
     
 }
 
@@ -407,11 +407,13 @@ void DBG::validateSequences(InSequences& inSequences) {
         
     }
     
+    double merquryError = errorRate(totMissingKmers, totKcount, k), merquryQV = -10*log10(merquryError);
+    
     std::cout<<"Presence QV (k="<<std::to_string(k)<<")\n"
              <<totMissingKmers<<"\t"
              <<totKcount<<"\t"
-             <<kmerQV(totMissingKmers, totKcount, k)
-             <<std::endl;
+             <<merquryQV<<"\t"
+             <<merquryError<<std::endl;
     
 }
 
@@ -509,8 +511,11 @@ bool DBG::validateSegment(InSegment* segment) {
     
     }
     
+    double merquryError = errorRate(totMissingKmers, kcount, k), merquryQV = -10*log10(merquryError);
+    double kreeqError = errorRate(totMissingKmers + edgeMissingKmers.size(), kcount, k), kreeqQV = -10*log10(kreeqError);
+    
     threadLog.add("Processed segment: " + segment->getSeqHeader());
-    threadLog.add("Found " + std::to_string(missingKmers.size()) + "/" + std::to_string(edgeMissingKmers.size()) + " missing/disconnected kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(kmerQV(missingKmers.size(), kcount, k)) + ", kreeq QV: " + std::to_string(kmerQV(missingKmers.size() + edgeMissingKmers.size(), kcount, k)) + ")");
+    threadLog.add("Found " + std::to_string(missingKmers.size()) + "/" + std::to_string(edgeMissingKmers.size()) + " missing/disconnected kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(merquryQV) + ", kreeq QV: " + std::to_string(kreeqQV) + ")");
     
     delete[] str;
     

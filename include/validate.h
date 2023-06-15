@@ -1,6 +1,15 @@
 #ifndef VALIDATE_H
 #define VALIDATE_H
 
+#include <iostream>
+#include <algorithm>
+#include <fstream>
+#include <string>
+#include <dirent.h>
+#include <vector>
+#include <set>
+#include <string>
+
 std::string getExePath(const std::string &argv0) {
     std::string exePath = argv0.substr(0, argv0.find_last_of("/\\")+1);
     std::replace(exePath.begin(), exePath.end(), '\\', '/');
@@ -74,17 +83,17 @@ void get_recursive(const std::string &path, std::set<std::string> &paths) {
 
 int i = 0;
 
-void genTest(std::string exePath, const std::string &file, const std::string &args){
+void genTest(std::string exePath, const std::string &file, const std::string &args, const std::string mode){
     std::string tstFile = "validateFiles/"+file+"."+std::to_string(i)+".tst";
     std::cout << "generating: " << tstFile << std::endl;
     std::ofstream ostream;
     ostream.open(tstFile);
-    ostream << "testFiles/" << file << " " << args << "\nembedded" << std::endl;
+    ostream << mode + " -f testFiles/" << file << " " << args << "\nembedded" << std::endl;
     ostream.close();
 #ifdef _WIN32
-    std::string cmd = "\"\""+exePath+"\" testFiles/"+file+" "+args+" >> "+tstFile+"\"";
+    std::string cmd = "\"\""+exePath+"\" " + mode + " -f testFiles/"+file+" "+args+" >> "+tstFile+"\"";
 #else
-    std::string cmd = "\""+exePath+"\" testFiles/"+file+" "+args+" >> "+tstFile;
+    std::string cmd = "\""+exePath+"\" " + mode + " -f testFiles/"+file+" "+args+" >> "+tstFile;
 #endif
     int exit = system(cmd.c_str());
     if (exit == EXIT_SUCCESS) {

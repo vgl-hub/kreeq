@@ -1,4 +1,4 @@
-validate -f testFiles/random1.fasta -r testFiles/random1.fastq
+validate -f testFiles/random1.fasta -r testFiles/random1.fastq.gz
 embedded
 DBG Summary statistics:
 Total: 172

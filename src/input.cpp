@@ -38,17 +38,17 @@ void Input::loadInput(UserInputKreeq userInput) {
 
 void Input::read(bool mode, InSequences& inSequences) {
     
-    if (userInput.iSeqFileArg.empty()) {return;}
+    if (userInput.inSequence.empty()) {return;}
     
     if (mode == 0) { // sequence validation
         
         DBG knav(userInput); // navigational kmerdb
         
-        if (userInput.iReadFileArg.size() > 0) {
+        if (userInput.inReads.size() > 0) {
             
             lg.verbose("Loading input reads");
             
-            unsigned int numFiles = userInput.iReadFileArg.size(); // number of input files
+            unsigned int numFiles = userInput.inReads.size(); // number of input files
             
             for (unsigned int i = 0; i < numFiles; i++) // load each input file in the kmerdb
                 loadKmers(userInput, &knav, 'r', &i);
@@ -59,7 +59,7 @@ void Input::read(bool mode, InSequences& inSequences) {
             
             std::ifstream file;
             
-            file.open(userInput.iSeqFileArg + "/.index"); // reads the kmer length from the index file
+            file.open(userInput.inSequence + "/.index"); // reads the kmer length from the index file
             std::string line;
             
             getline(file, line);
@@ -83,7 +83,7 @@ void Input::read(bool mode, InSequences& inSequences) {
 
 void Input::loadSequences(InSequences& inSequences) {
     
-    if (userInput.iSeqFileArg.empty()) {return;}
+    if (userInput.inSequence.empty()) {return;}
     
     //intermediates
     std::string h;
@@ -194,7 +194,7 @@ void Input::loadSequences(InSequences& inSequences) {
             
     }else{
 
-        fprintf(stderr, "Stream not successful: %s", userInput.iSeqFileArg.c_str());
+        fprintf(stderr, "Stream not successful: %s", userInput.inSequence.c_str());
         exit(1);
 
     }

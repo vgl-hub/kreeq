@@ -265,6 +265,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     freeContainer(map[m]);
     freeContainer(dumpMap);
     
+    std::unique_lock<std::mutex> lck(mtx);
     freed += map_size1 + map_size2;
     
     return true;
@@ -550,6 +551,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     
     freeContainer(map[m]);
     
+    std::unique_lock<std::mutex> lck(mtx);
     freed += map_size;
     
     return true;
@@ -572,6 +574,7 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific maps
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     map[m].phmap_load(ar_in);
     
+    std::unique_lock<std::mutex> lck(mtx);
     alloc = map[m].size() * (sizeof(DBGkmer) + sizeof(uint64_t));
     
     return true;

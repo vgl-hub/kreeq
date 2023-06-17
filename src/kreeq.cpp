@@ -265,7 +265,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     
     uint64_t map_size = map[m].size() * (sizeof(DBGkmer) + sizeof(uint64_t));
     
-    freeContainer(map[m]);
+//    freeContainer(map[m]);
     
     std::unique_lock<std::mutex> lck(mtx);
     freed += map_size;
@@ -551,7 +551,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     
     uint64_t map_size = map[m].size() * (sizeof(DBGkmer) + sizeof(uint64_t));
     
-    freeContainer(map[m]);
+//    freeContainer(map[m]);
     
     std::unique_lock<std::mutex> lck(mtx);
     freed += map_size;

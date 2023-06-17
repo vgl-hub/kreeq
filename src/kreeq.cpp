@@ -168,6 +168,9 @@ void DBG::finalize() {
         
     }
     
+    for(Buf<DBGkmer>* buf : buffers)
+        delete[] buf;
+    
     lg.verbose("Computing summary statistics");
     
     for(uint16_t m = 0; m<mapCount; ++m)

@@ -301,11 +301,11 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
             if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
                 dbgkmerMap.fw[w] += pair.second.fw[w];
             else
-                dbgkmerMap.fw[w] == 255;
+                dbgkmerMap.fw[w] = 255;
             if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
                 dbgkmerMap.bw[w] += pair.second.bw[w];
             else
-                dbgkmerMap.bw[w] == 255;
+                dbgkmerMap.bw[w] = 255;
             
         }
         

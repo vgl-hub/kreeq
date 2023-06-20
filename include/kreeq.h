@@ -18,7 +18,12 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, DBGkmer> {
 
 public:
     
-    DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {};
+    DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
+        
+        for(uint16_t m = 0; m<mapCount; ++m) // remove any tmp files
+            remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
+        
+    };
     
     std::vector<Log> logs;
     

@@ -149,12 +149,20 @@ void DBG::finalize() {
     
     if (tmp) {
         
+        lg.verbose("Using tmp");
+        
         updateDBG();
+        
+        lg.verbose("DBG updated");
         
         for(uint16_t m = 0; m<mapCount; ++m) // reload
             threadPool.queueJob([=]{ return loadMap(".", m); });
         
+        lg.verbose("Reloading final maps");
+        
         jobWait(threadPool);
+        
+        lg.verbose("Deleting tmp files");
         
         for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
             remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
@@ -167,6 +175,8 @@ void DBG::finalize() {
         jobWait(threadPool);
         
     }
+    
+    lg.verbose("Removing residual heap memory allocations");
     
     for(Buf<DBGkmer>* buf : buffers)
         delete[] buf;
@@ -232,6 +242,8 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
 void DBG::updateDBG() {
     
+    lg.verbose("Completing residaul jobs");
+    
     jobWait(threadPool, dependencies);
     
     for(uint16_t m = 0; m<mapCount; ++m) {
@@ -239,12 +251,16 @@ void DBG::updateDBG() {
         dependencies.push_back(jid);
     }
     
+    lg.verbose("Counting all residual buffers");
+    
     jobWait(threadPool, dependencies);
     
     for(uint16_t m = 0; m<mapCount; ++m) {
         uint32_t jid = threadPool.queueJob([=]{ return updateMap(".", m); });
         dependencies.push_back(jid);
     }
+    
+    lg.verbose("Updating maps");
     
     jobWait(threadPool, dependencies);
     
@@ -284,12 +300,19 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
             
             if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
                 dbgkmerMap.fw[w] += pair.second.fw[w];
+            else
+                dbgkmerMap.fw[w] == 255;
             if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
                 dbgkmerMap.bw[w] += pair.second.bw[w];
+            else
+                dbgkmerMap.bw[w] == 255;
             
         }
         
-        dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+        if (255 - dbgkmerMap.cov >= pair.second.cov)
+            dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+        else
+            dbgkmerMap.cov = 255;
         
     }
     
@@ -327,14 +350,14 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
             DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
             
 //            for (uint64_t w = 0; w<4; ++w) { // update weights
-//                
+//
 //                if (255 - dbgkmerMap.fw[w] >= dbgkmerBuf.fw[w])
 //                    dbgkmerMap.fw[w] += dbgkmerBuf.fw[w];
 //                if (255 - dbgkmerMap.bw[w] >= dbgkmerBuf.bw[w])
 //                    dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
 //            }
-//            
-//            ++dbgkmerMap.cov; // increase kmer coverage
+            if (dbgkmerMap.cov < 255)
+                ++dbgkmerMap.cov; // increase kmer coverage
             
         }
         

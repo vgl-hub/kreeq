@@ -600,7 +600,7 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     map[m].phmap_load(ar_in);
     
     std::unique_lock<std::mutex> lck(mtx);
-    alloc = map[m].size() * (sizeof(DBGkmer) + sizeof(uint64_t));
+    alloc += map[m].size() * (sizeof(DBGkmer) + sizeof(uint64_t));
     
     return true;
 

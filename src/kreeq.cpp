@@ -242,7 +242,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
 void DBG::updateDBG() {
     
-    lg.verbose("Completing residaul jobs");
+    lg.verbose("\nCompleting residaul jobs");
     
     jobWait(threadPool, dependencies);
     
@@ -349,13 +349,13 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
             DBGkmer &dbgkmerBuf = thisBuf.seq[c];
             DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
             
-//            for (uint64_t w = 0; w<4; ++w) { // update weights
-//
-//                if (255 - dbgkmerMap.fw[w] >= dbgkmerBuf.fw[w])
-//                    dbgkmerMap.fw[w] += dbgkmerBuf.fw[w];
-//                if (255 - dbgkmerMap.bw[w] >= dbgkmerBuf.bw[w])
-//                    dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
-//            }
+            for (uint64_t w = 0; w<4; ++w) { // update weights
+
+                if (255 - dbgkmerMap.fw[w] >= dbgkmerBuf.fw[w])
+                    dbgkmerMap.fw[w] += dbgkmerBuf.fw[w];
+                if (255 - dbgkmerMap.bw[w] >= dbgkmerBuf.bw[w])
+                    dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
+            }
             if (dbgkmerMap.cov < 255)
                 ++dbgkmerMap.cov; // increase kmer coverage
             
@@ -458,7 +458,7 @@ bool DBG::validateSegment(InSegment* segment) {
     
     std::vector<uint64_t> missingKmers;
     std::vector<uint64_t> edgeMissingKmers;
-    int64_t len = segment->getSegmentLen(), kcount = len-k+1;
+    uint64_t len = segment->getSegmentLen(), kcount = len-k+1;
     
     if (kcount<1)
         return true;
@@ -466,7 +466,7 @@ bool DBG::validateSegment(InSegment* segment) {
     unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
     uint8_t* str = new uint8_t[len];
     
-    for (int64_t i = 0; i<len; ++i)
+    for (uint64_t i = 0; i<len; ++i)
         str[i] = ctoi[*(first+i)];
     
     uint64_t key, i;
@@ -481,7 +481,7 @@ bool DBG::validateSegment(InSegment* segment) {
     
     //std::cout<<segment->getSeqHeader()<<std::endl;
     
-    for (int64_t c = 0; c<kcount; ++c){
+    for (uint64_t c = 0; c<kcount; ++c){
         
         key = hash(str+c, &isFw);
         i = key / moduloMap;
@@ -499,51 +499,18 @@ bool DBG::validateSegment(InSegment* segment) {
             
             if (isFw){
                 
-                if ((dbgkmer->fw[*(str+c+k)] == 0 || dbgkmer->bw[*(str+c-1)] == 0) && c<kcount-1){
+                if ((c<kcount-1 && dbgkmer->fw[*(str+c+k)]) == 0 || (c>0 && dbgkmer->bw[*(str+c-1)] == 0)){
                     edgeMissingKmers.push_back(c);
                     //std::cout<<"edge error1"<<std::endl;
                 }
             }else{
                 
-                if ((dbgkmer->fw[3-*(str+c-1)] == 0 || dbgkmer->bw[3-*(str+c+k)] == 0) && c>0){
+                if ((c>0 && dbgkmer->fw[3-*(str+c-1)] == 0) || (c<kcount-1 && dbgkmer->bw[3-*(str+c+k)] == 0)){
                     edgeMissingKmers.push_back(c);
                     //std::cout<<"edge error2"<<std::endl;
                 }
             }
-            
         }
-        
-        
-//        double totProb = 0;
-        
-        if(dbgkmer != NULL){
-                //std::cout<<std::to_string(dbgkmer->fw[0])<<","<<std::to_string(dbgkmer->fw[1])<<","<<std::to_string(dbgkmer->fw[2])<<","<<std::to_string(dbgkmer->fw[3])<<std::endl;
-                //std::cout<<std::to_string(dbgkmer->bw[0])<<","<<std::to_string(dbgkmer->bw[1])<<","<<std::to_string(dbgkmer->bw[2])<<","<<std::to_string(dbgkmer->bw[3])<<std::endl;
-                //if (c<kcount-1)
-                //std::cout<<"next: "<<itoc[*(str+c+k)]<<std::endl;
-                //if (c>0)
-                //std::cout<<"prev: "<<itoc[*(str+c-1)]<<std::endl;
-            
-            
-            //kmerProb = dbgkmer->cov < 3 ? presenceProbs[dbgkmer->cov] : 1;
-            //std::cout<<"kcov: "<<std::to_string(dbgkmer.cov)<<" "<<std::setprecision(15)<<"prob: "<<kmerProb<<"\t";
-        
-        }
-        
-        //kmerProbs.push_back(kmerProb);
-        //if (c >= k)
-        //    kmerProbs.pop_front();
-        
-        //for (double n : kmerProbs)
-        //    totProb += n;
-            
-        //for (double n : weightsProbs)
-        //    totProb *= n;
-        
-        //totProbs.push_back(totProb/kmerProbs.size());
-        
-        //std::cout<<"Final probability: "<<std::setprecision(15)<<std::to_string(totProb/kmerProbs.size())<<std::endl;
-    
     }
     
     double merquryError = errorRate(totMissingKmers, kcount, k), merquryQV = -10*log10(merquryError);

@@ -132,19 +132,19 @@ bool DBG::hashSequences(std::string* readBatch) {
     }
 
     delete[] str;
+    delete readBatch;
+    
+    // track memory usage
+    uint64_t newAlloc = 0;
+    for(uint64_t i = 0 ; i < mapCount ; ++i)
+        newAlloc += buf[i].size * sizeof(DBGkmer);
         
     // threadLog.add("Processed sequence: " + sequence->header);
     
     std::unique_lock<std::mutex> lck(mtx);
     
-    // track memory usage
-    for(uint64_t i = 0 ; i < mapCount ; ++i)
-        alloc += buf[i].size * sizeof(DBGkmer);
-    
-    delete readBatch;
-    
+    alloc += newAlloc;
     buffers.push_back(buf);
-    
     logs.push_back(threadLog);
     
     return true;
@@ -210,30 +210,30 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
     
     for (unsigned int i = 0; i<buffers.size(); ++i) { // for each buffer
         
-        unsigned int counter = 0;
-        
-        for(uint16_t m = 0; m<mapCount; ++m) { // for each map
-            
-            Buf<DBGkmer> *thisBuf = &buffers[i][m];
-            
-            if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
-                
-                mapsInUse[m] = true;
-                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
-                dependencies.push_back(jid);
-                
-            }
-            
-            if(thisBuf->seq == NULL){
-                
-                ++counter; // keeps track of the buffers that were processed so far
-                
-                if (counter == mapCount)
-                    buffers.erase(buffers.begin() + i);
-                
-            }
-
-        }
+//        unsigned int counter = 0;
+//        
+//        for(uint16_t m = 0; m<mapCount; ++m) { // for each map
+//            
+//            Buf<DBGkmer> *thisBuf = &buffers[i][m];
+//            
+//            if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
+//                
+//                mapsInUse[m] = true;
+//                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
+//                dependencies.push_back(jid);
+//                
+//            }
+//            
+//            if(thisBuf->seq == NULL){
+//                
+//                ++counter; // keeps track of the buffers that were processed so far
+//                
+//                if (counter == mapCount)
+//                    buffers.erase(buffers.begin() + i);
+//                
+//            }
+//
+//        }
         
     }
     

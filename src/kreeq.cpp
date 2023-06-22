@@ -25,6 +25,14 @@
 #include "kmer.h"
 #include "kreeq.h"
 
+uint64_t mapSize(phmap::flat_hash_map<uint64_t, DBGkmer>& m) {
+    
+    return (m.size() * (sizeof(DBGkmer) + sizeof(void*)) + // data list
+     m.bucket_count() * (sizeof(void*) + sizeof(size_t))) // bucket index
+    * 1.5; // estimated allocation overheads
+    
+}
+
 double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // estimate QV from missing kmers
     
     return 1 - pow(1 - (double) missingKmers/totalKmers, (double) 1/k);
@@ -342,7 +350,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
         
         uint64_t len = thisBuf.pos; // how many positions in the buffer have data
         
-        initial_size = thisMap.size();
+        initial_size = mapSize(thisMap);
         
         for (uint64_t c = 0; c<len; ++c) {
             
@@ -361,7 +369,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
             
         }
         
-        final_size = thisMap.size();
+        final_size = mapSize(thisMap);
         
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
@@ -371,7 +379,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
     std::unique_lock<std::mutex> lck(mtx); // release the map
 
-    alloc += (final_size - initial_size) * (sizeof(DBGkmer) + sizeof(uint64_t));
+    alloc += final_size - initial_size;
     freed += releasedMem;
     mapsInUse[m] = false;
     

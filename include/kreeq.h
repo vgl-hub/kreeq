@@ -21,7 +21,7 @@ public:
     DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
         
         for(uint16_t m = 0; m<mapCount; ++m) // remove any tmp files
-            remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
+            remove((prefix + "/.kmap." + std::to_string(m) + ".bin").c_str());
         
     };
     
@@ -47,9 +47,9 @@ public:
     
     bool traverseInReads(std::string *readBatch);
     
-    bool dumpMap(std::string prefix, uint16_t m);
+    bool dumpMap(uint16_t m);
     
-    bool loadMap(std::string prefix, uint16_t m);
+    bool loadMap(uint16_t m);
     
     void load();
     
@@ -57,7 +57,7 @@ public:
     
     void updateDBG();
     
-    bool updateMap(std::string prefix, uint16_t m);
+    bool updateMap(uint16_t m);
     
     bool unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2);
     

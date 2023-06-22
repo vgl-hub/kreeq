@@ -40,6 +40,9 @@ void Input::read(bool mode, InSequences& inSequences) {
     
     if (userInput.inSequence.empty()) {return;}
     
+    if (userInput.prefix != ".")
+        make_dir(userInput.prefix.c_str());
+    
     if (mode == 0) { // sequence validation
         
         DBG knav(userInput); // navigational kmerdb

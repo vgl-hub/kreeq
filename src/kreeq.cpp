@@ -164,7 +164,7 @@ void DBG::finalize() {
         lg.verbose("DBG updated");
         
         for(uint16_t m = 0; m<mapCount; ++m) // reload
-            threadPool.queueJob([=]{ return loadMap(".", m); });
+            threadPool.queueJob([=]{ return loadMap(m); });
         
         lg.verbose("Reloading final maps");
         
@@ -264,7 +264,7 @@ void DBG::updateDBG() {
     jobWait(threadPool, dependencies);
     
     for(uint16_t m = 0; m<mapCount; ++m) {
-        uint32_t jid = threadPool.queueJob([=]{ return updateMap(".", m); });
+        uint32_t jid = threadPool.queueJob([=]{ return updateMap(m); });
         dependencies.push_back(jid);
     }
     
@@ -274,19 +274,19 @@ void DBG::updateDBG() {
     
 }
 
-bool DBG::updateMap(std::string prefix, uint16_t m) {
+bool DBG::updateMap(uint16_t m) {
     
-    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    std::string path = userInput.prefix + "/.kmap." + std::to_string(m) + ".bin";
     
     phmap::flat_hash_map<uint64_t, DBGkmer> dumpMap;
-    phmap::BinaryInputArchive ar_in(prefix.c_str());
+    phmap::BinaryInputArchive ar_in(path.c_str());
     dumpMap.phmap_load(ar_in);
     
     uint64_t map_size = mapSize(map[m]);
     
     unionSum(map[m], dumpMap); // merges the current map and the existing map
     
-    phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
+    phmap::BinaryOutputArchive ar_out(path.c_str()); // dumps the data
     dumpMap.phmap_dump(ar_out);
     
     map[m].clear();
@@ -540,11 +540,11 @@ bool DBG::validateSegment(InSegment* segment) {
     
 }
 
-bool DBG::dumpMap(std::string prefix, uint16_t m) {
+bool DBG::dumpMap(uint16_t m) {
     
-    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    std::string path = userInput.prefix + "/.kmap." + std::to_string(m) + ".bin";
     
-    phmap::BinaryOutputArchive ar_out(prefix.c_str());
+    phmap::BinaryOutputArchive ar_out(path.c_str());
     map[m].phmap_dump(ar_out);
     
     uint64_t map_size = mapSize(map[m]);
@@ -567,11 +567,11 @@ void DBG::load() { // concurrent loading of existing hashmaps
     
 }
 
-bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
+bool DBG::loadMap(uint16_t m) { // loads a specific map
     
-    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    std::string path = userInput.prefix + "/.kmap." + std::to_string(m) + ".bin";
     
-    phmap::BinaryInputArchive ar_in(prefix.c_str());
+    phmap::BinaryInputArchive ar_in(path.c_str());
     map[m].phmap_load(ar_in);
     
     std::unique_lock<std::mutex> lck(mtx);

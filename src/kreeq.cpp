@@ -250,7 +250,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
 void DBG::updateDBG() {
     
-    lg.verbose("\nCompleting residaul jobs");
+    lg.verbose("\nCompleting residual jobs");
     
     jobWait(threadPool, dependencies);
     
@@ -272,6 +272,10 @@ void DBG::updateDBG() {
     
     jobWait(threadPool, dependencies);
     
+    delete[] map;
+    
+    map = new phmap::flat_hash_map<uint64_t, DBGkmer>[mapCount];
+    
 }
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
@@ -289,8 +293,6 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
     dumpMap.phmap_dump(ar_out);
     
-    map[m].clear();
-    
     std::unique_lock<std::mutex> lck(mtx);
     freed += map_size;
     
@@ -300,7 +302,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
 
 bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2) {
     
-    for (auto pair : map1) { // for each element in map2, find it in map1 and increase its value
+    for (auto pair : map1) { // for each element in map1, find it in map2 and increase its value
         
         DBGkmer &dbgkmerMap = map2[pair.first]; // insert or find this kmer in the hash table
         
@@ -575,7 +577,7 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     map[m].phmap_load(ar_in);
     
     std::unique_lock<std::mutex> lck(mtx);
-    alloc += map[m].size() * (sizeof(DBGkmer) + sizeof(uint64_t));
+    alloc += mapSize(map[m]);
     
     return true;
 

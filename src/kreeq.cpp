@@ -282,12 +282,17 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     dumpMap.phmap_load(ar_in);
     
+    uint64_t map_size = mapSize(map[m]);
+    
     unionSum(map[m], dumpMap); // merges the current map and the existing map
     
     phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
     dumpMap.phmap_dump(ar_out);
     
     map[m].clear();
+    
+    std::unique_lock<std::mutex> lck(mtx);
+    freed += map_size;
     
     return true;
     
@@ -542,7 +547,12 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     phmap::BinaryOutputArchive ar_out(prefix.c_str());
     map[m].phmap_dump(ar_out);
     
+    uint64_t map_size = mapSize(map[m]);
+    
     map[m].clear();
+    
+    std::unique_lock<std::mutex> lck(mtx);
+    freed += map_size;
     
     return true;
     

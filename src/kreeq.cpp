@@ -109,13 +109,13 @@ bool DBG::hashSequences(std::string* readBatch) {
                 
                 dbgkmer = &b->seq[b->pos++];
                 
-                if (isFw){
-                    dbgkmer->fw[*(str+c+k+p-e)] = 1;
-                    dbgkmer->bw[*(str+c-1+p-e)] = 1;
-                }else{
-                    dbgkmer->fw[3-*(str+c-1+p-e)] = 1;
-                    dbgkmer->bw[3-*(str+c+k+p-e)] = 1;
-                }
+//                if (isFw){
+//                    dbgkmer->fw[*(str+c+k+p-e)] = 1;
+//                    dbgkmer->bw[*(str+c-1+p-e)] = 1;
+//                }else{
+//                    dbgkmer->fw[3-*(str+c-1+p-e)] = 1;
+//                    dbgkmer->bw[3-*(str+c+k+p-e)] = 1;
+//                }
                 
                 dbgkmer->hash = key;
                 

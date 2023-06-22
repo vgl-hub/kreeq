@@ -27,9 +27,11 @@
 
 uint64_t mapSize(phmap::flat_hash_map<uint64_t, DBGkmer>& m) {
     
-    return (m.size() * (sizeof(DBGkmer) + sizeof(void*)) + // data list
-     m.bucket_count() * (sizeof(void*) + sizeof(size_t))) // bucket index
-    * 1.5; // estimated allocation overheads
+//    return (m.size() * (sizeof(DBGkmer) + sizeof(void*)) + // data list
+//     m.bucket_count() * (sizeof(void*) + sizeof(size_t))) // bucket index
+//    * 1.5; // estimated allocation overheads
+    
+    return 0;
     
 }
 

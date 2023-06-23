@@ -231,7 +231,6 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
                 if (counter == mapCount) {
                     
-                    lg.verbose("Deleting buffer array");
                     delete[] buffers[i];
                     buffers.erase(buffers.begin() + i);
                     

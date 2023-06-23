@@ -172,11 +172,6 @@ void DBG::finalize() {
         
         jobWait(threadPool);
         
-        lg.verbose("Deleting tmp files");
-        
-        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
-        
     }else{
         
         for(uint16_t m = 0; m<mapCount; ++m)
@@ -185,11 +180,6 @@ void DBG::finalize() {
         jobWait(threadPool);
         
     }
-    
-    lg.verbose("Removing residual heap memory allocations");
-    
-    for(Buf<DBGkmer>* buf : buffers)
-        delete[] buf;
     
     lg.verbose("Computing summary statistics");
     
@@ -205,6 +195,15 @@ void DBG::finalize() {
              <<"Unique: "<<totKmersUnique<<"\n"
              <<"Distinct: "<<totKmersDistinct<<"\n"
              <<"Missing: "<<missing<<"\n";
+
+}
+
+void DBG::cleanup() {
+    
+    lg.verbose("Deleting tmp files");
+    
+    for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
+        remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
     
 }
 
@@ -232,6 +231,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
                 if (counter == mapCount) {
                     
+                    lg.verbose("Deleting buffer array");
                     delete[] buffers[i];
                     buffers.erase(buffers.begin() + i);
                     
@@ -440,11 +440,7 @@ void DBG::validateSequences(InSequences& inSequences) {
     
     for (InSegment* segment : *segments) {
         
-        threadPool.queueJob([=]{ return
-        
-        validateSegment(segment);
-            
-        });
+        threadPool.queueJob([=]{ return validateSegment(segment); });
         
         std::unique_lock<std::mutex> lck(mtx);
         for (auto it = logs.begin(); it != logs.end(); it++) {
@@ -497,8 +493,6 @@ bool DBG::validateSegment(InSegment* segment) {
     // kreeq QV
     bool isFw = false;
     
-    //double presenceProbs[] = {0.000001, 0.01, 0.1};
-    //double kmerProb = presenceProbs[0];
     std::list<double> kmerProbs, weightsProbs;
     std::vector<double> totProbs;
     

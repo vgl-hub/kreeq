@@ -31,6 +31,8 @@ public:
     
     void finalize();
     
+    void cleanup();
+    
     bool joinBuff(uint16_t m);
     
     bool histogram(uint16_t m);

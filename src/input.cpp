@@ -78,6 +78,8 @@ void Input::read(bool mode, InSequences& inSequences) {
         
         knav.report(); // output
         
+        knav.cleanup(); // delete tmp files
+        
     }else{
         
     }

@@ -287,15 +287,13 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     dumpMap.phmap_load(ar_in);
     
-    uint64_t map_size = mapSize(*maps[m]);
-    
     unionSum(*maps[m], dumpMap); // merges the current map and the existing map
     
     phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
     dumpMap.phmap_dump(ar_out);
     
+    uint64_t map_size = mapSize(*maps[m]);
     delete maps[m];
-    
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     
     std::unique_lock<std::mutex> lck(mtx);
@@ -396,7 +394,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
 
 bool DBG::histogram(uint16_t m) {
     
-    uint64_t kmersUnique = 0, kmersDistinct = 0;
+    uint64_t kmersUnique = 0, kmersDistinct = 0, map_size = 0;
     phmap::flat_hash_map<uint64_t, uint64_t> hist;
     
     if (tmp)
@@ -412,7 +410,14 @@ bool DBG::histogram(uint16_t m) {
         
     }
     
+    if (tmp) {
+        map_size = mapSize(*maps[m]);
+        delete maps[m];
+        maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    }
+    
     std::unique_lock<std::mutex> lck(mtx);
+    freed += map_size;
     totKmersUnique += kmersUnique;
     totKmersDistinct += kmersDistinct;
     

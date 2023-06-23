@@ -165,13 +165,6 @@ void DBG::finalize() {
         
         lg.verbose("DBG updated");
         
-        for(uint16_t m = 0; m<mapCount; ++m) // reload
-            threadPool.queueJob([=]{ return loadMap(userInput.prefix, m); });
-        
-        lg.verbose("Reloading final maps");
-        
-        jobWait(threadPool);
-        
     }else{
         
         for(uint16_t m = 0; m<mapCount; ++m)
@@ -284,10 +277,6 @@ void DBG::updateDBG() {
     
     jobWait(threadPool, dependencies);
     
-    delete[] map;
-    
-    map = new phmap::flat_hash_map<uint64_t, DBGkmer>[mapCount];
-    
 }
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
@@ -298,12 +287,16 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     dumpMap.phmap_load(ar_in);
     
-    uint64_t map_size = mapSize(map[m]);
+    uint64_t map_size = mapSize(*maps[m]);
     
-    unionSum(map[m], dumpMap); // merges the current map and the existing map
+    unionSum(*maps[m], dumpMap); // merges the current map and the existing map
     
     phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
     dumpMap.phmap_dump(ar_out);
+    
+    delete maps[m];
+    
+    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     
     std::unique_lock<std::mutex> lck(mtx);
     freed += map_size;
@@ -360,7 +353,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
     
     if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
         
-        phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = map[m]; // the map associated to this buffer
+        phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[m]; // the map associated to this buffer
         
         uint64_t len = thisBuf.pos; // how many positions in the buffer have data
         
@@ -406,7 +399,10 @@ bool DBG::histogram(uint16_t m) {
     uint64_t kmersUnique = 0, kmersDistinct = 0;
     phmap::flat_hash_map<uint64_t, uint64_t> hist;
     
-    for (auto pair : map[m]) {
+    if (tmp)
+        loadMap(userInput.prefix, m);
+    
+    for (auto pair : *maps[m]) {
         
         if (pair.second.cov == 1)
             ++kmersUnique;
@@ -502,12 +498,12 @@ bool DBG::validateSegment(InSegment* segment) {
         key = hash(str+c, &isFw);
         i = key / moduloMap;
         
-        auto it = map[i].find(key);
-        const DBGkmer *dbgkmer = (it == map[i].end() ? NULL : &it->second);
+        auto it = maps[i]->find(key);
+        const DBGkmer *dbgkmer = (it == maps[i]->end() ? NULL : &it->second);
         
         //std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
         
-        if (it == map[i].end()) // merqury QV
+        if (it == maps[i]->end()) // merqury QV
             missingKmers.push_back(c);
         else if (it->second.cov < userInput.covCutOff) // merqury QV with cutoff
             missingKmers.push_back(c);
@@ -553,11 +549,11 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
     phmap::BinaryOutputArchive ar_out(prefix.c_str());
-    map[m].phmap_dump(ar_out);
+    maps[m]->phmap_dump(ar_out);
     
-    uint64_t map_size = mapSize(map[m]);
+    uint64_t map_size = mapSize(*maps[m]);
     
-    map[m].clear();
+    maps[m]->clear();
     
     std::unique_lock<std::mutex> lck(mtx);
     freed += map_size;
@@ -580,10 +576,10 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
     phmap::BinaryInputArchive ar_in(prefix.c_str());
-    map[m].phmap_load(ar_in);
+    maps[m]->phmap_load(ar_in);
     
     std::unique_lock<std::mutex> lck(mtx);
-    alloc += mapSize(map[m]);
+    alloc += mapSize(*maps[m]);
     
     return true;
 

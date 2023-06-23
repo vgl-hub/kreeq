@@ -245,7 +245,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
     
     threadPool.status();
     
-    if (get_mem_inuse(3) > get_mem_total(3) * 0.8) {
+    if (get_mem_inuse(3) > get_mem_total(3) * 0.5) {
         
         updateDBG();
         tmp = true;
@@ -268,6 +268,13 @@ void DBG::updateDBG() {
     lg.verbose("Counting all residual buffers");
     
     jobWait(threadPool, dependencies);
+    
+    lg.verbose("Removing residual heap memory allocations");
+    
+    for(Buf<DBGkmer>* buf : buffers)
+        delete[] buf;
+    
+    buffers.clear();
     
     for(uint16_t m = 0; m<mapCount; ++m) {
         uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });

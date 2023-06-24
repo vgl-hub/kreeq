@@ -84,6 +84,8 @@ int main(int argc, char **argv) {
             {"out-format", required_argument, 0, 'o'},
             {"input-reads", required_argument, 0, 'r'},
             {"tmp-prefix", required_argument, 0, 't'},
+            {"max-memory", required_argument, 0, 'm'},
+            {"threads", required_argument, 0, 'j'},
             
             {"verbose", no_argument, &verbose_flag, 1},
             {"cmd", no_argument, &cmd_flag, 1},
@@ -98,7 +100,7 @@ int main(int argc, char **argv) {
             
             int option_index = 0;
             
-            c = getopt_long(argc, argv, "-:c:d:f:k:o:r:t:j:v:h",
+            c = getopt_long(argc, argv, "-:c:d:f:k:o:r:t:m:j:v:h",
                             long_options, &option_index);
             
             if (c == -1) { // exit the loop if run out of options
@@ -213,6 +215,10 @@ int main(int argc, char **argv) {
                     userInput.prefix = optarg;
                     break;
                     
+                case 'm': // prefix for temporary files
+                    userInput.maxMem = atof(optarg);
+                    break;
+                    
                 case 'v': // software version
                     printf("kreeq v%s\n", version.c_str());
                     printf("Giulio Formenti giulio.formenti@gmail.com\n");
@@ -227,6 +233,7 @@ int main(int argc, char **argv) {
                     printf("\t-k --kmer-length length of kmers.\n");
                     printf("\t-o --out-format dumps hashmaps to file.\n");
                     printf("\t-t --tmp-prefix prefix to temporary directory.\n");
+                    printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.5 of max).\n");
                     printf("\t-j --threads <n> numbers of threads (default: max).\n");
                     printf("\t-v --version software version.\n");
                     printf("\t--cmd print $0 to stdout.\n");

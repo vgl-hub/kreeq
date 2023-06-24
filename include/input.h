@@ -4,6 +4,7 @@
 struct UserInputKreeq : UserInput {
 
     uint8_t kmerLen = 21, covCutOff = 0;
+    double maxMem = 0;
     std::string prefix = ".", outFile = "", iDBGFileArg = "";
 
 };

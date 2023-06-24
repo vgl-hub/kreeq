@@ -198,7 +198,7 @@ void DBG::cleanup() {
     lg.verbose("Deleting tmp files");
     
     for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-        remove(("./.kmap." + std::to_string(m) + ".bin").c_str());
+        threadPool.queueJob([=]{ return remove(("./.kmap." + std::to_string(m) + ".bin").c_str()); });
     
 }
 

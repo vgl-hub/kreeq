@@ -200,6 +200,8 @@ void DBG::cleanup() {
     for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
         threadPool.queueJob([=]{ return remove(("./.kmap." + std::to_string(m) + ".bin").c_str()); });
     
+    jobWait(threadPool);
+    
 }
 
 void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go

@@ -28,7 +28,7 @@
 uint64_t mapSize(phmap::flat_hash_map<uint64_t, DBGkmer>& m) {
     
     return (m.size() * (sizeof(DBGkmer) + sizeof(void*)) + // data list
-     m.bucket_count() * (sizeof(void*) + sizeof(size_t))) // bucket index
+     m.bucket_count() * (sizeof(void*) + sizeof(uint64_t))) // bucket index
     * 1.5; // estimated allocation overheads
     
 }
@@ -52,7 +52,7 @@ bool DBG::hashSequences(std::string* readBatch) {
     
     Log threadLog;
     
-    Buf<DBGkmer>* buf = new Buf<DBGkmer>[mapCount];
+    Buf<kmer>* buf = new Buf<kmer>[mapCount];
         
     uint64_t len = readBatch->size();
     
@@ -82,10 +82,10 @@ bool DBG::hashSequences(std::string* readBatch) {
             
             uint64_t kcount = e-k+1;
             
-            DBGkmer* dbgkmer;
+            kmer* khmer;
             uint64_t key, i, newSize;
-            Buf<DBGkmer>* b;
-            DBGkmer* bufNew;
+            Buf<kmer>* b;
+            kmer* bufNew;
             bool isFw = false;
             
             for (uint64_t c = 0; c<kcount; ++c){
@@ -97,9 +97,9 @@ bool DBG::hashSequences(std::string* readBatch) {
                 if (b->pos == b->size) {
                     
                     newSize = b->size*2;
-                    bufNew = new DBGkmer[newSize];
+                    bufNew = new kmer[newSize];
                     
-                    memcpy(bufNew, b->seq, b->size*sizeof(DBGkmer));
+                    memcpy(bufNew, b->seq, b->size*sizeof(kmer));
                     
                     b->size = newSize;
                     delete[] b->seq;
@@ -107,19 +107,19 @@ bool DBG::hashSequences(std::string* readBatch) {
                     
                 }
                 
-                dbgkmer = &b->seq[b->pos++];
+                khmer = &b->seq[b->pos++];
                 
                 if (isFw){
-                    dbgkmer->fw[*(str+c+k+p-e)] = 1;
+                    khmer->fw[*(str+c+k+p-e)] = 1;
                     if (c > 0)
-                        dbgkmer->bw[*(str+c-1+p-e)] = 1;
+                        khmer->bw[*(str+c-1+p-e)] = 1;
                 }else{
                     if (c > 0)
-                        dbgkmer->fw[3-*(str+c-1+p-e)] = 1;
-                    dbgkmer->bw[3-*(str+c+k+p-e)] = 1;
+                        khmer->fw[3-*(str+c-1+p-e)] = 1;
+                    khmer->bw[3-*(str+c+k+p-e)] = 1;
                 }
                 
-                dbgkmer->hash = key;
+                khmer->hash = key;
                 
             }
             
@@ -139,7 +139,7 @@ bool DBG::hashSequences(std::string* readBatch) {
     // track memory usage
     uint64_t thisAlloc = 0;
     for(uint64_t i = 0 ; i < mapCount ; ++i)
-        thisAlloc += buf[i].size * sizeof(DBGkmer);
+        thisAlloc += buf[i].size * sizeof(kmer);
         
     // threadLog.add("Processed sequence: " + sequence->header);
     
@@ -208,7 +208,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 
         for(uint16_t m = 0; m<mapCount; ++m) { // for each map
 
-            Buf<DBGkmer> *thisBuf = &buffers[i][m];
+            Buf<kmer> *thisBuf = &buffers[i][m];
 
             if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
 
@@ -263,7 +263,7 @@ void DBG::updateDBG() {
     
     lg.verbose("Removing residual heap memory allocations");
     
-    for(Buf<DBGkmer>* buf : buffers)
+    for(Buf<kmer>* buf : buffers)
         delete[] buf;
     
     buffers.clear();
@@ -336,16 +336,16 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
     
-    for(Buf<DBGkmer>* buf : buffers)
+    for(Buf<kmer>* buf : buffers)
         countBuff(&buf[m], m);
     
     return true;
 
 }
 
-bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
+bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
     
-    Buf<DBGkmer> &thisBuf = *buf;
+    Buf<kmer> &thisBuf = *buf;
     
     uint64_t releasedMem = 0, initial_size = 0, final_size = 0;
     
@@ -359,18 +359,18 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
         
         for (uint64_t c = 0; c<len; ++c) {
             
-            DBGkmer &dbgkmerBuf = thisBuf.seq[c];
-            DBGkmer &dbgkmerMap = thisMap[dbgkmerBuf.hash]; // insert or find this kmer in the hash table
+            kmer &khmer = thisBuf.seq[c];
+            DBGkmer &dbgkmer = thisMap[khmer.hash]; // insert or find this kmer in the hash table
             
             for (uint64_t w = 0; w<4; ++w) { // update weights
 
-                if (255 - dbgkmerMap.fw[w] >= dbgkmerBuf.fw[w])
-                    dbgkmerMap.fw[w] += dbgkmerBuf.fw[w];
-                if (255 - dbgkmerMap.bw[w] >= dbgkmerBuf.bw[w])
-                    dbgkmerMap.bw[w] += dbgkmerBuf.bw[w];
+                if (255 - dbgkmer.fw[w] >= khmer.fw[w])
+                    dbgkmer.fw[w] += khmer.fw[w];
+                if (255 - dbgkmer.bw[w] >= khmer.bw[w])
+                    dbgkmer.bw[w] += khmer.bw[w];
             }
-            if (dbgkmerMap.cov < 255)
-                ++dbgkmerMap.cov; // increase kmer coverage
+            if (dbgkmer.cov < 255)
+                ++dbgkmer.cov; // increase kmer coverage
             
         }
         
@@ -378,7 +378,7 @@ bool DBG::countBuff(Buf<DBGkmer>* buf, uint16_t m) { // counts a single buffer
         
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
-        releasedMem = thisBuf.size * sizeof(DBGkmer);
+        releasedMem = thisBuf.size * sizeof(kmer);
         
     }
     

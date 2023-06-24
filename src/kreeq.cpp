@@ -40,7 +40,9 @@ double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // esti
 }
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
-
+    
+    alloc += readBatch->size() * sizeof(char);
+    
     uint32_t jid = threadPool.queueJob([=]{ return hashSequences(readBatch); });
     dependencies.push_back(jid);
     
@@ -144,7 +146,7 @@ bool DBG::hashSequences(std::string* readBatch) {
     // threadLog.add("Processed sequence: " + sequence->header);
     
     std::unique_lock<std::mutex> lck(mtx);
-    
+    freed += len * sizeof(char);
     alloc += thisAlloc;
     buffers.push_back(buf);
     logs.push_back(threadLog);

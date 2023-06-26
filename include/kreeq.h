@@ -53,8 +53,6 @@ public:
     
     bool countBuff(Buf<kmer> *thisBuf, uint16_t m);
     
-    bool consolidateBuffs();
-    
     void consolidate();
     
     bool traverseInReads(std::string *readBatch);

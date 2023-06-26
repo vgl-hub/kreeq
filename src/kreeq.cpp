@@ -205,7 +205,7 @@ void DBG::cleanup() {
     
 }
 
-void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
+bool DBG::consolidateBuffs() {
     
     for (unsigned int i = 0; i<buffers.size(); ++i) { // for each buffer
         
@@ -218,8 +218,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
             if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
 
                 mapsInUse[m] = true;
-                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
-                dependencies.push_back(jid);
+                threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
 
             }
 
@@ -240,6 +239,14 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
         
     }
     
+    return true;
+    
+}
+
+void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
+    
+    threadPool.queueJob([=]{ return consolidateBuffs(); });
+    
     threadPool.status();
     
     if (get_mem_inuse(3) > (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem)) {
@@ -255,7 +262,7 @@ void DBG::updateDBG() {
     
     lg.verbose("\nCompleting residual jobs");
     
-    jobWait(threadPool, dependencies);
+    jobWait(threadPool);
     
     for(uint16_t m = 0; m<mapCount; ++m) {
         uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });

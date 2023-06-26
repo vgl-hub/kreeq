@@ -145,9 +145,10 @@ bool DBG::hashSequences(std::string* readBatch) {
         
     // threadLog.add("Processed sequence: " + sequence->header);
     
-    std::unique_lock<std::mutex> lck(mtx);
     freed += len * sizeof(char);
     alloc += thisAlloc;
+    
+    std::lock_guard<std::mutex> lck(mtx);
     buffers.push_back(buf);
     logs.push_back(threadLog);
     
@@ -296,11 +297,10 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
     dumpMap.phmap_dump(ar_out);
     
-    uint64_t map_size = mapSize(*maps[m]);
     delete maps[m];
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     
-    std::unique_lock<std::mutex> lck(mtx);
+    uint64_t map_size = mapSize(*maps[m]);
     freed += map_size;
     
     return true;
@@ -385,11 +385,10 @@ bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
         releasedMem = thisBuf.size * sizeof(kmer);
         
     }
-    
-    std::unique_lock<std::mutex> lck(mtx); // release the map
 
     alloc += final_size - initial_size;
     freed += releasedMem;
+    std::lock_guard<std::mutex> lck(mtx); // release the map
     mapsInUse[m] = false;
     
     return true;
@@ -420,8 +419,9 @@ bool DBG::histogram(uint16_t m) {
         maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     }
     
-    std::unique_lock<std::mutex> lck(mtx);
     freed += map_size;
+    
+    std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
     totKmersDistinct += kmersDistinct;
     
@@ -446,7 +446,7 @@ void DBG::validateSequences(InSequences& inSequences) {
         
         threadPool.queueJob([=]{ return validateSegment(segment); });
         
-        std::unique_lock<std::mutex> lck(mtx);
+        std::lock_guard<std::mutex> lck(mtx);
         for (auto it = logs.begin(); it != logs.end(); it++) {
          
             it->print();
@@ -542,7 +542,7 @@ bool DBG::validateSegment(InSegment* segment) {
     
     delete[] str;
     
-    std::unique_lock<std::mutex> lck(mtx);
+    std::lock_guard<std::mutex> lck(mtx);
 
     totMissingKmers += missingKmers.size();
     totKcount += kcount;
@@ -560,11 +560,9 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     phmap::BinaryOutputArchive ar_out(prefix.c_str());
     maps[m]->phmap_dump(ar_out);
     
-    uint64_t map_size = mapSize(*maps[m]);
-    
     maps[m]->clear();
     
-    std::unique_lock<std::mutex> lck(mtx);
+    uint64_t map_size = mapSize(*maps[m]);
     freed += map_size;
     
     return true;
@@ -587,7 +585,6 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     maps[m]->phmap_load(ar_in);
     
-    std::unique_lock<std::mutex> lck(mtx);
     alloc += mapSize(*maps[m]);
     
     return true;

@@ -43,7 +43,8 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
     alloc += readBatch->size() * sizeof(char);
     
-    threadPool.queueJob([=]{ return hashSequences(readBatch); });
+    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(readBatch); });
+    dependencies.push_back(jid);
     
     return true;
     
@@ -215,10 +216,11 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
             Buf<kmer> *thisBuf = &buffers[i][m];
 
             if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
-                
+
                 mapsInUse[m] = true;
-                threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
-                
+                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
+                dependencies.push_back(jid);
+
             }
 
             if(thisBuf->seq == NULL){
@@ -253,14 +255,16 @@ void DBG::updateDBG() {
     
     lg.verbose("\nCompleting residual jobs");
     
-    jobWait(threadPool);
+    jobWait(threadPool, dependencies);
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return countBuffs(m); });
-
+    for(uint16_t m = 0; m<mapCount; ++m) {
+        uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });
+        dependencies.push_back(jid);
+    }
+    
     lg.verbose("Counting all residual buffers");
     
-    jobWait(threadPool);
+    jobWait(threadPool, dependencies);
     
     lg.verbose("Removing residual heap memory allocations");
     
@@ -269,12 +273,14 @@ void DBG::updateDBG() {
     
     buffers.clear();
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
+    for(uint16_t m = 0; m<mapCount; ++m) {
+        uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
+        dependencies.push_back(jid);
+    }
     
     lg.verbose("Updating maps");
     
-    jobWait(threadPool);
+    jobWait(threadPool, dependencies);
     
 }
 

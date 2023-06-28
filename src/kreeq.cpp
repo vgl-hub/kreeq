@@ -218,38 +218,38 @@ void DBG::cleanup() {
 
 void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
     
-//    for (unsigned int i = 0; i<buffers.size(); ++i) { // for each buffer
-//        
-//        unsigned int counter = 0;
-//
-//        for(uint16_t m = 0; m<mapCount; ++m) { // for each map
-//
-//            Buf<kmer> *thisBuf = &buffers[i][m];
-//
-//            if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
-//
-//                mapsInUse[m] = true;
-//                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
-//                dependencies.push_back(jid);
-//
-//            }
-//
-//            if(thisBuf->seq == NULL){
-//
-//                ++counter; // keeps track of the buffers that were processed so far
-//
-//                if (counter == mapCount) {
-//                    
-//                    delete[] buffers[i];
-//                    buffers.erase(buffers.begin() + i);
-//                    
-//                }
-//
-//            }
-//
-//        }
-//        
-//    }
+    for (unsigned int i = 0; i<buffers.size(); ++i) { // for each buffer
+        
+        unsigned int counter = 0;
+
+        for(uint16_t m = 0; m<mapCount; ++m) { // for each map
+
+            Buf<kmer> *thisBuf = &buffers[i][m];
+
+            if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
+
+                mapsInUse[m] = true;
+                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
+                dependencies.push_back(jid);
+
+            }
+
+            if(thisBuf->seq == NULL){
+
+                ++counter; // keeps track of the buffers that were processed so far
+
+                if (counter == mapCount) {
+                    
+                    delete[] buffers[i];
+                    buffers.erase(buffers.begin() + i);
+                    
+                }
+
+            }
+
+        }
+        
+    }
     
     threadPool.status();
     

@@ -8,6 +8,7 @@
 #include <list>
 #include <iomanip>
 #include <stdio.h>
+#include <chrono>
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"
@@ -36,6 +37,12 @@ uint64_t mapSize(phmap::flat_hash_map<uint64_t, DBGkmer>& m) {
 double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // estimate QV from missing kmers
     
     return 1 - pow(1 - (double) missingKmers/totalKmers, (double) 1/k);
+    
+}
+
+bool DBG::memoryOk() {
+    
+    return get_mem_inuse(3) > (userInput.maxMem == 0 ? get_mem_total(3) * 0.9 : userInput.maxMem);
     
 }
 
@@ -242,7 +249,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
     
     threadPool.status();
     
-    if (get_mem_inuse(3) > (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem)) {
+    if (!memoryOk()) {
         
         updateDBG();
         tmp = true;
@@ -286,11 +293,16 @@ void DBG::updateDBG() {
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
     
+    while (!memoryOk())
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
     phmap::flat_hash_map<uint64_t, DBGkmer> dumpMap;
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     dumpMap.phmap_load(ar_in);
+    
+    alloc += mapSize(dumpMap);
     
     unionSum(*maps[m], dumpMap); // merges the current map and the existing map
     

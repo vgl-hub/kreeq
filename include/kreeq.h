@@ -35,6 +35,8 @@ public:
     
     std::vector<Log> logs;
     
+    bool memoryOk();
+    
     bool hashSequences(std::string *readBatch);
     
     void finalize();

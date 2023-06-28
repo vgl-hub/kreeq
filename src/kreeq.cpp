@@ -297,8 +297,7 @@ void DBG::updateDBG() {
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
     
-    while (!memoryOk())
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    uint64_t map_size1 = 0, map_size2 = 0;
     
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
@@ -306,19 +305,19 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     dumpMap.phmap_load(ar_in);
     
-    alloc += mapSize(dumpMap);
+    map_size1 = mapSize(dumpMap);
+    map_size2 = mapSize(*maps[m]);
+    alloc += map_size1;
     
     unionSum(*maps[m], dumpMap); // merges the current map and the existing map
     
     phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
     dumpMap.phmap_dump(ar_out);
     
-    uint64_t map_size = mapSize(*maps[m]);
-    
     delete maps[m];
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     
-    freed += map_size;
+    freed += map_size1 + map_size2;
     
     return true;
     

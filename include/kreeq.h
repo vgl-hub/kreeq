@@ -49,7 +49,9 @@ public:
     
     void validateSequences(InSequences &inSequences);
     
-    bool validateSegment(InSegment *segment);
+    bool validateSegments(uint16_t m, std::vector<InSegment*> *segments);
+    
+    bool validateSegment(InSegment *segment, uint16_t m, uint64_t &mapMissingKmers, uint64_t &mapKmers);
     
     bool countBuffs(uint16_t m);
     

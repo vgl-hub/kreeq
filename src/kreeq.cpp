@@ -203,12 +203,16 @@ void DBG::finalize() {
 
 void DBG::cleanup() {
     
-    lg.verbose("Deleting tmp files");
-    
-    for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-        threadPool.queueJob([=]{ return remove(("./.kmap." + std::to_string(m) + ".bin").c_str()); });
-    
-    jobWait(threadPool);
+    if(tmp) {
+        
+        lg.verbose("Deleting tmp files");
+        
+        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
+            threadPool.queueJob([=]{ return remove(("./.kmap." + std::to_string(m) + ".bin").c_str()); });
+        
+        jobWait(threadPool);
+        
+    }
     
 }
 
@@ -449,25 +453,14 @@ bool DBG::histogram(uint16_t m) {
     
 }
 
-void DBG::validateSequences(InSequences& inSequences) {
+void DBG::validateSequences(InSequences &inSequences) {
     
     lg.verbose("Validating sequence");
     
-    std::vector<InSegment*>* segments = inSequences.getInSegments();
+    std::vector<InSegment*> *segments = inSequences.getInSegments();
     
-    for (InSegment* segment : *segments) {
-        
-        threadPool.queueJob([=]{ return validateSegment(segment); });
-        
-        std::lock_guard<std::mutex> lck(mtx);
-        for (auto it = logs.begin(); it != logs.end(); it++) {
-         
-            it->print();
-            logs.erase(it--);
-            
-        }
-        
-    }
+    for(uint16_t m = 0; m<mapCount; ++m)
+        threadPool.queueJob([=]{ return validateSegments(m, segments); });
     
     jobWait(threadPool);
     
@@ -488,13 +481,34 @@ void DBG::validateSequences(InSequences& inSequences) {
     
 }
 
-bool DBG::validateSegment(InSegment* segment) {
+bool DBG::validateSegments(uint16_t m, std::vector<InSegment*> *segments) {
     
-    Log threadLog;
+    uint64_t mapMissingKmers = 0, mapKmers = 0;
+    
+    if (tmp)
+        loadMap(userInput.prefix, m);
+    
+    for (InSegment* segment : *segments)
+        validateSegment(segment, m, mapMissingKmers, mapKmers);
+    
+    if (tmp) {
+        delete maps[m];
+        maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    }
+    
+    std::lock_guard<std::mutex> lck(mtx);
+    totMissingKmers += mapMissingKmers;
+    totKcount += mapKmers;
+    
+    return true;
+    
+}
+
+bool DBG::validateSegment(InSegment* segment, uint16_t m, uint64_t &mapMissingKmers, uint64_t &mapKmers) {
     
     std::vector<uint64_t> missingKmers;
     std::vector<uint64_t> edgeMissingKmers;
-    uint64_t len = segment->getSegmentLen(), kcount = len-k+1;
+    uint64_t len = segment->getSegmentLen(), kcount = len-k+1, kmers = 0;
     
     if (kcount<1)
         return true;
@@ -507,60 +521,58 @@ bool DBG::validateSegment(InSegment* segment) {
     
     uint64_t key, i;
     
+    phmap::flat_hash_map<uint64_t, DBGkmer> *map = maps[m];
+    
     // kreeq QV
     bool isFw = false;
     
-    std::list<double> kmerProbs, weightsProbs;
-    std::vector<double> totProbs;
+    //std::list<double> kmerProbs, weightsProbs;
+    //std::vector<double> totProbs;
     
     //std::cout<<segment->getSeqHeader()<<std::endl;
     
     for (uint64_t c = 0; c<kcount; ++c){
         
         key = hash(str+c, &isFw);
+        
         i = key / moduloMap;
-        
-        auto it = maps[i]->find(key);
-        const DBGkmer *dbgkmer = (it == maps[i]->end() ? NULL : &it->second);
-        
-        //std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
-        
-        if (it == maps[i]->end()) // merqury QV
-            missingKmers.push_back(c);
-        else if (it->second.cov < userInput.covCutOff) // merqury QV with cutoff
-            missingKmers.push_back(c);
-        else if (dbgkmer != NULL) { // kreeq QV
+        if (i == m) {
+            auto it = map->find(key);
+            const DBGkmer *dbgkmer = (it == map->end() ? NULL : &it->second);
             
-            if (isFw){
+            //std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
+            
+            if (it == map->end()) // merqury QV
+                missingKmers.push_back(c);
+            else if (it->second.cov < userInput.covCutOff) // merqury QV with cutoff
+                missingKmers.push_back(c);
+            else if (dbgkmer != NULL) { // kreeq QV
                 
-                if ((c<kcount-1 && dbgkmer->fw[*(str+c+k)]) == 0 || (c>0 && dbgkmer->bw[*(str+c-1)] == 0)){
-                    edgeMissingKmers.push_back(c);
-                    //std::cout<<"edge error1"<<std::endl;
-                }
-            }else{
-                
-                if ((c>0 && dbgkmer->fw[3-*(str+c-1)] == 0) || (c<kcount-1 && dbgkmer->bw[3-*(str+c+k)] == 0)){
-                    edgeMissingKmers.push_back(c);
-                    //std::cout<<"edge error2"<<std::endl;
+                if (isFw){
+                    
+                    if ((c<kcount-1 && dbgkmer->fw[*(str+c+k)]) == 0 || (c>0 && dbgkmer->bw[*(str+c-1)] == 0)){
+                        edgeMissingKmers.push_back(c);
+                        //std::cout<<"edge error1"<<std::endl;
+                    }
+                }else{
+                    
+                    if ((c>0 && dbgkmer->fw[3-*(str+c-1)] == 0) || (c<kcount-1 && dbgkmer->bw[3-*(str+c+k)] == 0)){
+                        edgeMissingKmers.push_back(c);
+                        //std::cout<<"edge error2"<<std::endl;
+                    }
                 }
             }
+            ++kmers;
         }
     }
     
-    double merquryError = errorRate(totMissingKmers, kcount, k), merquryQV = -10*log10(merquryError);
-    double kreeqError = errorRate(totMissingKmers + edgeMissingKmers.size(), kcount, k), kreeqQV = -10*log10(kreeqError);
-    
-    threadLog.add("Processed segment: " + segment->getSeqHeader());
-    threadLog.add("Found " + std::to_string(missingKmers.size()) + "/" + std::to_string(edgeMissingKmers.size()) + " missing/disconnected kmers out of " + std::to_string(kcount) + " kmers (presence QV: " + std::to_string(merquryQV) + ", kreeq QV: " + std::to_string(kreeqQV) + ")");
+    //double merquryError = errorRate(totMissingKmers, kcount, k), merquryQV = -10*log10(merquryError);
+    //double kreeqError = errorRate(totMissingKmers + edgeMissingKmers.size(), kcount, k), kreeqQV = -10*log10(kreeqError);
     
     delete[] str;
     
-    std::lock_guard<std::mutex> lck(mtx);
-
-    totMissingKmers += missingKmers.size();
-    totKcount += kcount;
-    
-    logs.push_back(threadLog);
+    mapMissingKmers += missingKmers.size();
+    mapKmers += kmers;
     
     return true;
     

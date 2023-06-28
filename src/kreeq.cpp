@@ -42,7 +42,7 @@ double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // esti
 
 bool DBG::memoryOk() {
     
-    return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.8 : userInput.maxMem);
+    return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem);
     
 }
 

@@ -378,13 +378,15 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
     initial_size = mapSize(*maps[m]);
 
     for(Buf<kmer>* buf : buffers) {
-//        
-//        if (buf[m].seq != NULL) {
+        
+        if (buf[m].seq != NULL) {
             
             countBuff(&buf[m], m);
             releasedMem = buf[m].size * sizeof(kmer);
-//            
-//        }
+            
+            std::cout<<releasedMem<<std::endl;
+            
+        }
         
     }
     

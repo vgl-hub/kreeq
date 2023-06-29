@@ -379,7 +379,7 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
 
     for(Buf<kmer>* buf : buffers) {
         
-        if (buf->seq != NULL) {
+        if (buf[m].seq != NULL) {
             
             releasedMem = buf[m].size * sizeof(kmer);
             

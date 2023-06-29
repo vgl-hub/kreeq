@@ -9,6 +9,8 @@
 #include <iomanip>
 #include <stdio.h>
 #include <chrono>
+#include <filesystem>
+#include <array>
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"
@@ -43,6 +45,12 @@ double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // esti
 bool DBG::memoryOk() {
     
     return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem);
+    
+}
+
+bool DBG::memoryOk(int64_t delta) {
+    
+    return get_mem_inuse(3) + delta < (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem);
     
 }
 
@@ -457,10 +465,54 @@ void DBG::validateSequences(InSequences &inSequences) {
     
     std::vector<InSegment*> *segments = inSequences.getInSegments();
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return validateSegments(m, segments); });
+    std::array<uint16_t, 2> mapRange = {0,0};
     
-    jobWait(threadPool);
+    while(mapRange[1] < mapCount-1) {
+        
+        uint64_t max = 0;
+        
+        for(uint16_t m = mapRange[0]; m<mapCount; ++m) {
+            
+            if(tmp)
+                max += std::filesystem::file_size(userInput.prefix + "/.kmap." + std::to_string(m) + ".bin");
+            
+            if(!memoryOk(max))
+                break;
+            
+            mapRange[1] = m;
+            
+        }
+    
+        if(tmp) {
+            
+            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+                threadPool.queueJob([=]{ return loadMap(userInput.prefix, m); });
+            
+            jobWait(threadPool);
+            
+        }
+        
+        for (InSegment* segment : *segments)
+            threadPool.queueJob([=]{ return validateSegment(segment, mapRange); });
+        
+        jobWait(threadPool);
+        
+        if (tmp) {
+            
+            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m) {
+                
+                uint64_t map_size = mapSize(*maps[m]);
+                delete maps[m];
+                maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+                freed += map_size;
+                
+            }
+            
+            mapRange[0] = mapRange[1] + 1;
+            
+        }
+        
+    }
     
     for (auto it = logs.begin(); it != logs.end(); it++) {
      
@@ -479,32 +531,7 @@ void DBG::validateSequences(InSequences &inSequences) {
     
 }
 
-bool DBG::validateSegments(uint16_t m, std::vector<InSegment*> *segments) {
-    
-    uint64_t mapMissingKmers = 0, mapKmers = 0;
-    
-    if (tmp)
-        loadMap(userInput.prefix, m);
-    
-    for (InSegment* segment : *segments)
-        validateSegment(segment, m, mapMissingKmers, mapKmers);
-    
-    if (tmp) {
-        uint64_t map_size = mapSize(*maps[m]);
-        delete maps[m];
-        maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-        freed += map_size;
-    }
-    
-    std::lock_guard<std::mutex> lck(mtx);
-    totMissingKmers += mapMissingKmers;
-    totKcount += mapKmers;
-    
-    return true;
-    
-}
-
-bool DBG::validateSegment(InSegment* segment, uint16_t m, uint64_t &mapMissingKmers, uint64_t &mapKmers) {
+bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) {
     
     std::vector<uint64_t> missingKmers;
     std::vector<uint64_t> edgeMissingKmers;
@@ -514,29 +541,30 @@ bool DBG::validateSegment(InSegment* segment, uint16_t m, uint64_t &mapMissingKm
         return true;
     
     unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
-    uint8_t* str = new uint8_t[len];
+    uint8_t* str = new uint8_t[len];    
     
     for (uint64_t i = 0; i<len; ++i)
         str[i] = ctoi[*(first+i)];
     
     uint64_t key, i;
     
-    phmap::flat_hash_map<uint64_t, DBGkmer> *map = maps[m];
+    phmap::flat_hash_map<uint64_t, DBGkmer> *map;
     
     // kreeq QV
     bool isFw = false;
     
-    //std::list<double> kmerProbs, weightsProbs;
-    //std::vector<double> totProbs;
-    
-    //std::cout<<segment->getSeqHeader()<<std::endl;
+//    std::cout<<segment->getSeqHeader()<<std::endl;
     
     for (uint64_t c = 0; c<kcount; ++c){
         
         key = hash(str+c, &isFw);
         
         i = key / moduloMap;
-        if (i == m) {
+        
+        if (i >= mapRange[0] && i <= mapRange[1]) {
+            
+            map = maps[i];
+            
             auto it = map->find(key);
             const DBGkmer *dbgkmer = (it == map->end() ? NULL : &it->second);
             
@@ -571,8 +599,9 @@ bool DBG::validateSegment(InSegment* segment, uint16_t m, uint64_t &mapMissingKm
     
     delete[] str;
     
-    mapMissingKmers += missingKmers.size();
-    mapKmers += kmers;
+    std::lock_guard<std::mutex> lck(mtx);
+    totMissingKmers += missingKmers.size();
+    totKcount += kmers;
     
     return true;
     

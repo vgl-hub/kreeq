@@ -37,6 +37,8 @@ public:
     
     bool memoryOk();
     
+    bool memoryOk(int64_t delta);
+    
     bool hashSequences(std::string *readBatch);
     
     void finalize();
@@ -49,9 +51,9 @@ public:
     
     void validateSequences(InSequences &inSequences);
     
-    bool validateSegments(uint16_t m, std::vector<InSegment*> *segments);
+    bool validateSegments(std::array<uint16_t, 2> mapRange, std::vector<InSegment*> *segments);
     
-    bool validateSegment(InSegment *segment, uint16_t m, uint64_t &mapMissingKmers, uint64_t &mapKmers);
+    bool validateSegment(InSegment *segment, std::array<uint16_t, 2> mapRange);
     
     bool countBuffs(uint16_t m);
     

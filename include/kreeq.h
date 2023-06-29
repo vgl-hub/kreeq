@@ -16,7 +16,7 @@ struct DBGkmer {
 
 class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
-    std::atomic<uint64_t> totMissingKmers(0), totKcount(0);
+    std::atomic<uint64_t> totMissingKmers{0}, totKcount{0};
     std::vector<uint32_t> dependencies;
     bool tmp = false;
     

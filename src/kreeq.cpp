@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <chrono>
 #include <array>
+#include <atomic>
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"

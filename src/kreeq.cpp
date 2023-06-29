@@ -501,14 +501,12 @@ void DBG::validateSequences(InSequences &inSequences) {
     
         if(tmp) {
             
-            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+            for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
                 threadPool.queueJob([=]{ return loadMap(userInput.prefix, m); });
             
             jobWait(threadPool);
             
         }
-        
-        std::cout<<mapRange[0]<<" "<<mapRange[1]<<std::endl;
         
         for (InSegment* segment : *segments)
             threadPool.queueJob([=]{ return validateSegment(segment, mapRange); });

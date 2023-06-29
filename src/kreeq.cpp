@@ -378,14 +378,13 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
     initial_size = mapSize(*maps[m]);
 
     for(Buf<kmer>* buf : buffers) {
-        
-        if (buf[m].seq != NULL) {
-            
-            releasedMem = buf[m].size * sizeof(kmer);
+//        
+//        if (buf[m].seq != NULL) {
             
             countBuff(&buf[m], m);
-            
-        }
+            releasedMem = buf[m].size * sizeof(kmer);
+//            
+//        }
         
     }
     
@@ -427,7 +426,7 @@ bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
             
         }
         
-        delete[] thisBuf.seq; // delete the buffer
+        delete[] thisBuf.seq; // delete the buffer sequence
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
         
     }

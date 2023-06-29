@@ -253,7 +253,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
     
     for(uint16_t m = 0; m<mapCount; ++m) { // for each map, consolidate
      
-        if (!mapsInUse[m]) {
+        if (mapsInUse[m] == false) {
             
             uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });
             dependencies.push_back(jid);

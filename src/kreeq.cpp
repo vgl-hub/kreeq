@@ -225,36 +225,35 @@ void DBG::cleanup() {
 
 void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
     
-    for (unsigned int i = 0; i<buffers.size(); ++i) { // for each buffer
+    for (unsigned int i = 0; i<buffers.size(); ++i) { // for each buffer, check if we can delete them
         
         unsigned int counter = 0;
-
+        
         for(uint16_t m = 0; m<mapCount; ++m) { // for each map
-
+            
             Buf<kmer> *thisBuf = &buffers[i][m];
-
-            if (thisBuf->seq != NULL && mapsInUse[m] == false) { // if the buffer was not counted and the associated map is not in use we process it
-
-                mapsInUse[m] = true;
-                uint32_t jid = threadPool.queueJob([=]{ return countBuff(thisBuf, m); });
-                dependencies.push_back(jid);
-
-            }
-
+            
             if(thisBuf->seq == NULL){
-
+                
                 ++counter; // keeps track of the buffers that were processed so far
-
+                
                 if (counter == mapCount) {
                     
                     delete[] buffers[i];
                     buffers.erase(buffers.begin() + i);
                     
                 }
-
+                
             }
-
+            
         }
+        
+    }
+    
+    for(uint16_t m = 0; m<mapCount; ++m) { // for each map, consolidate
+     
+        uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });
+        dependencies.push_back(jid);
         
     }
     
@@ -362,9 +361,34 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
 
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
+
+    uint64_t releasedMem = 0, initial_size = 0, final_size = 0;
     
-    for(Buf<kmer>* buf : buffers)
-        countBuff(&buf[m], m);
+    initial_size = mapSize(*maps[m]);
+    
+    if (!mapsInUse[m]) {
+        
+        {
+            std::lock_guard<std::mutex> lck(mtx);
+            mapsInUse[m] = true;
+        }
+    
+        for(Buf<kmer>* buf : buffers) {
+                        
+            releasedMem = buf[m].size * sizeof(kmer);
+            
+            countBuff(&buf[m], m);
+            
+        }
+        
+    }
+    
+    final_size = mapSize(*maps[m]);
+    
+    alloc += final_size - initial_size;
+    freed += releasedMem;
+    std::lock_guard<std::mutex> lck(mtx); // release the map
+    mapsInUse[m] = false;
     
     return true;
 
@@ -374,15 +398,11 @@ bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
     
     Buf<kmer> &thisBuf = *buf;
     
-    uint64_t releasedMem = 0, initial_size = 0, final_size = 0;
-    
     if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
         
         phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[m]; // the map associated to this buffer
         
         uint64_t len = thisBuf.pos; // how many positions in the buffer have data
-        
-        initial_size = mapSize(thisMap);
         
         for (uint64_t c = 0; c<len; ++c) {
             
@@ -401,18 +421,10 @@ bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
             
         }
         
-        final_size = mapSize(thisMap);
-        
         delete[] thisBuf.seq; // delete the buffer
         thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
-        releasedMem = thisBuf.size * sizeof(kmer);
         
     }
-
-    alloc += final_size - initial_size;
-    freed += releasedMem;
-    std::lock_guard<std::mutex> lck(mtx); // release the map
-    mapsInUse[m] = false;
     
     return true;
 
@@ -490,6 +502,8 @@ void DBG::validateSequences(InSequences &inSequences) {
             jobWait(threadPool);
             
         }
+        
+        std::cout<<mapRange[0]<<" "<<mapRange[1]<<std::endl;
         
         for (InSegment* segment : *segments)
             threadPool.queueJob([=]{ return validateSegment(segment, mapRange); });
@@ -597,8 +611,7 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
     //double kreeqError = errorRate(totMissingKmers + edgeMissingKmers.size(), kcount, k), kreeqQV = -10*log10(kreeqError);
     
     delete[] str;
-    
-    std::lock_guard<std::mutex> lck(mtx);
+
     totMissingKmers += missingKmers.size();
     totKcount += kmers;
     

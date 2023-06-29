@@ -9,7 +9,6 @@
 #include <iomanip>
 #include <stdio.h>
 #include <chrono>
-#include <filesystem>
 #include <array>
 
 #include "parallel_hashmap/phmap.h"
@@ -474,7 +473,7 @@ void DBG::validateSequences(InSequences &inSequences) {
         for(uint16_t m = mapRange[0]; m<mapCount; ++m) {
             
             if(tmp)
-                max += std::filesystem::file_size(userInput.prefix + "/.kmap." + std::to_string(m) + ".bin");
+                max += fileSize(userInput.prefix + "/.kmap." + std::to_string(m) + ".bin");
             
             if(!memoryOk(max))
                 break;
@@ -499,7 +498,7 @@ void DBG::validateSequences(InSequences &inSequences) {
         
         if (tmp) {
             
-            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m) {
+            for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m) {
                 
                 uint64_t map_size = mapSize(*maps[m]);
                 delete maps[m];

@@ -367,7 +367,7 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
 
-    if (!mapsInUse[m]) {return true;}
+    if (mapsInUse[m] == true) {return true;}
     
     uint64_t releasedMem = 0, initial_size = 0, final_size = 0;
     

@@ -49,7 +49,7 @@ bool DBG::memoryOk() {
 
 bool DBG::memoryOk(int64_t delta) {
     
-    return get_mem_inuse(3) + delta < (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem);
+    return get_mem_inuse(3) + convert_memory(delta, 3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem);
     
 }
 

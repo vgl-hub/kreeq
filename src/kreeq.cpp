@@ -196,14 +196,17 @@ void DBG::finalize() {
 
 void DBG::cleanup() {
     
-    if(tmp) {
+    if(tmp && userInput.inDBG != userInput.prefix) {
         
         lg.verbose("Deleting tmp files");
         
         for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            threadPool.queueJob([=]{ return remove(("./.kmap." + std::to_string(m) + ".bin").c_str()); });
+            threadPool.queueJob([=]{ return remove((userInput.prefix + "./.kmap." + std::to_string(m) + ".bin").c_str()); });
         
         jobWait(threadPool);
+        
+        if (userInput.prefix != ".")
+            rm_dir(userInput.prefix.c_str());
         
     }
     
@@ -279,6 +282,9 @@ void DBG::updateDBG() {
         delete[] buf;
     
     buffers.clear();
+    
+    if (userInput.inDBG != "")
+        userInput.prefix = userInput.inDBG;
     
     for(uint16_t m = 0; m<mapCount; ++m) {
         uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
@@ -663,10 +669,10 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     
 }
 
-void DBG::load() { // concurrent loading of existing hashmaps
+void DBG::load() {
     
     tmp = true;
-    userInput.prefix = userInput.iDBGFileArg;
+    userInput.prefix = userInput.inDBG;
     
 }
 

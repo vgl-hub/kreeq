@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
                     }else{ // input is a regular file
                         
                         ifFileExists(optarg);
-                        userInput.iDBGFileArg = optarg;
+                        userInput.inDBG = optarg;
                         
                     }
                     

@@ -10,7 +10,7 @@ Either download one of the releases or `git clone https://github.com/vgl-hub/kre
 ## Usage
 
 ```
-kreeq validate -f input.[fasta|fastq][.gz] -r reads.fastq[.gz] [-k 21]
+kreeq validate -f input.[fasta|fastq][.gz] -r reads1.fastq[.gz] reads2.fastq[.gz] [...] [-k 21]
 ```
 
 It accepts multiple read files as input, separated by space. To check out all options and flags use `kreeq -h`.

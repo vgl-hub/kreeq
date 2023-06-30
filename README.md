@@ -18,7 +18,15 @@ It accepts multiple read files as input, separated by space. To check out all op
 You can test some typical usage with the files in the `testFiles` folder, e.g.:
 
 ```
-kreeq validate -f testFiles/random1.fasta testFiles/random1.fastq
+kreeq validate -f testFiles/random1.fasta -r testFiles/random1.fastq
+```
+
+Importantly, the kreeq database can only be computed once on the read set, and reused for multiple analyses to save runtime:
+
+```
+kreeq validate -f testFiles/random1.fasta -r testFiles/random1.fastq -o db.kreeq
+kreeq validate -f testFiles/random1.fasta -d db.kreeq
+
 ```
 
 ## How to cite

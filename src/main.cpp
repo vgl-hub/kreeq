@@ -73,7 +73,6 @@ int main(int argc, char **argv) {
 
     if(strcmp(argv[1],"validate") == 0) {
 
-        
         mode = 0;
         
         static struct option long_options[] = { // struct mapping long options
@@ -231,7 +230,7 @@ int main(int argc, char **argv) {
                     printf("\t-f --input-sequence sequence input file (fasta,gfa1/2).\n");
                     printf("\t-r --input-reads read input files (fastq).\n");
                     printf("\t-k --kmer-length length of kmers.\n");
-                    printf("\t-o --out-format dumps hashmaps to file.\n");
+                    printf("\t-o --out-format dumps hashmaps to file (supported extensions: .kreeq).\n");
                     printf("\t-t --tmp-prefix prefix to temporary directory.\n");
                     printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.5 of max).\n");
                     printf("\t-j --threads <n> numbers of threads (default: max).\n");

@@ -5,5 +5,6 @@ Total: 1400
 Unique: 0
 Distinct: 79
 Missing: 4398046511025
-Presence QV (k=21)
-274	711	16.3995	0.0229115
+Missing	Total	QV	Error	k	Method
+274	711	16.3995	0.0229115	21	Merqury
+274	711	16.3995	0.0229115	21	Kreeq

@@ -191,21 +191,6 @@ void DBG::finalize() {
         jobWait(threadPool);
         
     }
-    
-    lg.verbose("Computing summary statistics");
-    
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return histogram(m); });
-    
-    jobWait(threadPool);
-    
-    uint64_t missing = pow(4,k)-totKmersDistinct;
-    
-    std::cout<<"DBG Summary statistics:\n"
-             <<"Total: "<<totKmers<<"\n"
-             <<"Unique: "<<totKmersUnique<<"\n"
-             <<"Distinct: "<<totKmersDistinct<<"\n"
-             <<"Missing: "<<missing<<"\n";
 
 }
 
@@ -435,6 +420,25 @@ bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
 
 }
 
+void DBG::summary() {
+    
+    lg.verbose("Computing summary statistics");
+    
+    for(uint16_t m = 0; m<mapCount; ++m)
+        threadPool.queueJob([=]{ return histogram(m); });
+    
+    jobWait(threadPool);
+    
+    uint64_t missing = pow(4,k)-totKmersDistinct;
+    
+    std::cout<<"DBG Summary statistics:\n"
+             <<"Total: "<<totKmers<<"\n"
+             <<"Unique: "<<totKmersUnique<<"\n"
+             <<"Distinct: "<<totKmersDistinct<<"\n"
+             <<"Missing: "<<missing<<"\n";
+
+}
+
 bool DBG::histogram(uint16_t m) {
     
     uint64_t kmersUnique = 0, kmersDistinct = 0, map_size = 0;
@@ -537,13 +541,31 @@ void DBG::validateSequences(InSequences &inSequences) {
         
     }
     
+    std::cout<<"Missing"<<"\t"
+             <<"Total"<<"\t"
+             <<"QV"<<"\t"
+             <<"Error"<<"\t"
+             <<"k"<<"\t"
+             <<"Method"<<std::endl;
+    
     double merquryError = errorRate(totMissingKmers, totKcount, k), merquryQV = -10*log10(merquryError);
     
-    std::cout<<"Presence QV (k="<<std::to_string(k)<<")\n"
-             <<totMissingKmers<<"\t"
+    std::cout<<totMissingKmers<<"\t"
              <<totKcount<<"\t"
              <<merquryQV<<"\t"
-             <<merquryError<<std::endl;
+             <<merquryError<<"\t"
+             <<std::to_string(k)<<"\t"
+             <<"Merqury"<<std::endl;
+    
+    double kreeqError = errorRate(totMissingKmers+totEdgeMissingKmers, totKcount, k), kreeqQV = -10*log10(kreeqError);
+    
+    std::cout
+             <<totMissingKmers+totEdgeMissingKmers<<"\t"
+             <<totKcount<<"\t"
+             <<kreeqQV<<"\t"
+             <<kreeqError<<"\t"
+             <<std::to_string(k)<<"\t"
+             <<"Kreeq"<<std::endl;
     
 }
 
@@ -577,14 +599,14 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
         
         i = key / moduloMap;
         
+//        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
+        
         if (i >= mapRange[0] && i <= mapRange[1]) {
             
             map = maps[i];
             
             auto it = map->find(key);
             const DBGkmer *dbgkmer = (it == map->end() ? NULL : &it->second);
-            
-            //std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
             
             if (it == map->end()) // merqury QV
                 missingKmers.push_back(c);
@@ -594,15 +616,15 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
                 
                 if (isFw){
                     
-                    if ((c<kcount-1 && dbgkmer->fw[*(str+c+k)]) == 0 || (c>0 && dbgkmer->bw[*(str+c-1)] == 0)){
+                    if ((c<kcount-1 && dbgkmer->fw[*(str+c+k)] == 0) && (c>0 && dbgkmer->bw[*(str+c-1)] == 0)){
                         edgeMissingKmers.push_back(c);
-                        //std::cout<<"edge error1"<<std::endl;
+//                        std::cout<<"edge error1"<<std::endl;
                     }
                 }else{
                     
-                    if ((c>0 && dbgkmer->fw[3-*(str+c-1)] == 0) || (c<kcount-1 && dbgkmer->bw[3-*(str+c+k)] == 0)){
+                    if ((c>0 && dbgkmer->fw[3-*(str+c-1)] == 0) && (c<kcount-1 && dbgkmer->bw[3-*(str+c+k)] == 0)){
                         edgeMissingKmers.push_back(c);
-                        //std::cout<<"edge error2"<<std::endl;
+//                        std::cout<<"edge error2"<<std::endl;
                     }
                 }
             }
@@ -617,6 +639,7 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
 
     totMissingKmers += missingKmers.size();
     totKcount += kmers;
+    totEdgeMissingKmers += edgeMissingKmers.size();
     
     return true;
     
@@ -642,10 +665,8 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
 
 void DBG::load() { // concurrent loading of existing hashmaps
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return loadMap(userInput.iDBGFileArg, m); });
-    
-    jobWait(threadPool);
+    tmp = true;
+    userInput.prefix = userInput.iDBGFileArg;
     
 }
 

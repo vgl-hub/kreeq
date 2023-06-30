@@ -58,6 +58,8 @@ void Input::read(bool mode, InSequences& inSequences) {
             
             lg.verbose("Reads loaded");
             
+            knav.finalize(); // populate the hash table
+            
         }else{
             
             std::ifstream file;
@@ -72,7 +74,7 @@ void Input::read(bool mode, InSequences& inSequences) {
             
         }
         
-        knav.finalize(); // populate the hash table
+        knav.summary();
         
         knav.validateSequences(inSequences); // validate the input sequence
         

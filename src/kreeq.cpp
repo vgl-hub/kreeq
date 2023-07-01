@@ -364,7 +364,7 @@ bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
         }
         
         delete[] thisBuf.seq; // delete the buffer sequence
-        buf[m].seq = NULL; // set sequence buffers to the null pointer so that they can be deleted
+        thisBuf.seq = NULL; // set sequence buffers to the null pointer so that they can be deleted
         
     }
     

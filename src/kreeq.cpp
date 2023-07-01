@@ -209,14 +209,14 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
         
         uint16_t counter = 0;
         
-//        for(uint16_t m = 0; m<mapCount; ++m) { // for each map
-//            
-//            Buf<kmer>& thisBuf = buffers[i][m];
+        for(uint16_t m = 0; m<mapCount; ++m) { // for each map
+            
+            Buf<kmer>& thisBuf = buffers[i][m];
 //            
 //            if(thisBuf.seq == NULL)
 //                ++counter; // keeps track of the buffers that were processed so far
-//            
-//        }
+            
+        }
         
         if (counter == mapCount) {
             

@@ -222,6 +222,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
             
             delete[] buffers[i];
             buffers.erase(buffers.begin() + i);
+            --i;
             
         }
         

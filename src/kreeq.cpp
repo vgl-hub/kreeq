@@ -312,12 +312,6 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
     
-    {
-        std::lock_guard<std::mutex> lck(mtx);
-        if (mapsInUse[m] == true) {return true;}
-        mapsInUse[m] = true;
-    }
-    
     uint64_t releasedMem = 0, initial_size = 0, final_size = 0;
     
     initial_size = mapSize(*maps[m]);
@@ -335,14 +329,11 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
     
     final_size = mapSize(*maps[m]);
     
-    alloc += final_size - initial_size;
-    freed += releasedMem;
-    std::lock_guard<std::mutex> lck(mtx); // release the map
-    
     for(Buf<kmer>* buf : buffers)
         buf[m].seq = NULL; // set sequence buffers to the null pointer so that they can be deleted
-
-    mapsInUse[m] = false;
+    
+    alloc += final_size - initial_size;
+    freed += releasedMem;
 
     return true;
 

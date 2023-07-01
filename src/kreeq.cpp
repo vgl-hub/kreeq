@@ -79,74 +79,65 @@ bool DBG::hashSequences(std::string* readBatch) {
     unsigned char* first = (unsigned char*) readBatch->c_str();
     
     uint8_t* str = new uint8_t[len];
-    uint64_t e = 0;
     
-    for (uint64_t p = 0; p<len; ++p) {
+    uint8_t e = 0;
+    
+    kmer* khmer;
+    uint64_t key, i, newSize, kcount = len-k+1;
+    Buf<kmer>* b;
+    kmer* bufNew;
+    bool isFw = false;
+    
+    for (uint64_t p = 0; p<kcount; ++p) {
         
-        str[p] = ctoi[*(first+p)];
-        
-        if (str[p] > 3 || p+1 == len){
+        for (uint8_t c = e; c<k; ++c) { // generate 21 bases if e=0 or the next if e=20
             
-            if (p+1 == len && str[p] < 4) { // end of sequence, adjust indexes
-                ++e;
-                ++p;
+            str[p+c] = ctoi[*(first+p+c)]; // convert the next base
+            if (str[p+c] > 3) { // if non-canonical base is found
+                p = p+c; // move position
+                e = 0; // reset base counter
+                break;
             }
             
-            if (e < k) { // beginning/end of a sequence or kmer too short, nothing to be done
-                e = 0;
-                continue;
-            }
-            
-            uint64_t kcount = e-k+1;
-            
-            kmer* khmer;
-            uint64_t key, i, newSize;
-            Buf<kmer>* b;
-            kmer* bufNew;
-            bool isFw = false;
-            
-            for (uint64_t c = 0; c<kcount; ++c){
-                
-                key = hash(str+c+p-e, &isFw);
-                i = key / moduloMap;
-                b = &buf[i];
-                
-                if (b->pos == b->size) {
-                    
-                    newSize = b->size*2;
-                    bufNew = new kmer[newSize];
-                    
-                    memcpy(bufNew, b->seq, b->size*sizeof(kmer));
-                    
-                    b->size = newSize;
-                    delete[] b->seq;
-                    b->seq = bufNew;
-                    
-                }
-                
-                khmer = &b->seq[b->pos++];
-                
-                if (isFw){
-                    khmer->fw[*(str+c+k+p-e)] = 1;
-                    if (c > 0)
-                        khmer->bw[*(str+c-1+p-e)] = 1;
-                }else{
-                    if (c > 0)
-                        khmer->fw[3-*(str+c-1+p-e)] = 1;
-                    khmer->bw[3-*(str+c+k+p-e)] = 1;
-                }
-                
-                khmer->hash = key;
-                
-            }
-            
-            e = 0;
-            
-        }else{
-            
-            ++e;
+            e = k-1;
             
         }
+        
+        if (e == 0) // not enough bases for a kmer
+            continue;
+        
+        key = hash(str+p, &isFw);
+        i = key / moduloMap;
+        b = &buf[i];
+        
+        if (b->pos == b->size) {
+            
+            newSize = b->size*2;
+            bufNew = new kmer[newSize];
+            
+            memcpy(bufNew, b->seq, b->size*sizeof(kmer));
+            
+            b->size = newSize;
+            delete[] b->seq;
+            b->seq = bufNew;
+            
+        }
+        
+        khmer = &b->seq[b->pos++];
+        
+        if (isFw){
+            if (ctoi[*(first+p+k)] <= 3)
+                khmer->fw[ctoi[*(first+p+k)]] = 1;
+            if (p > 0 && *(str+p-1) <= 3)
+                khmer->bw[*(str+p-1)] = 1;
+        }else{
+            if (p > 0 && *(str+p-1) <= 3)
+                khmer->fw[3-*(str+p-1)] = 1;
+            if (ctoi[*(first+p+k)] <= 3)
+                khmer->bw[3-ctoi[*(first+p+k)]] = 1;
+        }
+        
+        khmer->hash = key;
         
     }
 
@@ -579,10 +570,13 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
     
     std::vector<uint64_t> missingKmers;
     std::vector<uint64_t> edgeMissingKmers;
-    uint64_t len = segment->getSegmentLen(), kcount = len-k+1, kmers = 0;
     
-    if (kcount<1)
+    uint64_t len = segment->getSegmentLen();
+    
+    if (len<k)
         return true;
+    
+    uint64_t kcount = len-k+1, kmers = 0;
     
     unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
     uint8_t* str = new uint8_t[len];    

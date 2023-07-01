@@ -211,9 +211,9 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
         
         for(uint16_t m = 0; m<mapCount; ++m) { // for each map
             
-            Buf<kmer> *thisBuf = &buffers[i][m];
+            Buf<kmer>& thisBuf = buffers[i][m];
             
-            if(thisBuf->seq == NULL)
+            if(thisBuf.seq == NULL)
                 ++counter; // keeps track of the buffers that were processed so far
             
         }
@@ -222,7 +222,6 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
             
             delete[] buffers[i];
             buffers.erase(buffers.begin() + i);
-            --i;
             
         }
         

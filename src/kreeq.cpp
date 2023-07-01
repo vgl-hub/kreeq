@@ -350,10 +350,11 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
     alloc += final_size - initial_size;
     freed += releasedMem;
     std::lock_guard<std::mutex> lck(mtx); // release the map
-    mapsInUse[m] = false;
     
     for(Buf<kmer>* buf : buffers)
         buf[m].seq = NULL; // set sequence buffers to the null pointer so that they can be deleted
+    
+    mapsInUse[m] = false;
     
     return true;
 

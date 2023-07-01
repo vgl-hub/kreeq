@@ -377,6 +377,9 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
     std::lock_guard<std::mutex> lck(mtx); // release the map
     mapsInUse[m] = false;
     
+    for(Buf<kmer>* buf : buffers)
+        buf[m].seq = NULL; // set sequence buffers to the null pointer so that they can be deleted
+    
     return true;
 
 }
@@ -409,7 +412,6 @@ bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
         }
         
         delete[] thisBuf.seq; // delete the buffer sequence
-        thisBuf.seq = NULL; // set its sequence to the null pointer in case its checked again
         
     }
     
@@ -694,7 +696,7 @@ void DBG::report() { // generates the output from the program
     if (userInput.outFile != "")
         ext = getFileExt("." + userInput.outFile);
     
-    lg.verbose("Writing ouput: " + ext);
+    lg.verbose("Writing ouput: " + userInput.outFile);
     
     std::unique_ptr<std::ostream> ostream; // smart pointer to handle any kind of output stream
     

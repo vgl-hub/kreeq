@@ -205,17 +205,6 @@ void DBG::cleanup() {
 
 void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
     
-    for(uint16_t m = 0; m<mapCount; ++m) { // for each map, consolidate
-     
-        if (mapsInUse[m] == false) {
-            
-            uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });
-            dependencies.push_back(jid);
-            
-        }
-        
-    }
-    
     threadPool.status();
     
     if (!memoryOk()) {
@@ -321,7 +310,6 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
     
 }
 
-
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
     
     {
@@ -334,12 +322,12 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
     
     initial_size = mapSize(*maps[m]);
 
-    for(Buf<kmer>* buf : buffers) {
+    for (uint32_t i = 0; i<buffers.size(); ++i) {
         
-        if (buf[m].seq != NULL) {
+        if (buffers[i][m].seq != NULL) {
             
-            countBuff(&buf[m], m);
-            releasedMem += buf[m].size * sizeof(kmer);
+            countBuff(&buffers[i][m], m);
+            releasedMem += buffers[i][m].size * sizeof(kmer);
             
         }
         
@@ -353,9 +341,9 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
     
     for(Buf<kmer>* buf : buffers)
         buf[m].seq = NULL; // set sequence buffers to the null pointer so that they can be deleted
-    
+
     mapsInUse[m] = false;
-    
+
     return true;
 
 }

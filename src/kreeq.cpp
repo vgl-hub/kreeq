@@ -214,7 +214,7 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
             
             Buf<kmer>& thisBuf = *buffers[m];
             
-            if(thisBuf.seq == NULL) {}
+            if(thisBuf.seq == NULL)
                 ++counter; // keeps track of the buffers that were processed so far
             
         }

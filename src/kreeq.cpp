@@ -205,23 +205,28 @@ void DBG::cleanup() {
 
 void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
     
-    for (uint32_t i = 0; i<buffers.size(); ++i) { // for each buffer, check if we can delete them
+    auto it = buffers.begin();
+    while(it != buffers.end()) { // for each buffer, check if we can delete them
         
         uint16_t counter = 0;
         
         for(uint16_t m = 0; m<mapCount; ++m) { // for each map
             
-            Buf<kmer>& thisBuf = buffers[i][m];
+            Buf<kmer>& thisBuf = *buffers[m];
             
             if(thisBuf.seq == NULL) {}
-//                ++counter; // keeps track of the buffers that were processed so far
+                ++counter; // keeps track of the buffers that were processed so far
             
         }
         
         if (counter == mapCount) {
             
-            delete[] buffers[i];
-            buffers.erase(buffers.begin() + i);
+            delete[] *it;
+            it = buffers.erase(it);
+            
+        }else{
+            
+            it++;
             
         }
         

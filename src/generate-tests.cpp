@@ -33,13 +33,13 @@ int main(int, char **argv) {
         {{"fasta", "fasta.gz", "fastq", "fastq.gz", "gfa"}, {"-r testFiles/random1.fastq", "-r testFiles/random2.fastq", "-r testFiles/random1.fastq.gz", "-r testFiles/random1.fastq testFiles/random2.fastq", "-r testFiles/random1.fastq.gz testFiles/random2.fastq.gz"}}
     //  {{set of test file extensions}, {list of command line args to run with}}
     };
+    
+    const std::set<std::string> exclude {};
 
     const std::map<std::set<std::string>, std::vector<std::string>> file_args = {
-        
+        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq"}}
     //  {{set of test file paths}, {list of command line args to run with}}
     };
-
-    const std::set<std::string> exclude {};
 
     for(const std::string &file : list_dir("testFiles")) {
         std::string ext = getFileExt(file);

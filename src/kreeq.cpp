@@ -205,9 +205,9 @@ void DBG::cleanup() {
 
 void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
     
-    for (unsigned int i = 0; i<buffers.size(); ++i) { // for each buffer, check if we can delete them
+    for (uint32_t i = 0; i<buffers.size(); ++i) { // for each buffer, check if we can delete them
         
-        unsigned int counter = 0;
+        uint16_t counter = 0;
         
         for(uint16_t m = 0; m<mapCount; ++m) { // for each map
             

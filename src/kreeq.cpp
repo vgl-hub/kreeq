@@ -68,13 +68,15 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
 bool DBG::hashSequences(std::string* readBatch) {
     
     Log threadLog;
-    
-    Buf<kmer>* buf = new Buf<kmer>[mapCount];
         
     uint64_t len = readBatch->size();
     
-    if (len<k)
+    if (len<k) {
+        delete readBatch;
         return true;
+    }
+    
+    Buf<kmer>* buf = new Buf<kmer>[mapCount];
     
     unsigned char* first = (unsigned char*) readBatch->c_str();
     
@@ -217,6 +219,9 @@ void DBG::consolidate() { // to reduce memory footprint we consolidate the buffe
 }
 
 void DBG::updateDBG() {
+
+    if (userInput.inDBG != "")
+        userInput.prefix = userInput.inDBG; 
     
     lg.verbose("\nCompleting residual jobs");
     
@@ -227,7 +232,7 @@ void DBG::updateDBG() {
         dependencies.push_back(jid);
     }
     
-    lg.verbose("Counting all residual buffers");
+    lg.verbose("Counting all residual buffers and updating maps");
     
     jobWait(threadPool, dependencies);
     
@@ -238,76 +243,6 @@ void DBG::updateDBG() {
     
     buffers.clear();
     
-    if (userInput.inDBG != "")
-        userInput.prefix = userInput.inDBG;
-    
-    for(uint16_t m = 0; m<mapCount; ++m) {
-        uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
-        dependencies.push_back(jid);
-    }
-    
-    lg.verbose("Updating maps");
-    
-    jobWait(threadPool, dependencies);
-    
-}
-
-bool DBG::updateMap(std::string prefix, uint16_t m) {
-    
-    uint64_t map_size1 = 0, map_size2 = 0;
-    
-    prefix.append("/.kmap." + std::to_string(m) + ".bin");
-    
-    phmap::flat_hash_map<uint64_t, DBGkmer> dumpMap;
-    phmap::BinaryInputArchive ar_in(prefix.c_str());
-    dumpMap.phmap_load(ar_in);
-    
-    map_size1 = mapSize(dumpMap);
-    map_size2 = mapSize(*maps[m]);
-    alloc += map_size1;
-    
-    unionSum(*maps[m], dumpMap); // merges the current map and the existing map
-    
-    phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
-    dumpMap.phmap_dump(ar_out);
-    
-    delete maps[m];
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-    
-    freed += map_size1 + map_size2;
-    
-    return true;
-    
-}
-
-bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2) {
-    
-    for (auto pair : map1) { // for each element in map1, find it in map2 and increase its value
-        
-        DBGkmer &dbgkmerMap = map2[pair.first]; // insert or find this kmer in the hash table
-        
-        for (uint64_t w = 0; w<4; ++w) { // update weights
-            
-            if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
-                dbgkmerMap.fw[w] += pair.second.fw[w];
-            else
-                dbgkmerMap.fw[w] = 255;
-            if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
-                dbgkmerMap.bw[w] += pair.second.bw[w];
-            else
-                dbgkmerMap.bw[w] = 255;
-            
-        }
-        
-        if (255 - dbgkmerMap.cov >= pair.second.cov)
-            dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
-        else
-            dbgkmerMap.cov = 255;
-        
-    }
-    
-    return true;
-    
 }
 
 bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
@@ -317,17 +252,15 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
     initial_size = mapSize(*maps[m]);
 
     for (uint32_t i = 0; i<buffers.size(); ++i) {
-        
-        if (buffers[i][m].seq != NULL) {
             
-            countBuff(&buffers[i][m], m);
-            releasedMem += buffers[i][m].size * sizeof(kmer);
-            
-        }
+        countBuff(&buffers[i][m], m);
+        releasedMem += buffers[i][m].size * sizeof(kmer);
         
     }
-    
-    final_size = mapSize(*maps[m]);
+        
+    final_size = mapSize(*maps[m]);   
+
+    updateMap(userInput.prefix, m);
     
     alloc += final_size - initial_size;
     freed += releasedMem;
@@ -370,6 +303,75 @@ bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
     
     return true;
 
+}
+
+bool DBG::updateMap(std::string prefix, uint16_t m) {
+    
+    uint64_t map_size1 = mapSize(*maps[m]), map_size2 = 0;
+    
+    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    
+    if (fileExists(prefix)) {
+    
+        phmap::flat_hash_map<uint64_t, DBGkmer> *dumpMap = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+        phmap::BinaryInputArchive ar_in(prefix.c_str());
+        dumpMap->phmap_load(ar_in);
+    
+        map_size2 = fileSize(prefix);
+        alloc += map_size2;
+    
+        unionSum(*maps[m], *dumpMap); // merges the current map and the existing map
+    
+        phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
+        dumpMap->phmap_dump(ar_out);
+    
+        delete dumpMap;
+    
+    }else{
+    
+        phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
+        maps[m]->phmap_dump(ar_out);
+    
+    }
+    
+    delete maps[m];
+    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    
+    freed += map_size1 + map_size2;
+    alloc += mapSize(*maps[m]);
+    
+    return true;
+    
+}
+
+bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2) {
+    
+    for (auto pair : map1) { // for each element in map1, find it in map2 and increase its value
+        
+        DBGkmer &dbgkmerMap = map2[pair.first]; // insert or find this kmer in the hash table
+        
+        for (uint64_t w = 0; w<4; ++w) { // update weights
+            
+            if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                dbgkmerMap.fw[w] += pair.second.fw[w];
+            else
+                dbgkmerMap.fw[w] = 255;
+            if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                dbgkmerMap.bw[w] += pair.second.bw[w];
+            else
+                dbgkmerMap.bw[w] = 255;
+            
+        }
+        
+        if (255 - dbgkmerMap.cov >= pair.second.cov)
+            dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+        else
+            dbgkmerMap.cov = 255;
+        
+    }
+    
+    return true;
+    
 }
 
 void DBG::summary() {

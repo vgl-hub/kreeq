@@ -258,9 +258,10 @@ bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain 
         
     }
         
-    final_size = mapSize(*maps[m]);   
-
-    updateMap(userInput.prefix, m);
+    final_size = mapSize(*maps[m]);
+    
+    if (tmp)
+        updateMap(userInput.prefix, m);
     
     alloc += final_size - initial_size;
     freed += releasedMem;

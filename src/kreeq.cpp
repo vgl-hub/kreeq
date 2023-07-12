@@ -123,7 +123,7 @@ bool DBG::hashSequences(std::string* readBatch, std::array<uint16_t, 2> mapRange
         key = hash(str+p, &isFw);
         i = key / moduloMap;
 
-        if (i >= mapRange[0] && i <= mapRange[1]) {
+        if (i >= mapRange[0] && i < mapRange[1]) {
             
             kmer khmer;
             

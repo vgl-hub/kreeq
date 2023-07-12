@@ -78,6 +78,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     jobWait(threadPool, dependencies);
     
     delete readBatch;
+    freed += readBatch->size() * sizeof(char);
     
     return true;
     
@@ -157,7 +158,6 @@ bool DBG::hashSequences(std::string* readBatch, std::array<uint16_t, 2> mapRange
     }
 
     delete[] str;
-    freed += len * sizeof(char);
         
 //    threadLog.add("Processed sequence: " + sequence->header);
 //    std::lock_guard<std::mutex> lck(mtx);

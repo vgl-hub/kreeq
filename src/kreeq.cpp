@@ -75,10 +75,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
         
     }
     
-    jobWait(threadPool, dependencies);
-    
-    delete readBatch;
-    freed += readBatch->size() * sizeof(char);
+    readBatches.push_back(readBatch);
     
     return true;
     
@@ -190,6 +187,18 @@ void DBG::consolidate() {
     threadPool.status();
     
     if (!memoryOk()) {
+        
+        jobWait(threadPool, dependencies);
+        
+        for (std::string* readBatch : readBatches) {
+            
+            delete readBatch;
+            freed += readBatch->size() * sizeof(char);
+            
+        }
+        
+        if (memoryOk())
+            return;
         
         tmp = true;
         

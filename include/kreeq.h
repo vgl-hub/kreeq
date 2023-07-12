@@ -21,6 +21,8 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     bool tmp = false;
     
     UserInputKreeq& userInput;
+    
+    std::vector<std::string*> readBatches;
 
 public:
     

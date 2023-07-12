@@ -40,9 +40,7 @@ public:
     
     bool memoryOk(int64_t delta);
     
-    bool hashSequences(std::string *readBatch);
-    
-    void finalize();
+    bool hashSequences(std::string *readBatch, std::array<uint16_t, 2> mapRange);
     
     void cleanup();
     
@@ -58,10 +56,6 @@ public:
     
     bool validateSegment(InSegment *segment, std::array<uint16_t, 2> mapRange);
     
-    bool countBuffs(uint16_t m);
-    
-    bool countBuff(Buf<kmer> *thisBuf, uint16_t m);
-    
     void consolidate();
     
     bool traverseInReads(std::string *readBatch);
@@ -73,8 +67,6 @@ public:
     void load();
     
     void report();
-    
-    void updateDBG();
     
     bool updateMap(std::string prefix, uint16_t m);
     

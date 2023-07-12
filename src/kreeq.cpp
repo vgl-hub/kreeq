@@ -58,16 +58,34 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
     alloc += readBatch->size() * sizeof(char);
     
-    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(readBatch); });
-    dependencies.push_back(jid);
+    uint8_t threadN = threadPool.totalThreads(), mapsN = mapCount / threadN;
+    
+    std::array<uint16_t, 2> mapRange = {0,0};
+    
+    while(mapRange[1] < mapCount) {
+        
+        mapRange[0] = mapRange[1];
+        mapRange[1] += mapsN;
+        
+        if (mapRange[1] >= mapCount)
+            mapRange[1] = mapCount;
+        
+        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(readBatch, mapRange); });
+        dependencies.push_back(jid);
+        
+    }
+    
+    jobWait(threadPool, dependencies);
+    
+    delete readBatch;
     
     return true;
     
 }
 
-bool DBG::hashSequences(std::string* readBatch) {
+bool DBG::hashSequences(std::string* readBatch, std::array<uint16_t, 2> mapRange) {
     
-    Log threadLog;
+//    Log threadLog;
         
     uint64_t len = readBatch->size();
     
@@ -76,23 +94,17 @@ bool DBG::hashSequences(std::string* readBatch) {
         return true;
     }
     
-    Buf<kmer>* buf = new Buf<kmer>[mapCount];
-    
     unsigned char* first = (unsigned char*) readBatch->c_str();
     
     uint8_t* str = new uint8_t[len];
     
     uint8_t e = 0;
-    
-    kmer* khmer;
-    uint64_t key, i, newSize, kcount = len-k+1;
-    Buf<kmer>* b;
-    kmer* bufNew;
+    uint64_t key, i, kcount = len-k+1;
     bool isFw = false;
     
     for (uint64_t p = 0; p<kcount; ++p) {
         
-        for (uint8_t c = e; c<k; ++c) { // generate 21 bases if e=0 or the next if e=20
+        for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
             
             str[p+c] = ctoi[*(first+p+c)]; // convert the next base
             if (str[p+c] > 3) { // if non-canonical base is found
@@ -110,81 +122,49 @@ bool DBG::hashSequences(std::string* readBatch) {
         
         key = hash(str+p, &isFw);
         i = key / moduloMap;
-        b = &buf[i];
-        
-        if (b->pos == b->size) {
+
+        if (i >= mapRange[0] && i <= mapRange[1]) {
             
-            newSize = b->size*2;
-            bufNew = new kmer[newSize];
+            kmer khmer;
             
-            memcpy(bufNew, b->seq, b->size*sizeof(kmer));
+            if (isFw){
+                if (ctoi[*(first+p+k)] <= 3)
+                    khmer.fw[ctoi[*(first+p+k)]] = 1;
+                if (p > 0 && *(str+p-1) <= 3)
+                    khmer.bw[*(str+p-1)] = 1;
+            }else{
+                if (p > 0 && *(str+p-1) <= 3)
+                    khmer.fw[3-*(str+p-1)] = 1;
+                if (ctoi[*(first+p+k)] <= 3)
+                    khmer.bw[3-ctoi[*(first+p+k)]] = 1;
+            }
             
-            b->size = newSize;
-            delete[] b->seq;
-            b->seq = bufNew;
+            phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
+            DBGkmer &dbgkmer = thisMap[key]; // insert or find this kmer in the hash table
+            
+            for (uint64_t w = 0; w<4; ++w) { // update weights
+
+                if (255 - dbgkmer.fw[w] >= khmer.fw[w])
+                    dbgkmer.fw[w] += khmer.fw[w];
+                if (255 - dbgkmer.bw[w] >= khmer.bw[w])
+                    dbgkmer.bw[w] += khmer.bw[w];
+            }
+            if (dbgkmer.cov < 255)
+                ++dbgkmer.cov; // increase kmer coverage
             
         }
-        
-        khmer = &b->seq[b->pos++];
-        
-        if (isFw){
-            if (ctoi[*(first+p+k)] <= 3)
-                khmer->fw[ctoi[*(first+p+k)]] = 1;
-            if (p > 0 && *(str+p-1) <= 3)
-                khmer->bw[*(str+p-1)] = 1;
-        }else{
-            if (p > 0 && *(str+p-1) <= 3)
-                khmer->fw[3-*(str+p-1)] = 1;
-            if (ctoi[*(first+p+k)] <= 3)
-                khmer->bw[3-ctoi[*(first+p+k)]] = 1;
-        }
-        
-        khmer->hash = key;
         
     }
 
     delete[] str;
-    delete readBatch;
-    
-    // track memory usage
-    uint64_t thisAlloc = 0;
-    for(uint64_t i = 0 ; i < mapCount ; ++i)
-        thisAlloc += buf[i].size * sizeof(kmer);
-        
-    // threadLog.add("Processed sequence: " + sequence->header);
-    
     freed += len * sizeof(char);
-    alloc += thisAlloc;
-    
-    std::lock_guard<std::mutex> lck(mtx);
-    buffers.push_back(buf);
-    logs.push_back(threadLog);
+        
+//    threadLog.add("Processed sequence: " + sequence->header);
+//    std::lock_guard<std::mutex> lck(mtx);
+//    logs.push_back(threadLog);
     
     return true;
     
-}
-
-void DBG::finalize() {
-    
-    lg.verbose("Finalizing DBG");
-    
-    if (tmp) {
-        
-        lg.verbose("Using tmp");
-        
-        updateDBG();
-        
-        lg.verbose("DBG updated");
-        
-    }else{
-        
-        for(uint16_t m = 0; m<mapCount; ++m)
-            threadPool.queueJob([=]{ return countBuffs(m); });
-        
-        jobWait(threadPool);
-        
-    }
-
 }
 
 void DBG::cleanup() {
@@ -205,104 +185,24 @@ void DBG::cleanup() {
     
 }
 
-void DBG::consolidate() { // to reduce memory footprint we consolidate the buffers as we go
+void DBG::consolidate() {
     
     threadPool.status();
     
     if (!memoryOk()) {
         
-        updateDBG();
         tmp = true;
         
-    }
-
-}
-
-void DBG::updateDBG() {
-
-    if (userInput.inDBG != "")
-        userInput.prefix = userInput.inDBG; 
-    
-    lg.verbose("\nCompleting residual jobs");
-    
-    jobWait(threadPool, dependencies);
-    
-    for(uint16_t m = 0; m<mapCount; ++m) {
-        uint32_t jid = threadPool.queueJob([=]{ return countBuffs(m); });
-        dependencies.push_back(jid);
-    }
-    
-    lg.verbose("Counting all residual buffers and updating maps");
-    
-    jobWait(threadPool, dependencies);
-    
-    lg.verbose("Removing residual heap memory allocations");
-    
-    for(Buf<kmer>* buf : buffers)
-        delete[] buf;
-    
-    buffers.clear();
-    
-}
-
-bool DBG::countBuffs(uint16_t m) { // counts all residual buffers for a certain map as we finalize the kmerdb
-    
-    uint64_t releasedMem = 0, initial_size = 0, final_size = 0;
-    
-    initial_size = mapSize(*maps[m]);
-
-    for (uint32_t i = 0; i<buffers.size(); ++i) {
-            
-        countBuff(&buffers[i][m], m);
-        releasedMem += buffers[i][m].size * sizeof(kmer);
-        
-    }
-        
-    final_size = mapSize(*maps[m]);
-    
-    if (tmp)
-        updateMap(userInput.prefix, m);
-    
-    alloc += final_size - initial_size;
-    freed += releasedMem;
-
-    return true;
-
-}
-
-bool DBG::countBuff(Buf<kmer>* buf, uint16_t m) { // counts a single buffer
-    
-    Buf<kmer> &thisBuf = *buf;
-    
-    if (thisBuf.seq != NULL) { // sanity check that this buffer was not already processed
-        
-        phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[m]; // the map associated to this buffer
-        
-        uint64_t len = thisBuf.pos; // how many positions in the buffer have data
-        
-        for (uint64_t c = 0; c<len; ++c) {
-            
-            kmer &khmer = thisBuf.seq[c];
-            DBGkmer &dbgkmer = thisMap[khmer.hash]; // insert or find this kmer in the hash table
-            
-            for (uint64_t w = 0; w<4; ++w) { // update weights
-
-                if (255 - dbgkmer.fw[w] >= khmer.fw[w])
-                    dbgkmer.fw[w] += khmer.fw[w];
-                if (255 - dbgkmer.bw[w] >= khmer.bw[w])
-                    dbgkmer.bw[w] += khmer.bw[w];
-            }
-            if (dbgkmer.cov < 255)
-                ++dbgkmer.cov; // increase kmer coverage
-            
+        for(uint16_t m = 0; m<mapCount; ++m) {
+            uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
+            dependencies.push_back(jid);
         }
         
-        delete[] thisBuf.seq; // delete the buffer sequence
-        thisBuf.seq = NULL; // set sequence buffers to the null pointer so that they can be deleted
+        lg.verbose("Updating maps");
+        
+        jobWait(threadPool, dependencies);
         
     }
-    
-    return true;
 
 }
 
@@ -450,7 +350,7 @@ void DBG::validateSequences(InSequences &inSequences) {
             
             if(tmp)
                 max += fileSize(userInput.prefix + "/.kmap." + std::to_string(m) + ".bin");
-            
+
             if(!memoryOk(max))
                 break;
             

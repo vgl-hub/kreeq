@@ -96,7 +96,7 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
 //    Log threadLog;
     
     std::string *readBatch;
-    uint32_t i = 0;
+    uint32_t b = 0;
     uint64_t initial_size = 0, final_size = 0;
     
     while (true) {
@@ -108,14 +108,14 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (readingDone && (i >= readBatches.size()))
+            if (readingDone && (b >= readBatches.size()))
                 return true;
             
-            if(i >= readBatches.size())
+            if(b >= readBatches.size())
                 continue;
             
-            readBatch = readBatches[i];
-            ++i;
+            readBatch = readBatches[b];
+            ++b;
             
         }
         

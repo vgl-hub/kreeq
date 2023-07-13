@@ -99,7 +99,7 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
             
             std::lock_guard<std::mutex> lck(mtx);
             
-            if (readingDone && (i == readBatches.size()))
+            if (readingDone && (i >= readBatches.size()))
                 return true;
             
             if(i >= readBatches.size())

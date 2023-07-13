@@ -119,6 +119,13 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
             
         }
         
+        if (!memoryOk()) {
+            
+            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+                updateMap(userInput.prefix, m);
+            
+        }
+        
         for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
             initial_size += mapSize(*maps[m]);
         
@@ -246,23 +253,7 @@ void DBG::consolidate() {
         
         readBatches.clear();
         
-        if (memoryOk()) {
-            
-            initHashing();
-            return;
-            
-        }
-        
         tmp = true;
-        
-        for(uint16_t m = 0; m<mapCount; ++m) {
-            uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
-            dependencies.push_back(jid);
-        }
-        
-        lg.verbose("Updating maps");
-        
-        jobWait(threadPool, dependencies);
         
         initHashing();
         

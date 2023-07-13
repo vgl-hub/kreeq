@@ -272,7 +272,7 @@ void DBG::consolidate() {
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
     
-    uint64_t map_size1 = mapSize(*maps[m]), map_size2 = 0;
+    uint64_t map_size = mapSize(*maps[m]);
     
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
@@ -281,9 +281,6 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         phmap::flat_hash_map<uint64_t, DBGkmer> *dumpMap = new phmap::flat_hash_map<uint64_t, DBGkmer>;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         dumpMap->phmap_load(ar_in);
-    
-        map_size2 = fileSize(prefix);
-        alloc += map_size2;
     
         unionSum(*maps[m], *dumpMap); // merges the current map and the existing map
     
@@ -302,7 +299,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     delete maps[m];
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     
-    freed += map_size1 + map_size2;
+    freed += map_size;
     alloc += mapSize(*maps[m]);
     
     return true;

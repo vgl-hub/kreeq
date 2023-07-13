@@ -93,7 +93,7 @@ void DBG::initHashing(){
 
 bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
     
-//    Log threadLog;
+//   Log threadLog;
     
     std::string *readBatch;
     uint32_t b = 0;

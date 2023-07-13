@@ -92,16 +92,16 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
     
     std::string *readBatch;
     uint32_t i = 0;
+    uint64_t initial_size = 0, final_size = 0;
     
     while (true) {
-        
-        uint64_t initial_size = 0, final_size = 0;
         
         {
             
             std::lock_guard<std::mutex> lck(mtx);
             
             alloc += final_size - initial_size;
+            initial_size = 0, final_size = 0;
             
             if (readingDone && (i >= readBatches.size()))
                 return true;
@@ -225,6 +225,11 @@ void DBG::consolidate() {
     
     if (!memoryOk()) {
         
+        {
+            std::lock_guard<std::mutex> lck(mtx);
+            readingDone = true;
+        }
+        
         jobWait(threadPool, dependencies);
         
         for (std::string* readBatch : readBatches) {
@@ -234,8 +239,14 @@ void DBG::consolidate() {
             
         }
         
-        if (memoryOk())
+        readBatches.clear();
+        
+        if (memoryOk()) {
+            
+            initHashing();
             return;
+            
+        }
         
         tmp = true;
         
@@ -247,6 +258,8 @@ void DBG::consolidate() {
         lg.verbose("Updating maps");
         
         jobWait(threadPool, dependencies);
+        
+        initHashing();
         
     }
 

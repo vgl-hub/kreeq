@@ -18,7 +18,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
     std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0};
     std::vector<uint32_t> dependencies;
-    bool tmp = false;
+    bool readingDone = false, tmp = false;
     
     UserInputKreeq& userInput;
     
@@ -34,6 +34,8 @@ public:
         
         jobWait(threadPool);
         
+        initHashing();
+        
     };
     
     std::vector<Log> logs;
@@ -42,7 +44,11 @@ public:
     
     bool memoryOk(int64_t delta);
     
-    bool hashSequences(std::string *readBatch, std::array<uint16_t, 2> mapRange);
+    bool traverseInReads(std::string *readBatch);
+    
+    void initHashing();
+    
+    bool hashSequences(std::array<uint16_t, 2> mapRange);
     
     void cleanup();
     
@@ -59,8 +65,6 @@ public:
     bool validateSegment(InSegment *segment, std::array<uint16_t, 2> mapRange);
     
     void consolidate();
-    
-    bool traverseInReads(std::string *readBatch);
     
     bool dumpMap(std::string prefix, uint16_t m);
     

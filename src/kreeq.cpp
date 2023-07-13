@@ -355,6 +355,19 @@ void DBG::summary() {
         
     }
     
+    if (tmp) {
+        
+        for(uint16_t m = 0; m<mapCount; ++m) {
+            uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
+            dependencies.push_back(jid);
+        }
+        
+        lg.verbose("Updating maps");
+        
+        jobWait(threadPool, dependencies);
+        
+    }
+    
     lg.verbose("Computing summary statistics");
     
     for(uint16_t m = 0; m<mapCount; ++m)

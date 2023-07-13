@@ -93,11 +93,15 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
     std::string *readBatch;
     uint32_t i = 0;
     
+    uint64_t initial_size = 0, final_size = 0;
+    
     while (true) {
         
         {
             
             std::lock_guard<std::mutex> lck(mtx);
+            
+            alloc += final_size - initial_size;
             
             if (readingDone && (i >= readBatches.size()))
                 return true;
@@ -109,6 +113,9 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
             ++i;
             
         }
+        
+        for (uint16_t m = 0; m<mapRange[1]; ++m)
+            initial_size += mapSize(*maps[m]);
         
         uint64_t len = readBatch->size();
         
@@ -180,6 +187,9 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
         }
         
         delete[] str;
+        
+        for (uint16_t m = 0; m<mapRange[1]; ++m)
+            final_size += mapSize(*maps[m]);
         
         //    threadLog.add("Processed sequence: " + sequence->header);
         //    std::lock_guard<std::mutex> lck(mtx);

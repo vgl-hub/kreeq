@@ -67,6 +67,11 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
 
 void DBG::initHashing(){
     
+    {
+        std::lock_guard<std::mutex> lck(mtx);
+        readingDone = false;
+    }
+    
     uint8_t threadN = threadPool.totalThreads() - 2, mapsN = mapCount / threadN;
     
     std::array<uint16_t, 2> mapRange = {0,0};

@@ -93,9 +93,9 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
     std::string *readBatch;
     uint32_t i = 0;
     
-    uint64_t initial_size = 0, final_size = 0;
-    
     while (true) {
+        
+        uint64_t initial_size = 0, final_size = 0;
         
         {
             

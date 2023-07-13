@@ -97,7 +97,7 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
     
     std::string *readBatch;
     uint32_t b = 0;
-    uint64_t initial_size = 0, final_size = 0;
+    int64_t initial_size = 0, final_size = 0;
     
     while (true) {
         
@@ -119,15 +119,15 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
             
         }
         
+        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+            initial_size += mapSize(*maps[m]);
+        
         if (!memoryOk()) {
             
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);
             
         }
-        
-        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-            initial_size += mapSize(*maps[m]);
         
         uint64_t len = readBatch->size();
         
@@ -263,8 +263,6 @@ void DBG::consolidate() {
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
     
-    uint64_t map_size = mapSize(*maps[m]);
-    
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
     if (fileExists(prefix)) {
@@ -289,9 +287,6 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     
     delete maps[m];
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-    
-    freed += map_size;
-    alloc += mapSize(*maps[m]);
     
     return true;
     

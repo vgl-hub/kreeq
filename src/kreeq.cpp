@@ -57,9 +57,10 @@ bool DBG::memoryOk(int64_t delta) {
 void DBG::initHashing(){
     
     dumpMaps = false;
+    readingDone = false;
     
-    for (uint8_t i = 0; i < 2; i++) {
-        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(i); });
+    for (uint8_t t = 0; t < 2; t++) {
+        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(t); });
         dependencies.push_back(jid);
     }
     
@@ -95,7 +96,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
 }
 
-bool DBG::hashSequences(uint8_t i) {
+bool DBG::hashSequences(uint8_t t) {
     //   Log threadLog;
     
     uint32_t b = 0;
@@ -108,15 +109,14 @@ bool DBG::hashSequences(uint8_t i) {
             std::lock_guard<std::mutex> lck(mtx);
             
             if (readingDone && (b >= readBatches.size())) {
-                bufferingDone = true;
+                bufferingDone[t] = true;
                 return true;
-                
             }
             
             if(b >= readBatches.size())
                 continue;
             
-            if ((b % 2 == 0 && i == 0) || (!(b % 2 == 0) && i == 1)) {
+            if ((b % 2 == 0 && t == 1) || (!(b % 2 == 0) && t == 0)) {
                 ++b;
                 continue;
             }
@@ -218,7 +218,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (bufferingDone && (b >= buffers.size()))
+            if (bufferingDone[0] && bufferingDone[1] && (b >= buffers.size()))
                 return true;
             
             if(b >= buffers.size())
@@ -293,6 +293,7 @@ void DBG::consolidate() {
     if (!memoryOk()) {
         
         dumpMaps = true;
+        readingDone = true;
         
         jobWait(threadPool, dependencies);
         

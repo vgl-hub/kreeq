@@ -101,7 +101,7 @@ bool DBG::hashSequences(std::string* readBatch) {
     }
     
     unsigned char *first = (unsigned char*) readBatch->c_str();
-    uint8_t str = new uint8_t[len];
+    uint8_t *str = new uint8_t[len];
     uint8_t e = 0;
     uint64_t kcount = len-k+1;
     bool isFw = false;

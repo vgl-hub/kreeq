@@ -73,6 +73,7 @@ void DBG::initHashing(){
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         
+        std::cout<<"hello"<<std::endl;
         uint32_t jid = threadPool.queueJob([=]{ return processBuffers(mapRange); });
         dependencies.push_back(jid);
         

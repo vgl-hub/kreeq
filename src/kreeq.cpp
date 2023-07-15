@@ -98,7 +98,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     uint8_t e = 0;
     uint64_t kcount = len-k+1;
     bool isFw = false;
-    Buf<kmer> *buf = new Buf<kmer>;
+    Buf<kmer> *buf = new Buf<kmer>(kcount);
     
     for (uint64_t p = 0; p<kcount; ++p) {
         
@@ -136,8 +136,8 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
         
     }
     
-//    delete[] str;
-//    delete readBatch;
+    delete[] str;
+    delete readBatch;
     
     //    threadLog.add("Processed sequence: " + sequence->header);
     //    std::lock_guard<std::mutex> lck(mtx);

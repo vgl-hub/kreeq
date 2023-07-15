@@ -68,6 +68,9 @@ void DBG::initHashing(){
         mapRange[0] = mapRange[1];
         mapRange[1] *= mapsN;
         
+        std::cout<<mapRange[0]<<" "<<mapRange[1]<<std::endl;
+
+        
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         

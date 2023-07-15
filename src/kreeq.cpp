@@ -95,9 +95,9 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
     while (counter > 10) {
         
-        for (std::vector<std::string*> readBatch : readBatches) {
+        for (std::string* r : readBatches) {
             
-            if (readBatch != NULL)
+            if (r != NULL)
                 ++counter;
             
         }

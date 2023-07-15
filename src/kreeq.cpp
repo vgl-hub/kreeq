@@ -306,6 +306,7 @@ void DBG::consolidate() {
         }
         
         buffers.clear();
+        readBatches.clear();
         
         tmp = true;
         

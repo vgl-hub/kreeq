@@ -201,15 +201,16 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     uint32_t b = 0;
     int64_t initial_size = 0, final_size = 0;
     Buf<kmer>* buf;
+    mapsDumped = false;
     
     while (true) {
         
-        if (dumpMaps && bufferingDone[0] && bufferingDone[1]) {
+        if (dumpMaps && !mapsDumped) {
             
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);
             
-            return true;
+            mapsDumped = true;
             
         }
         

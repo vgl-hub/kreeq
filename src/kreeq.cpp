@@ -61,10 +61,8 @@ void DBG::initHashing(){
         readingDone = false;
     }
     
-    for (int i = 0; i < 2; i++) {
-        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
-        dependencies.push_back(jid);
-    }
+    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
+    dependencies.push_back(jid);
     
     uint16_t threadN = threadPool.totalThreads() - 4, mapsN = mapCount / threadN;
     

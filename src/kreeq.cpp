@@ -66,7 +66,7 @@ void DBG::initHashing(){
     while(mapRange[1] < mapCount) {
                 
         mapRange[0] = mapRange[1];
-        mapRange[1] = std::ceil(pow(t++,mapsN));
+        mapRange[1] = std::ceil(pow(mapsN,t++));
         
         std::cout<<mapRange[0]<<" "<<mapsN<<" "<<mapRange[1]<<std::endl;
 

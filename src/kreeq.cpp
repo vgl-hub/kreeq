@@ -258,7 +258,7 @@ void DBG::consolidate() {
         
         for (Buf<kmer> *buffer : buffers) {
             
-            freed += buffer->size * sizeof(char);
+            freed += buffer->size * sizeof(kmer);
             delete[] buffer->seq;
             delete buffer;
             
@@ -349,7 +349,7 @@ void DBG::summary() {
     
     for (Buf<kmer> *buffer : buffers) {
         
-        freed += buffer->size * sizeof(char);
+        freed += buffer->size * sizeof(kmer);
         delete[] buffer->seq;
         delete buffer;
         

@@ -195,6 +195,7 @@ bool DBG::hashSequences(uint8_t t) {
         
         delete[] str;
         delete readBatch;
+        readBatch = NULL;
         
         //    threadLog.add("Processed sequence: " + sequence->header);
         //    std::lock_guard<std::mutex> lck(mtx);

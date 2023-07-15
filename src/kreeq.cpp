@@ -58,7 +58,7 @@ void DBG::initHashing(){
     
     {
         std::lock_guard<std::mutex> lck(mtx);
-        readingDone = false;
+        dumpMaps = false;
     }
     
     uint8_t threadN = threadPool.totalThreads() - 2, mapsN = mapCount / threadN;
@@ -167,6 +167,15 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     while (true) {
         
+        if (dumpMaps) {
+            
+            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+                updateMap(userInput.prefix, m);
+            
+            return true;
+            
+        }
+        
         {
             
             std::lock_guard<std::mutex> lck(mtx);
@@ -187,15 +196,6 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
         for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
             initial_size += mapSize(*maps[m]);
-        
-        if (dumpMaps) {
-            
-            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-                updateMap(userInput.prefix, m);
-            
-            return true;
-            
-        }
         
         uint64_t len = buf->pos; // how many positions in the buffer have data
         

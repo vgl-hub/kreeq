@@ -56,10 +56,7 @@ bool DBG::memoryOk(int64_t delta) {
 
 void DBG::initHashing(){
     
-    {
-        std::lock_guard<std::mutex> lck(mtx);
-        dumpMaps = false;
-    }
+    dumpMaps = false;
     
     uint8_t threadN = threadPool.totalThreads() - 2, mapsN = mapCount / threadN;
     
@@ -81,8 +78,6 @@ void DBG::initHashing(){
 }
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
-    
-    alloc += readBatch->size() * sizeof(char);
     
     hashSequences(readBatch);
     
@@ -151,7 +146,7 @@ bool DBG::hashSequences(std::string* readBatch) {
     //    logs.push_back(threadLog);
  
     std::lock_guard<std::mutex> lck(mtx);
-    freed += readBatch->size() * sizeof(char);
+    alloc += buf->size() * sizeof(char);
     buffers.push_back(buf);
     
     return true;

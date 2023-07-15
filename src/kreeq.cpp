@@ -202,7 +202,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     while (true) {
         
-        if (dumpMaps) {
+        if (dumpMaps && bufferingDone[0] && bufferingDone[1]) {
             
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);

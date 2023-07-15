@@ -84,8 +84,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
     alloc += readBatch->size() * sizeof(char);
     
-    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(readBatch); });
-    dependencies.push_back(jid);
+    hashSequences(readBatch);
     
     return true;
     
@@ -152,6 +151,7 @@ bool DBG::hashSequences(std::string* readBatch) {
     //    logs.push_back(threadLog);
  
     std::lock_guard<std::mutex> lck(mtx);
+    freed += readBatch->size() * sizeof(char);
     buffers.push_back(buf);
     
     return true;
@@ -226,6 +226,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             final_size += mapSize(*maps[m]);
         
     }
+    
+    return true;
     
 }
 

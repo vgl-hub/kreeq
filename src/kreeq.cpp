@@ -303,6 +303,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     
     }
     
+    freed += mapSize(*maps[m]);;
     delete maps[m];
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     

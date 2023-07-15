@@ -61,10 +61,7 @@ void DBG::initHashing(){
         readingDone = false;
     }
     
-    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
-    dependencies.push_back(jid);
-    
-    uint16_t threadN = threadPool.totalThreads() - 4, mapsN = mapCount / threadN;
+    uint8_t threadN = threadPool.totalThreads() - 2, mapsN = mapCount / threadN;
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
@@ -87,101 +84,75 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
     alloc += readBatch->size() * sizeof(char);
     
-    std::lock_guard<std::mutex> lck(mtx);
-    readBatches.push_back(readBatch);
+    hashSequences(readBatch);
     
     return true;
     
 }
 
-bool DBG::hashSequences() {
+bool DBG::hashSequences(std::string* readBatch) {
     //   Log threadLog;
+            
+    uint64_t len = readBatch->size();
     
-    uint32_t b = 0;
-    std::string *readBatch;
-    
-    while (true) {
-        
-        {
-            
-            std::lock_guard<std::mutex> lck(mtx);
-            
-            if (readingDone && (b >= readBatches.size())) {
-                bufferingDone = true;
-                return true;
-                
-            }
-            
-            if(b >= readBatches.size())
-                continue;
-            
-            readBatch = readBatches[b];
-            ++b;
-            
-        }
-        
-        uint64_t len = readBatch->size();
-        
-        if (len<k) {
-            delete readBatch;
-            return true;
-        }
-        
-        unsigned char *first = (unsigned char*) readBatch->c_str();
-        uint8_t *str = new uint8_t[len];
-        uint8_t e = 0;
-        uint64_t kcount = len-k+1;
-        bool isFw = false;
-        Buf<kmer> *buf = new Buf<kmer>(kcount);
-        
-        for (uint64_t p = 0; p<kcount; ++p) {
-            
-            for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
-                
-                str[p+c] = ctoi[*(first+p+c)]; // convert the next base
-                if (str[p+c] > 3) { // if non-canonical base is found
-                    p = p+c; // move position
-                    e = 0; // reset base counter
-                    break;
-                }
-                
-                e = k-1;
-                
-            }
-            
-            if (e == 0) // not enough bases for a kmer
-                continue;
-            
-            kmer &khmer = buf->seq[buf->pos++];
-            
-            khmer.hash = hash(str+p, &isFw);
-            
-            if (isFw){
-                if (ctoi[*(first+p+k)] <= 3)
-                    khmer.fw[ctoi[*(first+p+k)]] = 1;
-                if (p > 0 && *(str+p-1) <= 3)
-                    khmer.bw[*(str+p-1)] = 1;
-            }else{
-                if (p > 0 && *(str+p-1) <= 3)
-                    khmer.fw[3-*(str+p-1)] = 1;
-                if (ctoi[*(first+p+k)] <= 3)
-                    khmer.bw[3-ctoi[*(first+p+k)]] = 1;
-            }
-            
-        }
-        
-        delete[] str;
+    if (len<k) {
         delete readBatch;
+        return true;
+    }
+    
+    unsigned char *first = (unsigned char*) readBatch->c_str();
+    uint8_t *str = new uint8_t[len];
+    uint8_t e = 0;
+    uint64_t kcount = len-k+1;
+    bool isFw = false;
+    Buf<kmer> *buf = new Buf<kmer>(kcount);
+    
+    for (uint64_t p = 0; p<kcount; ++p) {
         
-        //    threadLog.add("Processed sequence: " + sequence->header);
-        //    std::lock_guard<std::mutex> lck(mtx);
-        //    logs.push_back(threadLog);
+        for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
+            
+            str[p+c] = ctoi[*(first+p+c)]; // convert the next base
+            if (str[p+c] > 3) { // if non-canonical base is found
+                p = p+c; // move position
+                e = 0; // reset base counter
+                break;
+            }
+            
+            e = k-1;
+            
+        }
         
-        std::lock_guard<std::mutex> lck(mtx);
-        freed += len * sizeof(char);
-        buffers.push_back(buf);
+        if (e == 0) // not enough bases for a kmer
+            continue;
+        
+        kmer &khmer = buf->seq[buf->pos++];
+        
+        khmer.hash = hash(str+p, &isFw);
+        
+        if (isFw){
+            if (ctoi[*(first+p+k)] <= 3)
+                khmer.fw[ctoi[*(first+p+k)]] = 1;
+            if (p > 0 && *(str+p-1) <= 3)
+                khmer.bw[*(str+p-1)] = 1;
+        }else{
+            if (p > 0 && *(str+p-1) <= 3)
+                khmer.fw[3-*(str+p-1)] = 1;
+            if (ctoi[*(first+p+k)] <= 3)
+                khmer.bw[3-ctoi[*(first+p+k)]] = 1;
+        }
         
     }
+    
+    delete[] str;
+    delete readBatch;
+    
+    //    threadLog.add("Processed sequence: " + sequence->header);
+    //    std::lock_guard<std::mutex> lck(mtx);
+    //    logs.push_back(threadLog);
+ 
+    std::lock_guard<std::mutex> lck(mtx);
+    freed += readBatch->size() * sizeof(char);
+    buffers.push_back(buf);
     
     return true;
     
@@ -203,7 +174,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (bufferingDone && (b >= buffers.size()))
+            if (readingDone && (b >= buffers.size()))
                 return true;
             
             if(b >= buffers.size())

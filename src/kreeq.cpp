@@ -281,6 +281,8 @@ void DBG::consolidate() {
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
     
+    uint64_t map_size = mapSize(*maps[m]);
+    
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
     if (fileExists(prefix)) {
@@ -303,7 +305,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     
     }
     
-    freed += mapSize(*maps[m]);;
+    freed += map_size;
     delete maps[m];
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     

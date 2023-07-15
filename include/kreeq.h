@@ -48,6 +48,8 @@ public:
     
     bool traverseInReads(std::string *readBatch);
     
+    bool hashSequences(std::string* readBatch);
+    
     bool processBuffers(std::array<uint16_t, 2> mapRange);
     
     void cleanup();

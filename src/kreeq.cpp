@@ -84,8 +84,16 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
     alloc += readBatch->size() * sizeof(char);
     
-//   Log threadLog;
-        
+    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(readBatch); });
+    dependencies.push_back(jid);
+    
+    return true;
+    
+}
+
+bool DBG::hashSequences(std::string* readBatch) {
+    //   Log threadLog;
+            
     uint64_t len = readBatch->size();
     
     if (len<k) {

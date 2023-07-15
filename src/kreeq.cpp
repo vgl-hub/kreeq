@@ -58,14 +58,15 @@ void DBG::initHashing(){
     
     dumpMaps = false;
     
-    uint8_t threadN = threadPool.totalThreads() - 2, mapsN = mapCount / threadN;
+    uint8_t threadN = threadPool.totalThreads() - 2;
+    uint16_t mapsN = round(pow(10,log10(mapCount)/threadN));
     
-    std::array<uint16_t, 2> mapRange = {0,0};
+    std::array<uint16_t, 2> mapRange = {0,1};
     
     while(mapRange[1] < mapCount) {
-        
+                
         mapRange[0] = mapRange[1];
-        mapRange[1] += mapsN;
+        mapRange[1] *= mapsN;
         
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;

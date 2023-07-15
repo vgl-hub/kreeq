@@ -68,7 +68,7 @@ void DBG::initHashing(){
         mapRange[0] = mapRange[1];
         mapRange[1] = std::ceil(pow(mapsN,t++));
         
-        if (mapRange[0] <= mapRange[1])
+        if (mapRange[0] >= mapRange[1])
             mapRange[1] = mapRange[0] + 1;
         
         std::cout<<mapRange[0]<<" "<<mapsN<<" "<<mapRange[1]<<std::endl;

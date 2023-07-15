@@ -44,7 +44,7 @@ double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // esti
 
 bool DBG::memoryOk() {
     
-    return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.9 : userInput.maxMem);
+    return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem);
     
 }
 
@@ -58,10 +58,12 @@ void DBG::initHashing(){
     
     dumpMaps = false;
     
-    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
-    dependencies.push_back(jid);
+    for (uint8_t i = 0; i < 2; i++) {
+        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(i); });
+        dependencies.push_back(jid);
+    }
     
-    uint8_t threadN = threadPool.totalThreads() - 3;
+    uint8_t threadN = threadPool.totalThreads() - 4;
     double mapsN = pow(10,log10(mapCount)/threadN), t = 0;
     
     std::array<uint16_t, 2> mapRange = {0,0};
@@ -93,7 +95,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
 }
 
-bool DBG::hashSequences() {
+bool DBG::hashSequences(uint8_t i) {
     //   Log threadLog;
     
     uint32_t b = 0;
@@ -113,6 +115,11 @@ bool DBG::hashSequences() {
             
             if(b >= readBatches.size())
                 continue;
+            
+            if ((b % 2 == 0 && i == 0) || (!(b % 2 == 0) && i == 1)) {
+                ++b;
+                continue;
+            }
             
             readBatch = readBatches[b];
             ++b;

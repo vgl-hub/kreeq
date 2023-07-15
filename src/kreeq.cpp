@@ -146,7 +146,7 @@ bool DBG::hashSequences(std::string* readBatch) {
     //    logs.push_back(threadLog);
  
     std::lock_guard<std::mutex> lck(mtx);
-    alloc += buf->size() * sizeof(char);
+    alloc += buf->size * sizeof(kmer);
     buffers.push_back(buf);
     
     return true;

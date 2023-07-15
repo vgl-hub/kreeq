@@ -91,7 +91,18 @@ void DBG::initHashing(){
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
-    while (readBatches.size() > 10) {
+    uint16_t counter = 0;
+    
+    while (counter > 10) {
+        
+        for (std::vector<std::string*> readBatch : readBatches) {
+            
+            if (readBatch != NULL)
+                ++counter;
+            
+        }
+        
+        counter = 0;
 
     }
     

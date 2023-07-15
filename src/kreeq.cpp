@@ -61,10 +61,12 @@ void DBG::initHashing(){
         readingDone = false;
     }
     
-    uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
-    dependencies.push_back(jid);
+    for (int i = 0; i < 2; i++) {
+        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
+        dependencies.push_back(jid);
+    }
     
-    uint16_t threadN = threadPool.totalThreads() - 3, mapsN = mapCount / threadN;
+    uint16_t threadN = threadPool.totalThreads() - 4, mapsN = mapCount / threadN;
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
@@ -178,7 +180,7 @@ bool DBG::hashSequences() {
         //    logs.push_back(threadLog);
         
         std::lock_guard<std::mutex> lck(mtx);
-        freed += readBatch->size() * sizeof(char);
+        freed += len * sizeof(char);
         buffers.push_back(buf);
         
     }

@@ -136,8 +136,8 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
         
     }
     
-    delete[] str;
-    delete readBatch;
+//    delete[] str;
+//    delete readBatch;
     
     //    threadLog.add("Processed sequence: " + sequence->header);
     //    std::lock_guard<std::mutex> lck(mtx);

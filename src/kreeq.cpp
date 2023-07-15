@@ -188,10 +188,12 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
             initial_size += mapSize(*maps[m]);
         
-        if (!memoryOk()) {
+        if (dumpMaps) {
             
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);
+            
+            return true;
             
         }
         
@@ -255,10 +257,7 @@ void DBG::consolidate() {
     
     if (!memoryOk()) {
         
-        {
-            std::lock_guard<std::mutex> lck(mtx);
-            readingDone = true;
-        }
+        dumpMaps = true;
         
         jobWait(threadPool, dependencies);
         

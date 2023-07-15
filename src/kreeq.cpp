@@ -91,14 +91,12 @@ void DBG::initHashing(){
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
+    while (readBatches.size() > 10) {
+
+    }
+    
     std::unique_lock<std::mutex> lck(mtx);
     readBatches.push_back(readBatch);
-    
-    std::condition_variable mutexCondition;
-    
-    mutexCondition.wait(lck, [this] {
-        return readBatches.size() < 10;
-    });
     
     return true;
     

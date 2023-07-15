@@ -201,7 +201,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     uint32_t b = 0;
     int64_t initial_size = 0, final_size = 0;
     Buf<kmer>* buf;
-    mapsDumped = false;
+    bool mapsDumped = false;
     
     while (true) {
         

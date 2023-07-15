@@ -19,7 +19,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0};
     std::vector<uint32_t> dependencies;
     bool readingDone = false, tmp = false;
-    bool bufferingDone[2] = {false,false};
+    bool bufferingDone[3] = {false,false,false};
     std::atomic<bool> dumpMaps{false};
     
     UserInputKreeq& userInput;

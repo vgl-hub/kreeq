@@ -91,8 +91,14 @@ void DBG::initHashing(){
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
-    std::lock_guard<std::mutex> lck(mtx);
+    std::unique_lock<std::mutex> lck(mtx);
     readBatches.push_back(readBatch);
+    
+    std::condition_variable mutexCondition;
+    
+    mutexCondition.wait(lck, [this] {
+        return readBatches.size() < 10;
+    });
     
     return true;
     
@@ -204,10 +210,12 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     while (true) {
         
-        if (!memoryOk()) {
+        if (dumpMaps) {
             
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);
+            
+            return true;
             
         }
         

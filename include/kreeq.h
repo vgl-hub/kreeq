@@ -22,7 +22,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
     UserInputKreeq& userInput;
     
-    std::vector<std::string*> readBatches;
+    std::vector<Buf<kmer>*> buffers;
 
 public:
     
@@ -44,11 +44,11 @@ public:
     
     bool memoryOk(int64_t delta);
     
-    bool traverseInReads(std::string *readBatch);
-    
     void initHashing();
     
-    bool hashSequences(std::array<uint16_t, 2> mapRange);
+    bool traverseInReads(std::string *readBatch);
+    
+    bool processBuffers(std::array<uint16_t, 2> mapRange);
     
     void cleanup();
     

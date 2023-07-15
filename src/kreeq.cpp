@@ -54,17 +54,6 @@ bool DBG::memoryOk(int64_t delta) {
     
 }
 
-bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
-    
-    alloc += readBatch->size() * sizeof(char);
-    
-    std::lock_guard<std::mutex> lck(mtx);
-    readBatches.push_back(readBatch);
-    
-    return true;
-    
-}
-
 void DBG::initHashing(){
     
     {
@@ -84,20 +73,89 @@ void DBG::initHashing(){
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         
-        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(mapRange); });
+        uint32_t jid = threadPool.queueJob([=]{ return processBuffers(mapRange); });
         dependencies.push_back(jid);
         
     }
     
 }
 
-bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
+bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
+    
+    alloc += readBatch->size() * sizeof(char);
     
 //   Log threadLog;
+        
+    uint64_t len = readBatch->size();
     
-    std::string *readBatch;
+    if (len<k) {
+        delete readBatch;
+        return true;
+    }
+    
+    unsigned char *first = (unsigned char*) readBatch->c_str();
+    uint8_t *str = new uint8_t[len];
+    uint8_t e = 0;
+    uint64_t kcount = len-k+1;
+    bool isFw = false;
+    Buf<kmer> *buf = new Buf<kmer>;
+    
+    for (uint64_t p = 0; p<kcount; ++p) {
+        
+        for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
+            
+            str[p+c] = ctoi[*(first+p+c)]; // convert the next base
+            if (str[p+c] > 3) { // if non-canonical base is found
+                p = p+c; // move position
+                e = 0; // reset base counter
+                break;
+            }
+            
+            e = k-1;
+            
+        }
+        
+        if (e == 0) // not enough bases for a kmer
+            continue;
+        
+        kmer &khmer = buf->seq[buf->pos++];
+        
+        khmer.hash = hash(str+p, &isFw);
+        
+        if (isFw){
+            if (ctoi[*(first+p+k)] <= 3)
+                khmer.fw[ctoi[*(first+p+k)]] = 1;
+            if (p > 0 && *(str+p-1) <= 3)
+                khmer.bw[*(str+p-1)] = 1;
+        }else{
+            if (p > 0 && *(str+p-1) <= 3)
+                khmer.fw[3-*(str+p-1)] = 1;
+            if (ctoi[*(first+p+k)] <= 3)
+                khmer.bw[3-ctoi[*(first+p+k)]] = 1;
+        }
+        
+    }
+    
+    delete[] str;
+    delete readBatch;
+    
+    //    threadLog.add("Processed sequence: " + sequence->header);
+    //    std::lock_guard<std::mutex> lck(mtx);
+    //    logs.push_back(threadLog);
+ 
+    std::lock_guard<std::mutex> lck(mtx);
+    buffers.push_back(buf);
+    
+    return true;
+    
+}
+
+bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
+    
+    uint16_t i;
     uint32_t b = 0;
     int64_t initial_size = 0, final_size = 0;
+    Buf<kmer>* buf;
     
     while (true) {
         
@@ -108,13 +166,13 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (readingDone && (b >= readBatches.size()))
+            if (readingDone && (b >= buffers.size()))
                 return true;
             
-            if(b >= readBatches.size())
+            if(b >= buffers.size())
                 continue;
             
-            readBatch = readBatches[b];
+            buf = buffers[b];
             ++b;
             
         }
@@ -129,60 +187,18 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
             
         }
         
-        uint64_t len = readBatch->size();
+        uint64_t len = buf->pos; // how many positions in the buffer have data
         
-        if (len<k) {
-            delete readBatch;
-            return true;
-        }
-        
-        unsigned char* first = (unsigned char*) readBatch->c_str();
-        
-        uint8_t* str = new uint8_t[len];
-        
-        uint8_t e = 0;
-        uint64_t key, i, kcount = len-k+1;
-        bool isFw = false;
-        
-        for (uint64_t p = 0; p<kcount; ++p) {
+        for (uint64_t c = 0; c<len; ++c) {
             
-            for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
-                
-                str[p+c] = ctoi[*(first+p+c)]; // convert the next base
-                if (str[p+c] > 3) { // if non-canonical base is found
-                    p = p+c; // move position
-                    e = 0; // reset base counter
-                    break;
-                }
-                
-                e = k-1;
-                
-            }
+            kmer &khmer = buf->seq[c];
             
-            if (e == 0) // not enough bases for a kmer
-                continue;
-            
-            key = hash(str+p, &isFw);
-            i = key / moduloMap;
+            i = khmer.hash / moduloMap;
             
             if (i >= mapRange[0] && i < mapRange[1]) {
                 
-                kmer khmer;
-                
-                if (isFw){
-                    if (ctoi[*(first+p+k)] <= 3)
-                        khmer.fw[ctoi[*(first+p+k)]] = 1;
-                    if (p > 0 && *(str+p-1) <= 3)
-                        khmer.bw[*(str+p-1)] = 1;
-                }else{
-                    if (p > 0 && *(str+p-1) <= 3)
-                        khmer.fw[3-*(str+p-1)] = 1;
-                    if (ctoi[*(first+p+k)] <= 3)
-                        khmer.bw[3-ctoi[*(first+p+k)]] = 1;
-                }
-                
                 phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
-                DBGkmer &dbgkmer = thisMap[key]; // insert or find this kmer in the hash table
+                DBGkmer &dbgkmer = thisMap[khmer.hash]; // insert or find this kmer in the hash table
                 
                 for (uint64_t w = 0; w<4; ++w) { // update weights
                     
@@ -198,18 +214,10 @@ bool DBG::hashSequences(std::array<uint16_t, 2> mapRange) {
             
         }
         
-        delete[] str;
-        
         for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
             final_size += mapSize(*maps[m]);
         
-        //    threadLog.add("Processed sequence: " + sequence->header);
-        //    std::lock_guard<std::mutex> lck(mtx);
-        //    logs.push_back(threadLog);
-        
     }
-    
-    return true;
     
 }
 
@@ -244,14 +252,15 @@ void DBG::consolidate() {
         
         jobWait(threadPool, dependencies);
         
-        for (std::string* readBatch : readBatches) {
+        for (Buf<kmer> *buffer : buffers) {
             
-            delete readBatch;
-            freed += readBatch->size() * sizeof(char);
+            freed += buffer->size * sizeof(char);
+            delete[] buffer->seq;
+            delete buffer;
             
         }
         
-        readBatches.clear();
+        buffers.clear();
         
         tmp = true;
         
@@ -331,10 +340,11 @@ void DBG::summary() {
     
     jobWait(threadPool, dependencies);
     
-    for (std::string* readBatch : readBatches) {
+    for (Buf<kmer> *buffer : buffers) {
         
-        delete readBatch;
-        freed += readBatch->size() * sizeof(char);
+        freed += buffer->size * sizeof(char);
+        delete[] buffer->seq;
+        delete buffer;
         
     }
     

@@ -294,7 +294,7 @@ void DBG::consolidate() {
 
         }
 
-        for (uint32_t b = 0; b<bufferDone; ++b) {
+        for (uint32_t b = 0; b<bufferDone.size(); ++b) {
 
             Buf<kmer>* buffer = buffers[b];
 

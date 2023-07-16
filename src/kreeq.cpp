@@ -110,7 +110,6 @@ bool DBG::hashSequences() {
             std::lock_guard<std::mutex> lck(mtx);
             
             if (readingDone && readBatches.size() == 0) {
-                bufferingDone[t] = true;
                 return true;
             }
             
@@ -211,7 +210,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (bufferingDone[0] && bufferingDone[1] && (b >= buffers.size()))
+            if (readingDone && buffers.size() == 0)
                 return true;
             
             if(b >= buffers.size())

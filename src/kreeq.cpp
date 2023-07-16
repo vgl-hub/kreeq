@@ -93,7 +93,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
     uint16_t counter = 0;
     
-    while (counter > 10) {
+    while (true) {
         
         counter = 0;
         
@@ -105,6 +105,9 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
         }
         
         std::cout<<counter<<std::endl;
+        
+        if (counter < 10)
+            break;
 
     }
     

@@ -68,7 +68,7 @@ void DBG::initHashing(){
     }
     
     for (uint8_t t = 0; t < hashThreads; t++) {
-        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
+        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(t); });
         dependencies.push_back(jid);
     }
     
@@ -108,7 +108,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
 }
 
-bool DBG::hashSequences() {
+bool DBG::hashSequences(uint8_t t) {
     //   Log threadLog;
     
     std::string *readBatch;
@@ -119,8 +119,10 @@ bool DBG::hashSequences() {
             
             std::unique_lock<std::mutex> lck(mtx);
             
-            if (readingDone && readBatches.size() == 0)
+            if (readingDone && readBatches.size() == 0) {
+                buffingDone[t] = true;
                 return true;
+            }
 
             if (readBatches.size() == 0)
                 continue;
@@ -219,12 +221,15 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             
             std::lock_guard<std::mutex> lck(mtx);
             
+            if (buffers.size() == 0)
+                continue;
+            
             buffersDone[t] = b;
             
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (readingDone && b >= buffers.size())
+            if (readingDone && b >= buffers.size() && std::find(buffingDone.begin(), buffingDone.end(), false) == buffingDone.end() && readBatches.size() == 0)
                 return true;
             
             if(b >= buffers.size())
@@ -566,7 +571,8 @@ void DBG::validateSequences(InSequences &inSequences) {
     
     double kreeqError = errorRate(totMissingKmers+totEdgeMissingKmers, totKcount, k), kreeqQV = -10*log10(kreeqError);
     
-    std::cout<<totMissingKmers+totEdgeMissingKmers<<"\t"
+    std::cout
+             <<totMissingKmers+totEdgeMissingKmers<<"\t"
              <<totKcount<<"\t"
              <<kreeqQV<<"\t"
              <<kreeqError<<"\t"

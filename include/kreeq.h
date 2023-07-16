@@ -20,12 +20,14 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     std::vector<uint32_t> dependencies;
     bool readingDone = false, tmp = false;
     std::atomic<bool> dumpMaps{false};
+    uint8_t bufferThreads = 4;
     
     UserInputKreeq& userInput;
     
     std::queue<std::string*> readBatches;
     std::vector<Buf<kmer>*> buffers;
     std::vector<uint32_t> buffersDone;
+    std::vector<bool> buffingDone = std::vector<bool>(bufferThreads, false);
 
 public:
     
@@ -51,7 +53,7 @@ public:
     
     bool traverseInReads(std::string *readBatch);
     
-    bool hashSequences();
+    bool hashSequences(uint8_t t);
     
     bool processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange);
     

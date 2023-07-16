@@ -296,9 +296,9 @@ void DBG::consolidate() {
 
         for (uint32_t b = 0; b<bufferDone; ++b) {
 
-            if (buffers[b] != NULL) {
-            
-                Buf<kmer>* buffer = buffers[b];
+            Buf<kmer>* buffer = buffers[b];
+
+            if (buffer != NULL) {
                 std::cout<<"deleting!"<<std::endl;
                 freed += buffer->size * sizeof(kmer);
                 delete[] buffer->seq;
@@ -307,6 +307,8 @@ void DBG::consolidate() {
             }
 
         }
+        
+        std::cout<<"done!"<<std::endl;
 
     }
     

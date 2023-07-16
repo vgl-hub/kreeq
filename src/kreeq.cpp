@@ -303,7 +303,7 @@ void DBG::consolidate() {
                 freed += buffer->size * sizeof(kmer);
                 delete[] buffer->seq;
                 delete buffer;
-                buffer = NULL;
+                buffers[b] = NULL;
             }
 
         }

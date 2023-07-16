@@ -51,7 +51,7 @@ public:
     
     bool traverseInReads(std::string *readBatch);
     
-    bool hashSequences(uint8_t t);
+    bool hashSequences();
     
     bool processBuffers(std::array<uint16_t, 2> mapRange);
     

@@ -62,7 +62,7 @@ void DBG::initHashing(){
     bufferingDone[1] = false;
     
     for (uint8_t t = 0; t < 2; t++) {
-        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(t); });
+        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
         dependencies.push_back(jid);
     }
     
@@ -91,26 +91,6 @@ void DBG::initHashing(){
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
-    uint16_t counter = 0;
-    
-    while (true) {
-        
-        counter = 0;
-        
-        for (std::string* r : readBatches) {
-            
-            if (r != NULL)
-                ++counter;
-            
-        }
-        
-        std::cout<<counter<<std::endl;
-        
-        if (counter < 100)
-            break;
-
-    }
-    
     std::unique_lock<std::mutex> lck(mtx);
     readBatches.push_back(readBatch);
     
@@ -118,10 +98,9 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
 }
 
-bool DBG::hashSequences(uint8_t t) {
+bool DBG::hashSequences() {
     //   Log threadLog;
     
-    uint32_t b = 0;
     std::string *readBatch;
     
     while (true) {
@@ -130,21 +109,13 @@ bool DBG::hashSequences(uint8_t t) {
             
             std::lock_guard<std::mutex> lck(mtx);
             
-            if (readingDone && (b >= readBatches.size())) {
+            if (readingDone && readBatches.size() == 0) {
                 bufferingDone[t] = true;
                 return true;
             }
             
-            if(b >= readBatches.size())
-                continue;
-            
-            if ((b % 2 == 0 && t == 1) || (!(b % 2 == 0) && t == 0)) {
-                ++b;
-                continue;
-            }
-            
-            readBatch = readBatches[b];
-            ++b;
+            readBatch = readBatches.front();
+            readBatches.pop();
             
         }
         
@@ -200,7 +171,6 @@ bool DBG::hashSequences(uint8_t t) {
         
         delete[] str;
         delete readBatch;
-        readBatch = NULL;
         
         //    threadLog.add("Processed sequence: " + sequence->header);
         //    std::lock_guard<std::mutex> lck(mtx);

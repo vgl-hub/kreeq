@@ -224,6 +224,8 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             
             std::lock_guard<std::mutex> lck(mtx);
             
+            buffersDone[t] = b;
+            
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
@@ -271,8 +273,6 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
         for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
             final_size += mapSize(*maps[m]);
         
-        buffersDone[t] = b;
-        
     }
     
     return true;
@@ -301,6 +301,7 @@ void DBG::consolidate() {
             Buf<kmer>* buffer = buffers[b];
 
             if (buffer != NULL) {
+                std::cout<<"deleting!"<<std::endl;
                 freed += buffer->size * sizeof(kmer);
                 delete[] buffer->seq;
                 delete buffer;

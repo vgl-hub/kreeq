@@ -106,7 +106,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
         
         std::cout<<counter<<std::endl;
         
-        if (counter < 10)
+        if (counter < 100)
             break;
 
     }

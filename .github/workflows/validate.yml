@@ -31,4 +31,5 @@ jobs:
       run: |
         chmod +x .github/workflows/val.sh
         ${{ matrix.command }}
+    timeout-minutes: 10
 

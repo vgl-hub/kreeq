@@ -94,8 +94,6 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
         readBatches.push(readBatch);
     }
     
-    mutexCondition.notify_one();
-    
     return true;
     
 }
@@ -114,7 +112,7 @@ bool DBG::hashSequences() {
             if (readingDone && readBatches.size() == 0)
                 return true;
 
-            mutexCondition.wait(lck, [] {
+            mutexCondition.wait(lck, [this] {
                 return !readBatches.empty();
             });
             

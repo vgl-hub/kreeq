@@ -103,6 +103,8 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
                 ++counter;
             
         }
+        
+        std::cout<<counter<<std::endl;
 
     }
     

@@ -89,8 +89,12 @@ void DBG::initHashing(){
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
-    std::unique_lock<std::mutex> lck(mtx);
-    readBatches.push(readBatch);
+    {
+        std::lock_guard<std::mutex> lck(mtx);
+        readBatches.push(readBatch);
+    }
+    
+    mutexCondition.notify_one();
     
     return true;
     
@@ -110,6 +114,9 @@ bool DBG::hashSequences() {
             if (readingDone && readBatches.size() == 0)
                 return true;
 
+            mutexCondition.wait(lck, [] {
+                return !readBatches.empty();
+            });
             
             readBatch = readBatches.front();
             readBatches.pop();

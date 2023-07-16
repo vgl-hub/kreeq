@@ -91,7 +91,7 @@ void DBG::initHashing(){
         
         std::cout<<mapRange[0]<<" "<<mapRange[1]<<std::endl;
         
-        uint32_t jid = threadPool.queueJob([=]{ return processBuffers(t, mapRange); });
+        uint32_t jid = threadPool.queueJob([=]{ return processBuffers(t-2, mapRange); });
         dependencies.push_back(jid);
         
     }

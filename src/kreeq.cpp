@@ -58,6 +58,7 @@ void DBG::initHashing(){
     
     dumpMaps = false;
     readingDone = false;
+    buffersDone.clear();
     
     int16_t threadN = threadPool.totalThreads(), hashThreads = 4, buffThreads = threadN - hashThreads - 1;
     

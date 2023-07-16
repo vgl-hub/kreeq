@@ -300,9 +300,9 @@ void DBG::consolidate() {
 
             if (buffer != NULL) {
                 std::cout<<"deleting!"<<std::endl;
-//                freed += buffer->size * sizeof(kmer);
-//                delete[] buffer->seq;
-                delete buffer;
+                freed += buffer->size * sizeof(kmer);
+                delete[] buffer->seq;
+//                delete buffer;
                 buffer = NULL;
             }
 

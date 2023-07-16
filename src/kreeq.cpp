@@ -100,8 +100,6 @@ void DBG::initHashing(){
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
-    while (readBatches.size() > 10){continue;} // guard against batch runaway
-    
     {
         std::lock_guard<std::mutex> lck(mtx);
         readBatches.push(readBatch);

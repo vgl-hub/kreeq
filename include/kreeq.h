@@ -25,6 +25,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
     std::queue<std::string*> readBatches;
     std::vector<Buf<kmer>*> buffers;
+    std::vector<uint16_t> buffersDone;
     
     std::condition_variable mutexBatches;
 
@@ -54,7 +55,7 @@ public:
     
     bool hashSequences();
     
-    bool processBuffers(std::array<uint16_t, 2> mapRange);
+    bool processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange);
     
     void cleanup();
     

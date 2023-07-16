@@ -64,12 +64,14 @@ void DBG::initHashing(){
         dependencies.push_back(jid);
     }
     
-    uint8_t threadN = threadPool.totalThreads() - 6;
-    double mapsN = pow(10,log10(mapCount)/threadN), t = 0;
+    uint8_t threadN = threadPool.totalThreads() - 6, t = 0;
+    double mapsN = pow(10,log10(mapCount)/threadN);
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
     while(mapRange[1] < mapCount) {
+        
+        buffersDone.push_back(0);
                 
         mapRange[0] = mapRange[1];
         mapRange[1] = std::ceil(pow(mapsN,t++));
@@ -80,7 +82,7 @@ void DBG::initHashing(){
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         
-        uint32_t jid = threadPool.queueJob([=]{ return processBuffers(mapRange); });
+        uint32_t jid = threadPool.queueJob([=]{ return processBuffers(t, mapRange); });
         dependencies.push_back(jid);
         
     }
@@ -192,7 +194,7 @@ bool DBG::hashSequences() {
     
 }
 
-bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
+bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
     
     uint16_t i;
     uint32_t b = 0;
@@ -217,7 +219,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (readingDone && buffers.size() == 0)
+            if (readingDone && b >= buffers.size())
                 return true;
             
             if(b >= buffers.size())
@@ -264,24 +266,6 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     }
     
     return true;
-    
-}
-
-void DBG::cleanup() {
-    
-    if(tmp && userInput.inDBG != userInput.prefix) {
-        
-        lg.verbose("Deleting tmp files");
-        
-        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "./.kmap." + std::to_string(m) + ".bin").c_str()); });
-        
-        jobWait(threadPool);
-        
-        if (userInput.prefix != ".")
-            rm_dir(userInput.prefix.c_str());
-        
-    }
     
 }
 
@@ -631,6 +615,24 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
     totEdgeMissingKmers += edgeMissingKmers.size();
     
     return true;
+    
+}
+
+void DBG::cleanup() {
+    
+    if(tmp && userInput.inDBG != userInput.prefix) {
+        
+        lg.verbose("Deleting tmp files");
+        
+        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
+            threadPool.queueJob([=]{ return remove((userInput.prefix + "./.kmap." + std::to_string(m) + ".bin").c_str()); });
+        
+        jobWait(threadPool);
+        
+        if (userInput.prefix != ".")
+            rm_dir(userInput.prefix.c_str());
+        
+    }
     
 }
 

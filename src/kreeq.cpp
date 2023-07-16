@@ -90,8 +90,6 @@ void DBG::initHashing(){
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         
-        std::cout<<mapRange[0]<<" "<<mapRange[1]<<std::endl;
-        
         uint32_t jid = threadPool.queueJob([=]{ return processBuffers(t-2, mapRange); });
         dependencies.push_back(jid);
         
@@ -104,8 +102,6 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     {
         std::lock_guard<std::mutex> lck(mtx);
         readBatches.push(readBatch);
-        
-        std::cout<<readBatches.size()<<std::endl;
     }
     
     return true;
@@ -294,15 +290,12 @@ void DBG::consolidate() {
                 bufferDone = b;
 
         }
-        
-        std::cout<<bufferDone<<std::endl;
 
         for (uint32_t b = 0; b<bufferDone; ++b) {
 
             Buf<kmer>* buffer = buffers[b];
 
             if (buffer != NULL) {
-                std::cout<<"deleting "<<b<<std::endl;
                 freed += buffer->size * sizeof(kmer);
                 delete[] buffer->seq;
                 delete buffer;
@@ -310,8 +303,6 @@ void DBG::consolidate() {
             }
 
         }
-        
-        std::cout<<"done!"<<std::endl;
 
     }
     
@@ -575,8 +566,7 @@ void DBG::validateSequences(InSequences &inSequences) {
     
     double kreeqError = errorRate(totMissingKmers+totEdgeMissingKmers, totKcount, k), kreeqQV = -10*log10(kreeqError);
     
-    std::cout
-             <<totMissingKmers+totEdgeMissingKmers<<"\t"
+    std::cout<<totMissingKmers+totEdgeMissingKmers<<"\t"
              <<totKcount<<"\t"
              <<kreeqQV<<"\t"
              <<kreeqError<<"\t"

@@ -146,7 +146,7 @@ bool DBG::hashSequences() {
         uint8_t e = 0;
         uint64_t kcount = len-k+1;
         bool isFw = false;
-        Buf<kmer> *buf = new Buf<kmer>(kcount);
+        Buf<kmer> *buf = new Buf<kmer>(len);
         
         for (uint64_t p = 0; p<kcount; ++p) {
             
@@ -294,6 +294,8 @@ void DBG::consolidate() {
                 bufferDone = b;
 
         }
+        
+        std::cout<<bufferDone<<std::endl;
 
         for (uint32_t b = 0; b<bufferDone; ++b) {
 

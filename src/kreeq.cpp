@@ -59,7 +59,7 @@ void DBG::initHashing(){
     dumpMaps = false;
     readingDone = false;
     
-    for (uint8_t t = 0; t < 2; t++) {
+    for (uint8_t t = 0; t < 4; t++) {
         uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
         dependencies.push_back(jid);
     }

@@ -23,7 +23,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
     UserInputKreeq& userInput;
     
-    std::vector<std::string*> readBatches;
+    std::queue<std::string*> readBatches;
     std::vector<Buf<kmer>*> buffers;
 
 public:

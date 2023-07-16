@@ -58,8 +58,6 @@ void DBG::initHashing(){
     
     dumpMaps = false;
     readingDone = false;
-    bufferingDone[0] = false;
-    bufferingDone[1] = false;
     
     for (uint8_t t = 0; t < 2; t++) {
         uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
@@ -109,9 +107,9 @@ bool DBG::hashSequences() {
             
             std::lock_guard<std::mutex> lck(mtx);
             
-            if (readingDone && readBatches.size() == 0) {
+            if (readingDone && readBatches.size() == 0)
                 return true;
-            }
+
             
             readBatch = readBatches.front();
             readBatches.pop();

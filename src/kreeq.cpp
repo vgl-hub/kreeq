@@ -90,7 +90,7 @@ void DBG::initHashing(){
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
     std::unique_lock<std::mutex> lck(mtx);
-    readBatches.push_back(readBatch);
+    readBatches.push(readBatch);
     
     return true;
     
@@ -296,7 +296,6 @@ void DBG::consolidate() {
         }
         
         buffers.clear();
-        readBatches.clear();
         
         tmp = true;
         

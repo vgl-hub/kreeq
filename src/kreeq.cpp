@@ -59,13 +59,20 @@ void DBG::initHashing(){
     dumpMaps = false;
     readingDone = false;
     
-    for (uint8_t t = 0; t < 4; t++) {
+    int16_t threadN = threadPool.totalThreads(), hashThreads = 4, buffThreads = threadN - hashThreads - 1;
+    
+    if (buffThreads <= 0) {
+        --hashThreads;
+        buffThreads = 1;
+    }
+    
+    for (uint8_t t = 0; t < hashThreads; t++) {
         uint32_t jid = threadPool.queueJob([=]{ return hashSequences(); });
         dependencies.push_back(jid);
     }
     
-    uint8_t threadN = threadPool.totalThreads() - 6, t = 0;
-    double mapsN = pow(10,log10(mapCount)/threadN);
+    uint8_t t = 0;
+    double mapsN = pow(10,log10(mapCount)/buffThreads);
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
@@ -81,6 +88,8 @@ void DBG::initHashing(){
         
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
+        
+        std::cout<<mapRange[0]<<" "<<mapRange[1]<<std::endl;
         
         uint32_t jid = threadPool.queueJob([=]{ return processBuffers(t, mapRange); });
         dependencies.push_back(jid);
@@ -263,6 +272,8 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
         for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
             final_size += mapSize(*maps[m]);
         
+        buffersDone[t] = b;
+        
     }
     
     return true;
@@ -272,8 +283,36 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
 void DBG::consolidate() {
     
     threadPool.status();
+    // release memory from consumed buffers
+    uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
     
-    if (!memoryOk()) {
+    {
+
+        std::lock_guard<std::mutex> lck(mtx);
+
+        for (uint32_t b : buffersDone) {
+
+            if (b < bufferDone)
+                bufferDone = b;
+
+        }
+
+        for (uint32_t b = 0; b<bufferDone; ++b) {
+
+            Buf<kmer>* buffer = buffers[b];
+
+            if (buffer != NULL) {
+                freed += buffer->size * sizeof(kmer);
+                delete[] buffer->seq;
+                delete buffer;
+                buffer = NULL;
+            }
+
+        }
+
+    }
+    
+    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
         
         dumpMaps = true;
         readingDone = true;
@@ -282,9 +321,11 @@ void DBG::consolidate() {
         
         for (Buf<kmer> *buffer : buffers) {
             
-            freed += buffer->size * sizeof(kmer);
-            delete[] buffer->seq;
-            delete buffer;
+            if (buffer != NULL) {
+                freed += buffer->size * sizeof(kmer);
+                delete[] buffer->seq;
+                delete buffer;
+            }
             
         }
         
@@ -373,9 +414,11 @@ void DBG::summary() {
     
     for (Buf<kmer> *buffer : buffers) {
         
-        freed += buffer->size * sizeof(kmer);
-        delete[] buffer->seq;
-        delete buffer;
+        if (buffer != NULL) {
+            freed += buffer->size * sizeof(kmer);
+            delete[] buffer->seq;
+            delete buffer;
+        }
         
     }
     

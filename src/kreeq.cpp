@@ -299,10 +299,10 @@ void DBG::consolidate() {
             Buf<kmer>* buffer = buffers[b];
 
             if (buffer != NULL) {
-                std::cout<<"deleting!"<<std::endl;
+                std::cout<<"deleting "<<b<<std::endl;
                 freed += buffer->size * sizeof(kmer);
                 delete[] buffer->seq;
-//                delete buffer;
+                delete buffer;
                 buffer = NULL;
             }
 

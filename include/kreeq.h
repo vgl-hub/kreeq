@@ -26,8 +26,6 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     std::queue<std::string*> readBatches;
     std::vector<Buf<kmer>*> buffers;
     std::vector<uint32_t> buffersDone;
-    
-    std::condition_variable mutexBatches;
 
 public:
     

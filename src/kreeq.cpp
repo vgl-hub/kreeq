@@ -71,7 +71,7 @@ void DBG::initHashing(){
         dependencies.push_back(jid);
     }
     
-    uint8_t t = 0;
+    uint8_t t = 1;
     double mapsN = pow(10,log10(mapCount)/buffThreads);
     
     std::array<uint16_t, 2> mapRange = {0,0};
@@ -107,8 +107,6 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
         std::cout<<readBatches.size()<<std::endl;
     }
     
-    mutexBatches.notify_one();
-    
     return true;
     
 }
@@ -127,9 +125,8 @@ bool DBG::hashSequences() {
             if (readingDone && readBatches.size() == 0)
                 return true;
 
-            mutexBatches.wait(lck, [this] {
-                return !readBatches.empty();
-            });
+            if (readBatches.size() == 0)
+                continue;
             
             readBatch = readBatches.front();
             readBatches.pop();

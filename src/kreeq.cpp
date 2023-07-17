@@ -284,56 +284,56 @@ void DBG::consolidate() {
     threadPool.status();
     // release memory from consumed buffers
     uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
-//
-//    {
-//
-//        std::lock_guard<std::mutex> lck(mtx);
-//
-//        for (uint32_t b : buffersDone) {
-//
-//            if (b < bufferDone)
-//                bufferDone = b;
-//
-//        }
-//
-//        for (uint32_t b = 0; b<bufferDone; ++b) {
-//
-//            Buf<kmer>* buffer = buffers[b];
-//
-//            if (buffer != NULL) {
-//                freed += buffer->size * sizeof(kmer);
-//                delete[] buffer->seq;
-//                delete buffer;
-//                buffers[b] = NULL;
-//            }
-//
-//        }
-//
-//    }
     
-    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
-        
-        tmp = true;
-        dumpMaps = true;
-        readingDone = true;
-        
-        jobWait(threadPool, dependencies);
-        
-        for (Buf<kmer> *buffer : buffers) {
-            
+    {
+
+        std::lock_guard<std::mutex> lck(mtx);
+
+        for (uint32_t b : buffersDone) {
+
+            if (b < bufferDone)
+                bufferDone = b;
+
+        }
+
+        for (uint32_t b = 0; b<bufferDone; ++b) {
+
+            Buf<kmer>* buffer = buffers[b];
+
             if (buffer != NULL) {
                 freed += buffer->size * sizeof(kmer);
                 delete[] buffer->seq;
                 delete buffer;
+                buffers[b] = NULL;
             }
-            
+
         }
-        
-        buffers.clear();
-        
-        initHashing();
-        
+
     }
+    
+//    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
+//        
+//        tmp = true;
+//        dumpMaps = true;
+//        readingDone = true;
+//        
+//        jobWait(threadPool, dependencies);
+//        
+//        for (Buf<kmer> *buffer : buffers) {
+//            
+//            if (buffer != NULL) {
+//                freed += buffer->size * sizeof(kmer);
+//                delete[] buffer->seq;
+//                delete buffer;
+//            }
+//            
+//        }
+//        
+//        buffers.clear();
+//        
+//        initHashing();
+//        
+//    }
 
 }
 

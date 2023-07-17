@@ -284,35 +284,36 @@ void DBG::consolidate() {
     threadPool.status();
     // release memory from consumed buffers
     uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
-    
-    {
-
-        std::lock_guard<std::mutex> lck(mtx);
-
-        for (uint32_t b : buffersDone) {
-
-            if (b < bufferDone)
-                bufferDone = b;
-
-        }
-
-        for (uint32_t b = 0; b<bufferDone; ++b) {
-
-            Buf<kmer>* buffer = buffers[b];
-
-            if (buffer != NULL) {
-                freed += buffer->size * sizeof(kmer);
-                delete[] buffer->seq;
-                delete buffer;
-                buffers[b] = NULL;
-            }
-
-        }
-
-    }
+//
+//    {
+//
+//        std::lock_guard<std::mutex> lck(mtx);
+//
+//        for (uint32_t b : buffersDone) {
+//
+//            if (b < bufferDone)
+//                bufferDone = b;
+//
+//        }
+//
+//        for (uint32_t b = 0; b<bufferDone; ++b) {
+//
+//            Buf<kmer>* buffer = buffers[b];
+//
+//            if (buffer != NULL) {
+//                freed += buffer->size * sizeof(kmer);
+//                delete[] buffer->seq;
+//                delete buffer;
+//                buffers[b] = NULL;
+//            }
+//
+//        }
+//
+//    }
     
     if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
         
+        tmp = true;
         dumpMaps = true;
         readingDone = true;
         
@@ -329,8 +330,6 @@ void DBG::consolidate() {
         }
         
         buffers.clear();
-        
-        tmp = true;
         
         initHashing();
         
@@ -423,7 +422,7 @@ void DBG::summary() {
     
     if (tmp) {
         
-        for(uint16_t m = 0; m<mapCount; ++m) {
+        for (uint16_t m = 0; m<mapCount; ++m) {
             uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
             dependencies.push_back(jid);
         }
@@ -436,7 +435,7 @@ void DBG::summary() {
     
     lg.verbose("Computing summary statistics");
     
-    for(uint16_t m = 0; m<mapCount; ++m)
+    for (uint16_t m = 0; m<mapCount; ++m)
         threadPool.queueJob([=]{ return histogram(m); });
     
     jobWait(threadPool);
@@ -499,13 +498,13 @@ void DBG::validateSequences(InSequences &inSequences) {
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
-    while(mapRange[1] < mapCount-1) {
+    while (mapRange[1] < mapCount-1) {
         
         uint64_t max = 0;
         
-        for(uint16_t m = mapRange[0]; m<mapCount; ++m) {
+        for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
             
-            if(tmp)
+            if (tmp)
                 max += fileSize(userInput.prefix + "/.kmap." + std::to_string(m) + ".bin");
 
             if(!memoryOk(max))
@@ -515,7 +514,7 @@ void DBG::validateSequences(InSequences &inSequences) {
             
         }
     
-        if(tmp) {
+        if (tmp) {
             
             for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
                 threadPool.queueJob([=]{ return loadMap(userInput.prefix, m); });

@@ -311,29 +311,29 @@ void DBG::consolidate() {
 
     }
     
-//    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
-//        
-//        tmp = true;
-//        dumpMaps = true;
-//        readingDone = true;
-//        
-//        jobWait(threadPool, dependencies);
-//        
-//        for (Buf<kmer> *buffer : buffers) {
-//            
-//            if (buffer != NULL) {
-//                freed += buffer->size * sizeof(kmer);
-//                delete[] buffer->seq;
-//                delete buffer;
-//            }
-//            
-//        }
-//        
-//        buffers.clear();
-//        
-//        initHashing();
-//        
-//    }
+    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
+        
+        tmp = true;
+        dumpMaps = true;
+        readingDone = true;
+        
+        jobWait(threadPool, dependencies);
+        
+        for (Buf<kmer> *buffer : buffers) {
+            
+            if (buffer != NULL) {
+                freed += buffer->size * sizeof(kmer);
+                delete[] buffer->seq;
+                delete buffer;
+            }
+            
+        }
+        
+        buffers.clear();
+        
+        initHashing();
+        
+    }
 
 }
 

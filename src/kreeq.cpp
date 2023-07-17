@@ -205,15 +205,16 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
     uint32_t b = 0;
     int64_t initial_size = 0, final_size = 0;
     Buf<kmer>* buf;
+    bool mapUpdated = false;
     
     while (true) {
         
-        if (dumpMaps) {
+        if (dumpMaps && !mapUpdated) {
             
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);
             
-            return true;
+            mapUpdated = true;
             
         }
         
@@ -311,29 +312,29 @@ void DBG::consolidate() {
 
     }
     
-//    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
-//        
-//        tmp = true;
-//        dumpMaps = true;
-//        readingDone = true;
-//        
-//        jobWait(threadPool, dependencies);
-//        
-//        for (Buf<kmer> *buffer : buffers) {
-//            
-//            if (buffer != NULL) {
-//                freed += buffer->size * sizeof(kmer);
-//                delete[] buffer->seq;
-//                delete buffer;
-//            }
-//            
-//        }
-//        
-//        buffers.clear();
-//        
-//        initHashing();
-//        
-//    }
+    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
+        
+        tmp = true;
+        dumpMaps = true;
+        readingDone = true;
+        
+        jobWait(threadPool, dependencies);
+        
+        for (Buf<kmer> *buffer : buffers) {
+            
+            if (buffer != NULL) {
+                freed += buffer->size * sizeof(kmer);
+                delete[] buffer->seq;
+                delete buffer;
+            }
+            
+        }
+        
+        buffers.clear();
+        
+        initHashing();
+        
+    }
 
 }
 

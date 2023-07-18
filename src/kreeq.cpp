@@ -114,7 +114,7 @@ bool DBG::hashSequences(uint8_t t) {
             
             std::unique_lock<std::mutex> lck(mtx);
             
-            if (readingDone && readBatches.size() == 0) {
+            if (readingDone) {
                 buffingDone[t] = true;
                 return true;
             }
@@ -215,7 +215,7 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (readingDone && b >= buffers.size() && std::find(buffingDone.begin(), buffingDone.end(), false) == buffingDone.end() && readBatches.size() == 0)
+            if (readingDone)
                 return true;
             
             if(b >= buffers.size())
@@ -303,22 +303,10 @@ void DBG::consolidate() {
         tmp = true;
         readingDone = true;
         
-        for(std::thread& activeThread : threads) {
+        for(std::thread& activeThread : threads)
             activeThread.join();
-        }
+
         threads.clear();
-        
-        for (Buf<kmer> *buffer : buffers) {
-            
-            if (buffer != NULL) {
-                freed += buffer->size * sizeof(kmer);
-                delete[] buffer->seq;
-                delete buffer;
-            }
-            
-        }
-        
-        buffers.clear();
         
         jobWait(threadPool);
 

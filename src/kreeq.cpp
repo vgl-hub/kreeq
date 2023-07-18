@@ -299,20 +299,26 @@ void DBG::consolidate() {
     
     if (!memoryOk()) { // if out of memory, consolidate maps
         
+        std::lock_guard<std::mutex> lck(mtx);
+        
         tmp = true;
 
-        for (uint16_t m = 0; m<mapCount; ++m) {
-            uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
-            dependencies.push_back(jid);
-        }
+        for (uint16_t m = 0; m<mapCount; ++m)
+            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
+        
+        maps.clear();
+        
+        maps.reserve(maps.capacity() + mapCount);
+        std::generate_n(std::back_inserter(maps), mapCount,
+                    []() { return new phmap::flat_hash_map<uint64_t, DBGkmer>; });
 
     }
 
 }
 
-bool DBG::updateMap(std::string prefix, uint16_t m) {
+bool DBG::updateMap(std::string prefix, uint16_t m, phmap::flat_hash_map<uint64_t, DBGkmer> *map) {
     
-    uint64_t map_size = mapSize(*maps[m]);
+    uint64_t map_size = mapSize(*map);
     
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
@@ -322,7 +328,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         dumpMap->phmap_load(ar_in);
     
-        unionSum(*maps[m], *dumpMap); // merges the current map and the existing map
+        unionSum(*map, *dumpMap); // merges the current map and the existing map
     
         phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
         dumpMap->phmap_dump(ar_out);
@@ -332,13 +338,12 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
     }else{
     
         phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
-        maps[m]->phmap_dump(ar_out);
+        map->phmap_dump(ar_out);
     
     }
     
     freed += map_size;
-    delete maps[m];
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    delete map;
     
     return true;
     
@@ -395,10 +400,8 @@ void DBG::summary() {
     
     if (tmp) {
         
-        for (uint16_t m = 0; m<mapCount; ++m) {
-            uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
-            dependencies.push_back(jid);
-        }
+        for (uint16_t m = 0; m<mapCount; ++m)
+            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
         
         lg.verbose("Updating maps");
         

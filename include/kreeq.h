@@ -82,7 +82,7 @@ public:
     
     void report();
     
-    bool updateMap(std::string prefix, uint16_t m);
+    bool updateMap(std::string prefix, uint16_t m, phmap::flat_hash_map<uint64_t, DBGkmer> *map);
     
     bool unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2);
     

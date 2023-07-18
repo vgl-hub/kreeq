@@ -20,6 +20,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     std::vector<uint32_t> dependencies;
     bool tmp = false;
     std::atomic<bool> readingDone{false}, dumpMaps{false};
+    std::vector<std::thread> threads;
     uint8_t bufferThreads = 4;
     
     UserInputKreeq& userInput;

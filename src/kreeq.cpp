@@ -60,16 +60,10 @@ void DBG::initHashing(){
     readingDone = false;
     buffersDone.clear();
     
-    int16_t threadN = threadPool.totalThreads(), hashThreads = 4, buffThreads = threadN - hashThreads - 1;
-    
-    if (buffThreads <= 0) {
-        --hashThreads;
-        buffThreads = 1;
-    }
+    int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 4, buffThreads = threadN - hashThreads - 1;
     
     for (uint8_t t = 0; t < hashThreads; t++) {
-        uint32_t jid = threadPool.queueJob([=]{ return hashSequences(t); });
-        dependencies.push_back(jid);
+        threads.push_back(std::thread(&DBG::hashSequences, this, t));
     }
     
     uint8_t t = 1;
@@ -90,8 +84,7 @@ void DBG::initHashing(){
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         
-        uint32_t jid = threadPool.queueJob([=]{ return processBuffers(t-2, mapRange); });
-        dependencies.push_back(jid);
+        threads.push_back(std::thread(&DBG::processBuffers, this, t-2, mapRange));
         
     }
     
@@ -205,7 +198,7 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
     uint32_t b = 0;
     int64_t initial_size = 0, final_size = 0;
     Buf<kmer>* buf;
-    bool mapUpdated = false;
+    bool mapUpdated = false; // maps are updated at most once per job
     
     while (true) {
         
@@ -282,7 +275,6 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
 
 void DBG::consolidate() {
     
-    threadPool.status();
     // release memory from consumed buffers
     uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
     
@@ -318,7 +310,10 @@ void DBG::consolidate() {
         dumpMaps = true;
         readingDone = true;
         
-        jobWait(threadPool, dependencies);
+        for(std::thread& activeThread : threads) {
+            activeThread.join();
+        }
+        threads.clear();
         
         for (Buf<kmer> *buffer : buffers) {
             
@@ -404,12 +399,12 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
 
 void DBG::summary() {
     
-    {
-        std::lock_guard<std::mutex> lck(mtx);
-        readingDone = true;
-    }
+    readingDone = true;
     
-    jobWait(threadPool, dependencies);
+    for(std::thread& activeThread : threads) {
+        activeThread.join();
+    }
+    threads.clear();
     
     for (Buf<kmer> *buffer : buffers) {
         
@@ -429,8 +424,6 @@ void DBG::summary() {
         }
         
         lg.verbose("Updating maps");
-        
-        jobWait(threadPool, dependencies);
         
     }
     

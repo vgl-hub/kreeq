@@ -321,6 +321,8 @@ void DBG::consolidate() {
         
         jobWait(threadPool);
         
+        exit(1);
+        
         initHashing();
 
     }

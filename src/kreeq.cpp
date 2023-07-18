@@ -56,7 +56,6 @@ bool DBG::memoryOk(int64_t delta) {
 
 void DBG::initHashing(){
     
-    dumpMaps = false;
     readingDone = false;
     buffersDone.clear();
     
@@ -308,16 +307,7 @@ void DBG::consolidate() {
             activeThread.join();
         }
         threads.clear();
-
-        for (uint16_t m = 0; m<mapCount; ++m)
-            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
-
-        maps.clear();
-
-        maps.reserve(mapCount);
-        std::generate_n(std::back_inserter(maps), mapCount,
-                    []() { return new phmap::flat_hash_map<uint64_t, DBGkmer>; });
-
+        
         for (Buf<kmer> *buffer : buffers) {
             
             if (buffer != NULL) {
@@ -329,6 +319,15 @@ void DBG::consolidate() {
         }
         
         buffers.clear();
+
+        for (uint16_t m = 0; m<mapCount; ++m)
+            updateMap(userInput.prefix, m, maps[m]);
+
+        maps.clear();
+
+        maps.reserve(mapCount);
+        std::generate_n(std::back_inserter(maps), mapCount,
+                    []() { return new phmap::flat_hash_map<uint64_t, DBGkmer>; });
         
         initHashing();
 

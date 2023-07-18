@@ -308,7 +308,7 @@ void DBG::consolidate() {
         
         maps.clear();
         
-        maps.reserve(maps.capacity() + mapCount);
+        maps.reserve(mapCount);
         std::generate_n(std::back_inserter(maps), mapCount,
                     []() { return new phmap::flat_hash_map<uint64_t, DBGkmer>; });
 

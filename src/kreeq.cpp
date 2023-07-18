@@ -325,11 +325,11 @@ void DBG::consolidate() {
         for (uint16_t m = 0; m<mapCount; ++m)
             threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
 
-        maps.clear();
-
-        maps.reserve(mapCount);
-        std::generate_n(std::back_inserter(maps), mapCount,
-                    []() { return new phmap::flat_hash_map<uint64_t, DBGkmer>; });
+//        maps.clear();
+//
+//        maps.reserve(mapCount);
+//        std::generate_n(std::back_inserter(maps), mapCount,
+//                    []() { return new phmap::flat_hash_map<uint64_t, DBGkmer>; });
         
         jobWait(threadPool);
         

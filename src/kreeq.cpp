@@ -319,9 +319,11 @@ void DBG::consolidate() {
         }
         
         buffers.clear();
+        
+        jobWait(threadPool);
 
         for (uint16_t m = 0; m<mapCount; ++m)
-            updateMap(userInput.prefix, m, maps[m]);
+            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
 
         maps.clear();
 

@@ -299,9 +299,13 @@ void DBG::consolidate() {
     
     if (!memoryOk()) { // if out of memory, consolidate maps
         
-        std::lock_guard<std::mutex> lck(mtx);
-        
         tmp = true;
+        readingDone = true;
+        
+        for(std::thread& activeThread : threads) {
+            activeThread.join();
+        }
+        threads.clear();
 
         for (uint16_t m = 0; m<mapCount; ++m)
             threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
@@ -311,6 +315,8 @@ void DBG::consolidate() {
         maps.reserve(mapCount);
         std::generate_n(std::back_inserter(maps), mapCount,
                     []() { return new phmap::flat_hash_map<uint64_t, DBGkmer>; });
+        
+        initHashing();
 
     }
 

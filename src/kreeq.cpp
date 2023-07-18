@@ -268,6 +268,8 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
 
 void DBG::consolidate() {
     
+    lg.verbose("Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+    
     // release memory from consumed buffers
     uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
     

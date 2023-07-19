@@ -317,7 +317,7 @@ void DBG::consolidate() {
         for (uint16_t m = 0; m<mapCount; ++m)
             maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
         
-        jobWait();
+        jobWait(threadPool);
         
         initHashing();
 

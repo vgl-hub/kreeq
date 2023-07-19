@@ -315,11 +315,8 @@ void DBG::consolidate() {
         
         jobWait(threadPool);
 
-        maps.clear();
-
-        maps.reserve(mapCount);
-        std::generate_n(std::back_inserter(maps), mapCount,
-                    []() { return new phmap::flat_hash_map<uint64_t, DBGkmer>; });
+        for (uint16_t m = 0; m<mapCount; ++m)
+            maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
         
         initHashing();
 

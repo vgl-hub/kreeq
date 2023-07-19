@@ -90,6 +90,8 @@ void DBG::initHashing(){
         
     }
     
+    std::cout<<"hello"<<std::endl;
+    
 }
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
@@ -307,8 +309,6 @@ void DBG::consolidate() {
             activeThread.join();
 
         threads.clear();
-        
-        jobWait(threadPool);
 
         for (uint16_t m = 0; m<mapCount; ++m)
             threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });

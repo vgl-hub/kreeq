@@ -204,11 +204,13 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
     
     while (true) {
         
-        double totMem = userInput.maxMem == 0 ? get_mem_total(3) : userInput.maxMem;
+        double totMem = userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem;
         
         if (dumpMaps || final_size / pow(1024, 3) > totMem/std::thread::hardware_concurrency()/3) {
             
-            std::cout<<"dumping! "<<t<<std::endl;
+            uint64_t a = final_size / pow(1024, 3), b = totMem/std::thread::hardware_concurrency()/3;
+            
+            std::cout<<"dumping! "<<t<<" "<<a<<" "<<b<<std::endl;
             
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);

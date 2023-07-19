@@ -201,16 +201,15 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
     uint32_t b = 0;
     int64_t initial_size = 0, final_size = 0;
     Buf<kmer>* buf;
-    bool mapUpdated = false; // maps are updated at most once per job
     
     while (true) {
         
-        if (dumpMaps && !mapUpdated) {
+        if (dumpMaps || final_size > (int64_t) get_mem_total(0)/std::thread::hardware_concurrency()/10) {
             
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);
             
-            mapUpdated = true;
+            initial_size = 0, final_size = 0;
             
         }
         
@@ -421,10 +420,8 @@ void DBG::summary() {
     
     if (tmp) {
         
-        for (uint16_t m = 0; m<mapCount; ++m) {
-            uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
-            dependencies.push_back(jid);
-        }
+        for (uint16_t m = 0; m<mapCount; ++m)
+            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
         
         lg.verbose("Updating maps");
         

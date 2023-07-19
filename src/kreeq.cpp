@@ -310,7 +310,7 @@ void DBG::consolidate() {
     if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
         
         tmp = true;
-        dumpMaps = true;
+//        dumpMaps = true;
         readingDone = true;
         
         for(std::thread& activeThread : threads) {
@@ -329,6 +329,9 @@ void DBG::consolidate() {
         }
         
         buffers.clear();
+        
+        for (uint16_t m = 0; m<mapCount; ++m)
+            updateMap(userInput.prefix, m);
         
         initHashing();
         
@@ -421,10 +424,8 @@ void DBG::summary() {
     
     if (tmp) {
         
-        for (uint16_t m = 0; m<mapCount; ++m) {
-            uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
-            dependencies.push_back(jid);
-        }
+        for (uint16_t m = 0; m<mapCount; ++m)
+            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
         
         lg.verbose("Updating maps");
         

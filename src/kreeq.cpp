@@ -226,7 +226,7 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             buf = buffers[b];
             ++b;
             
-            if (buffer == NULL)
+            if (buf == NULL)
                 continue;
             
         }

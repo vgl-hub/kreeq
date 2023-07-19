@@ -73,6 +73,8 @@ void DBG::initHashing(){
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
+    std::cout<<"hello"<<std::endl;
+    
     while(mapRange[1] < mapCount) {
         
         buffersDone.push_back(0);
@@ -89,8 +91,6 @@ void DBG::initHashing(){
         threads.push_back(std::thread(&DBG::processBuffers, this, t-2, mapRange));
         
     }
-    
-    std::cout<<"hello"<<std::endl;
     
 }
 

@@ -206,7 +206,7 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
         
         double totMem = userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem;
         
-        if (dumpMaps || final_size > 100000000) {
+        if (dumpMaps || final_size > 1000000000) {
             
             uint64_t a = final_size / pow(1024, 3), b = totMem/std::thread::hardware_concurrency()/3;
             

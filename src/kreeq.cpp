@@ -331,11 +331,13 @@ void DBG::consolidate() {
         buffers.clear();
         
         for (uint16_t m = 0; m<mapCount; ++m)
-            updateMap(userInput.prefix, m);
+            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
         
         initHashing();
         
     }
+    
+    lg.verbose("Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true)
 
 }
 

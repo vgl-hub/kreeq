@@ -208,6 +208,8 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
         
         if (dumpMaps || final_size / pow(1024, 3) > totMem/std::thread::hardware_concurrency()/3) {
             
+            std::cout<<"dumping! "<<t<<std::endl;
+            
             for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
                 updateMap(userInput.prefix, m);
             

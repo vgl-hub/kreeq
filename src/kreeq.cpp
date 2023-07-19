@@ -333,6 +333,8 @@ void DBG::consolidate() {
         for (uint16_t m = 0; m<mapCount; ++m)
             threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
         
+        jobWait(threadPool);
+        
         initHashing();
         
     }

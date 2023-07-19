@@ -56,6 +56,7 @@ bool DBG::memoryOk(int64_t delta) {
 
 void DBG::initHashing(){
     
+    dumpMaps = false;
     readingDone = false;
     buffersDone.clear();
     
@@ -114,7 +115,7 @@ bool DBG::hashSequences(uint8_t t) {
             
             std::unique_lock<std::mutex> lck(mtx);
             
-            if (readingDone) {
+            if (readingDone && readBatches.size() == 0) {
                 buffingDone[t] = true;
                 return true;
             }
@@ -200,8 +201,18 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
     uint32_t b = 0;
     int64_t initial_size = 0, final_size = 0;
     Buf<kmer>* buf;
+    bool mapUpdated = false; // maps are updated at most once per job
     
     while (true) {
+        
+        if (dumpMaps && !mapUpdated) {
+            
+            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+                updateMap(userInput.prefix, m);
+            
+            mapUpdated = true;
+            
+        }
         
         {
             
@@ -215,7 +226,7 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (readingDone)
+            if (readingDone && b >= buffers.size() && std::find(buffingDone.begin(), buffingDone.end(), false) == buffingDone.end() && readBatches.size() == 0)
                 return true;
             
             if(b >= buffers.size())
@@ -223,9 +234,6 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             
             buf = buffers[b];
             ++b;
-            
-            if (buf == NULL)
-                continue;
             
         }
         
@@ -270,8 +278,6 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
 
 void DBG::consolidate() {
     
-    lg.verbose("Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
-    
     // release memory from consumed buffers
     uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
     
@@ -301,35 +307,38 @@ void DBG::consolidate() {
 
     }
     
-    if (!memoryOk()) { // if out of memory, consolidate maps
+    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
         
         tmp = true;
+        dumpMaps = true;
         readingDone = true;
         
-        for(std::thread& activeThread : threads)
+        for(std::thread& activeThread : threads) {
             activeThread.join();
-
+        }
         threads.clear();
         
-        jobWait(threadPool);
-
-        for (uint16_t m = 0; m<mapCount; ++m)
-            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
+        for (Buf<kmer> *buffer : buffers) {
+            
+            if (buffer != NULL) {
+                freed += buffer->size * sizeof(kmer);
+                delete[] buffer->seq;
+                delete buffer;
+            }
+            
+        }
         
-        jobWait(threadPool);
-
-        for (uint16_t m = 0; m<mapCount; ++m)
-            maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+        buffers.clear();
         
         initHashing();
-
+        
     }
 
 }
 
-bool DBG::updateMap(std::string prefix, uint16_t m, phmap::flat_hash_map<uint64_t, DBGkmer> *map) {
+bool DBG::updateMap(std::string prefix, uint16_t m) {
     
-    uint64_t map_size = mapSize(*map);
+    uint64_t map_size = mapSize(*maps[m]);
     
     prefix.append("/.kmap." + std::to_string(m) + ".bin");
     
@@ -339,7 +348,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m, phmap::flat_hash_map<uint64_
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         dumpMap->phmap_load(ar_in);
     
-        unionSum(*map, *dumpMap); // merges the current map and the existing map
+        unionSum(*maps[m], *dumpMap); // merges the current map and the existing map
     
         phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
         dumpMap->phmap_dump(ar_out);
@@ -349,12 +358,13 @@ bool DBG::updateMap(std::string prefix, uint16_t m, phmap::flat_hash_map<uint64_
     }else{
     
         phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
-        map->phmap_dump(ar_out);
+        maps[m]->phmap_dump(ar_out);
     
     }
     
     freed += map_size;
-    delete map;
+    delete maps[m];
+    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     
     return true;
     
@@ -411,8 +421,10 @@ void DBG::summary() {
     
     if (tmp) {
         
-        for (uint16_t m = 0; m<mapCount; ++m)
-            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
+        for (uint16_t m = 0; m<mapCount; ++m) {
+            uint32_t jid = threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
+            dependencies.push_back(jid);
+        }
         
         lg.verbose("Updating maps");
         

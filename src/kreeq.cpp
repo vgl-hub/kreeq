@@ -310,14 +310,16 @@ void DBG::consolidate() {
             activeThread.join();
 
         threads.clear();
+        
+        jobWait(threadPool);
 
         for (uint16_t m = 0; m<mapCount; ++m)
             threadPool.queueJob([=]{ return updateMap(userInput.prefix, m, maps[m]); });
+        
+        jobWait(threadPool);
 
         for (uint16_t m = 0; m<mapCount; ++m)
             maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-        
-        jobWait(threadPool);
         
         initHashing();
 

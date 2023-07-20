@@ -406,9 +406,9 @@ void DBG::summary() {
     
     readingDone = true;
     
-    for(std::thread& activeThread : threads) {
+    for(std::thread& activeThread : threads)
         activeThread.join();
-    }
+
     threads.clear();
     
     for (Buf<kmer> *buffer : buffers) {
@@ -427,6 +427,8 @@ void DBG::summary() {
             threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
         
         lg.verbose("Updating maps");
+        
+        jobWait(threadPool);
         
     }
     
@@ -663,7 +665,7 @@ void DBG::cleanup() {
         lg.verbose("Deleting tmp files");
         
         for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "./.kmap." + std::to_string(m) + ".bin").c_str()); });
+            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.kmap." + std::to_string(m) + ".bin").c_str()); });
         
         jobWait(threadPool);
         

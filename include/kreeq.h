@@ -36,7 +36,7 @@ public:
         
         lg.verbose("Deleting any tmp file");
         for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            threadPool.queueJob([=]{ return remove(("./.kmap." + std::to_string(m) + ".bin").c_str()); });
+            threadPool.queueJob([=]{ return remove((userInput.prefix + "./.kmap." + std::to_string(m) + ".bin").c_str()); });
         
         jobWait(threadPool);
         

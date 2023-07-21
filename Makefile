@@ -22,7 +22,7 @@ GFALIBS_DIR := $(CURDIR)/gfalibs
 SOURCES := main input kreeq
 OBJECTS := $(addprefix $(BINDIR)/, $(SOURCES))
 
-head: $(OBJECTS) gfalibs nthash | $(BUILD)
+head: $(OBJECTS) gfalibs | $(BUILD)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(LIB_DIR) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(GFALIBS_DIR)/*.o $(LIBS)
 
 debug: CXXFLAGS += -DDEBUG

@@ -58,7 +58,6 @@ void DBG::initHashing(){
     
     dumpMaps = false;
     readingDone = false;
-    buffersDone.clear();
     
     int16_t threadN = std::thread::hardware_concurrency(), buffThreads = threadN - hashThreads - 1;
     
@@ -75,8 +74,6 @@ void DBG::initHashing(){
     std::array<uint16_t, 2> mapRange = {0,0};
     
     while(mapRange[1] < mapCount) {
-        
-        buffersDone.push_back(0);
                 
         mapRange[0] = mapRange[1];
         mapRange[1] = std::ceil(pow(mapsN,t));
@@ -87,7 +84,8 @@ void DBG::initHashing(){
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         
-        threads.push_back(std::thread(&DBG::processBuffers, this, t++, mapRange)); // t-2 is wrong!
+        threads.push_back(std::thread(&DBG::processBuffers, this, mapRange));
+        t++;
         
     }
     
@@ -187,7 +185,12 @@ bool DBG::hashSequences(uint8_t t) {
         
         std::lock_guard<std::mutex> lck(mtx);
         alloc += buf->size * sizeof(kmer);
-        buffers.push_back(buf);
+        
+        auto bufFile = std::fstream(userInput.prefix + "/.buffer.bin", std::fstream::app | std::ios::out | std::ios::binary);
+        for (uint64_t i = 0; i < buf->pos; i++)
+            bufFile << buf->seq[i];
+        bufFile.close();
+        ++buffers;
         
     }
     
@@ -195,13 +198,15 @@ bool DBG::hashSequences(uint8_t t) {
     
 }
 
-bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
+bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     uint16_t i;
     uint32_t b = 0;
-    int64_t initial_size = 0, final_size = 0;
-    Buf<kmer>* buf;
+    int64_t initial_size = 0, final_size = 0, bufSize = 10000000;
+    Buf<kmer> *buf = new Buf<kmer>(bufSize);
     bool mapUpdated = false; // maps are updated at most once per job
+    
+    std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::binary);
     
     while (true) {
         
@@ -218,21 +223,28 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             
             std::lock_guard<std::mutex> lck(mtx);
             
-            if (buffers.size() == 0)
+            if (buffers == 0)
                 continue;
-            
-            buffersDone.at(t) = b;
             
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
-            if (readingDone && b >= buffers.size() && std::find(buffingDone.begin(), buffingDone.end(), false) == buffingDone.end() && readBatches.size() == 0)
-                return true;
+            if (readingDone && b == buffers && std::find(buffingDone.begin(), buffingDone.end(), false) == buffingDone.end() && readBatches.size() == 0)
+                break;
             
-            if(b >= buffers.size())
+            if(b == buffers)
                 continue;
             
-            buf = buffers[b];
+            buf->pos = 0;
+
+            for (uint64_t i = 0; i < buf->size; i++) {
+                bufFile >> buf->seq[buf->pos];
+                if (bufFile.eof())
+                    break;
+                else
+                    buf->pos++;
+            }
+            
             ++b;
             
         }
@@ -272,40 +284,16 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
         
     }
     
+    freed += buf->size * sizeof(kmer);
+    delete[] buf->seq;
+    delete buf;
+    bufFile.close();
+    
     return true;
     
 }
 
 void DBG::consolidate() {
-    
-    // release memory from consumed buffers
-//    {
-//
-//        std::lock_guard<std::mutex> lck(mtx);
-//
-//        uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
-//
-//        for (uint32_t b : buffersDone) {
-//
-//            if (b < bufferDone)
-//                bufferDone = b;
-//
-//        }
-//
-//        for (uint32_t b = 0; b<bufferDone; ++b) {
-//
-//            Buf<kmer>* buffer = buffers[b];
-//
-//            if (buffer != NULL) {
-//                freed += buffer->size * sizeof(kmer);
-//                delete[] buffer->seq;
-//                delete buffer;
-//                buffers[b] = NULL;
-//            }
-//
-//        }
-//
-//    }
     
     if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
         
@@ -317,18 +305,6 @@ void DBG::consolidate() {
             activeThread.join();
         }
         threads.clear();
-        
-        for (Buf<kmer> *buffer : buffers) {
-            
-            if (buffer != NULL) {
-                freed += buffer->size * sizeof(kmer);
-                delete[] buffer->seq;
-                delete buffer;
-            }
-            
-        }
-        
-        buffers.clear();
         
         initHashing();
         
@@ -410,16 +386,6 @@ void DBG::summary() {
         activeThread.join();
 
     threads.clear();
-    
-    for (Buf<kmer> *buffer : buffers) {
-        
-        if (buffer != NULL) {
-            freed += buffer->size * sizeof(kmer);
-            delete[] buffer->seq;
-            delete buffer;
-        }
-        
-    }
     
     if (tmp) {
         
@@ -659,6 +625,8 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
 }
 
 void DBG::cleanup() {
+    
+    remove((userInput.prefix + "/.buffer.bin").c_str());
     
     if(tmp && userInput.inDBG != userInput.prefix) {
         

@@ -4,7 +4,27 @@
 struct kmer {
     
     uint64_t hash = 0;
-    uint8_t fw[4] = {0}, bw[4] = {0};
+    bool fw[4] = {0}, bw[4] = {0};
+
+    friend std::ostream & operator << (std::ostream & outs, const kmer &k)
+    {
+        outs << k.hash << " ";
+        for (uint8_t i = 0; i < 4; ++i)
+            outs << k.fw[i] << " ";
+        for (uint8_t i = 0; i < 4; ++i)
+            outs << k.bw[i] << " ";
+      return outs;
+    }
+
+    friend std::istream & operator >> ( std::istream & ins, kmer & k )
+    {
+        ins >> k.hash;
+        for (uint8_t i = 0; i < 4; ++i)
+            ins >> k.fw[i];
+        for (uint8_t i = 0; i < 4; ++i)
+        return ins;
+    }
+
     
 };
 
@@ -16,7 +36,7 @@ struct DBGkmer {
 
 class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
-    std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0};
+    std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0}, buffers{0};
     std::vector<uint32_t> dependencies;
     bool tmp = false;
     std::atomic<bool> readingDone{false}, dumpMaps{false};
@@ -26,7 +46,6 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     UserInputKreeq& userInput;
     
     std::queue<std::string*> readBatches;
-    std::vector<Buf<kmer>*> buffers;
     std::vector<uint32_t> buffersDone;
     std::vector<bool> buffingDone = std::vector<bool>(hashThreads, false);
 
@@ -35,8 +54,9 @@ public:
     DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
         
         lg.verbose("Deleting any tmp file");
-        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "./.kmap." + std::to_string(m) + ".bin").c_str()); });
+        remove((userInput.prefix + "/.buffer.bin").c_str());
+        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp maps
+            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.kmap." + std::to_string(m) + ".bin").c_str()); });
         
         jobWait(threadPool);
         
@@ -56,7 +76,7 @@ public:
     
     bool hashSequences(uint8_t t);
     
-    bool processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange);
+    bool processBuffers(std::array<uint16_t, 2> mapRange);
     
     void cleanup();
     

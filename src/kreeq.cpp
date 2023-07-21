@@ -61,7 +61,7 @@ void DBG::initHashing(){
     readingDone = false;
     buffersDone.clear();
     
-    int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 4, buffThreads = threadN - hashThreads - 1;
+    int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 1, buffThreads = threadN - hashThreads - 1;
     
 //    if (buffThreads < 1)
         buffThreads = 1;

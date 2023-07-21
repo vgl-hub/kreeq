@@ -253,7 +253,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             i = khmer.hash / moduloMap;
             
-            std::cout<<khmer.hash<<std::endl;
+//            std::cout<<khmer.hash<<std::endl;
             
             if (i >= mapRange[0] && i < mapRange[1]) {
                 
@@ -621,7 +621,7 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
 
 void DBG::cleanup() {
     
-    remove((userInput.prefix + "/.buffer.bin").c_str());
+//    remove((userInput.prefix + "/.buffer.bin").c_str());
     
     if(tmp && userInput.inDBG != userInput.prefix) {
         

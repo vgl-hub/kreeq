@@ -1,8 +1,9 @@
 CXX = g++
-INCLUDE_DIR = -I./include -Igfalibs/include
+INCLUDE_DIR = -I./include -Igfalibs/include -IntHash/include
+LIB_DIR = -LntHash/lib -lnthash
 WARNINGS = -Wall -Wextra
 
-CXXFLAGS = -g -std=gnu++14 -O3 $(INCLUDE_DIR) $(WARNINGS)
+CXXFLAGS = -g -std=gnu++17 -O3 $(INCLUDE_DIR) $(WARNINGS)
 
 TARGET = kreeq
 TEST_TARGET = validate
@@ -22,7 +23,7 @@ SOURCES := main input kreeq
 OBJECTS := $(addprefix $(BINDIR)/, $(SOURCES))
 
 head: $(OBJECTS) gfalibs | $(BUILD)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(GFALIBS_DIR)/*.o $(LIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(LIB_DIR) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(GFALIBS_DIR)/*.o $(LIBS)
 
 debug: CXXFLAGS += -DDEBUG
 debug: CCFLAGS += -DDEBUG

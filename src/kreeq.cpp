@@ -14,6 +14,7 @@
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"
+#include <nthash/nthash.hpp>
 
 #include "bed.h"
 #include "struct.h"
@@ -62,7 +63,7 @@ void DBG::initHashing(){
     
     int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 4, buffThreads = threadN - hashThreads - 1;
     
-    if (buffThreads < 1)
+//    if (buffThreads < 1)
         buffThreads = 1;
     
     for (uint8_t t = 0; t < hashThreads; t++) {
@@ -137,32 +138,20 @@ bool DBG::hashSequences(uint8_t t) {
         
         unsigned char *first = (unsigned char*) readBatch->c_str();
         uint8_t *str = new uint8_t[len];
-        uint8_t e = 0;
-        uint64_t kcount = len-k+1;
+        uint64_t p = 0;
         bool isFw = false;
         Buf<kmer> *buf = new Buf<kmer>(len);
         
-        for (uint64_t p = 0; p<kcount; ++p) {
+        std::string &s = *readBatch;
+        nthash::NtHash nth(s, 1, k);  // 1 hash per k-mer
+        while (nth.roll()) {
             
-            for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
-                
-                str[p+c] = ctoi[*(first+p+c)]; // convert the next base
-                if (str[p+c] > 3) { // if non-canonical base is found
-                    p = p+c; // move position
-                    e = 0; // reset base counter
-                    break;
-                }
-                
-                e = k-1;
-                
-            }
-            
-            if (e == 0) // not enough bases for a kmer
-                continue;
+            p = nth.get_pos();
             
             kmer &khmer = buf->seq[buf->pos++];
             
-            khmer.hash = hash(str+p, &isFw);
+            isFw = nth.get_forward_hash() < nth.get_reverse_hash() ? true : false;
+            khmer.hash = isFw ? nth.get_forward_hash() : nth.get_reverse_hash();
             
             if (isFw){
                 if (ctoi[*(first+p+k)] <= 3)
@@ -246,7 +235,7 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             
             kmer &khmer = buf->seq[c];
             
-            i = khmer.hash / moduloMap;
+            i = khmer.hash % mapCount;
             
             if (i >= mapRange[0] && i < mapRange[1]) {
                 
@@ -597,7 +586,7 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
     for (uint64_t i = 0; i<len; ++i)
         str[i] = ctoi[*(first+i)];
     
-    uint64_t key, i;
+    uint64_t key, i, c;
     
     phmap::flat_hash_map<uint64_t, DBGkmer> *map;
     
@@ -605,14 +594,17 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
     bool isFw = false;
     
 //    std::cout<<segment->getSeqHeader()<<std::endl;
-    
-    for (uint64_t c = 0; c<kcount; ++c){
         
-        key = hash(str+c, &isFw);
+    std::string &s = *segment->getInSequencePtr();
+    nthash::NtHash nth(s, 1, k);  // 1 hash per k-mer
+    while (nth.roll()) {
         
-        i = key / moduloMap;
+        c = nth.get_pos();
+        isFw = nth.get_forward_hash() < nth.get_reverse_hash() ? true : false;
+        key = isFw ? nth.get_forward_hash() : nth.get_reverse_hash();
+        i = key % mapCount;
         
-//        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
+//        std::cout<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<"\t"<<i<<"\t"<<key<<std::endl;
         
         if (i >= mapRange[0] && i <= mapRange[1]) {
             
@@ -622,7 +614,9 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
             const DBGkmer *dbgkmer = (it == map->end() ? NULL : &it->second);
             
             if (it == map->end()) // merqury QV
+            {
                 missingKmers.push_back(c);
+            }
             else if (it->second.cov < userInput.covCutOff) // merqury QV with cutoff
                 missingKmers.push_back(c);
             else if (dbgkmer != NULL) { // kreeq QV

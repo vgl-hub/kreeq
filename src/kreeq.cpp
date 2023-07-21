@@ -236,6 +236,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             bufFile.read(reinterpret_cast<char*>(&buf),sizeof(buf));
             
+            std::cout<<b<<std::endl;
+            
             ++b;
             
         }

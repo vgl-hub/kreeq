@@ -201,7 +201,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     uint16_t i;
     uint32_t b = 0;
-    int64_t initial_size = 0, final_size = 0, bufSize = 10000000;
+    int64_t initial_size = 0, final_size = 0, bufSize = 10000 * sizeof(kmer);
     Buf<kmer> *buf = new Buf<kmer>(bufSize);
     bool mapUpdated = false; // maps are updated at most once per job
     
@@ -245,7 +245,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
         uint64_t len = buf->pos; // how many positions in the buffer have data
         
-        std::cout<<len<<std::endl;
+//        std::cout<<len<<std::endl;
         
         for (uint64_t c = 0; c<len; ++c) {
             

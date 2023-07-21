@@ -61,7 +61,7 @@ void DBG::initHashing(){
     readingDone = false;
     buffersDone.clear();
     
-    int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 1, buffThreads = threadN - hashThreads - 1;
+    int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 1, buffThreads = threadN - hashThreads - 1, mapsN = mapCount / threadN;
     
 //    if (buffThreads < 1)
         buffThreads = 1;
@@ -70,7 +70,7 @@ void DBG::initHashing(){
         threads.push_back(std::thread(&DBG::hashSequences, this, t));
     }
     
-    uint8_t threadN = threadPool.totalThreads() - 2, mapsN = mapCount / threadN;
+    uint8_t t = 0;
     
     std::array<uint16_t, 2> mapRange = {0,0};
     

@@ -60,7 +60,7 @@ void DBG::initHashing(){
     readingDone = false;
     buffersDone.clear();
     
-    int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 4, buffThreads = threadN - hashThreads - 1;
+    int16_t threadN = std::thread::hardware_concurrency(), buffThreads = threadN - hashThreads - 1;
     
     if (buffThreads < 1)
         buffThreads = 1;
@@ -69,7 +69,7 @@ void DBG::initHashing(){
         threads.push_back(std::thread(&DBG::hashSequences, this, t));
     }
     
-    uint8_t t = 1;
+    uint8_t t = 0;
     double mapsN = pow(10,log10(mapCount)/buffThreads);
     
     std::array<uint16_t, 2> mapRange = {0,0};
@@ -79,7 +79,7 @@ void DBG::initHashing(){
         buffersDone.push_back(0);
                 
         mapRange[0] = mapRange[1];
-        mapRange[1] = std::ceil(pow(mapsN,t++));
+        mapRange[1] = std::ceil(pow(mapsN,t));
         
         if (mapRange[0] >= mapRange[1])
             mapRange[1] = mapRange[0] + 1;
@@ -87,7 +87,7 @@ void DBG::initHashing(){
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         
-        threads.push_back(std::thread(&DBG::processBuffers, this, t-2, mapRange));
+        threads.push_back(std::thread(&DBG::processBuffers, this, t++, mapRange)); // t-2 is wrong!
         
     }
     
@@ -221,7 +221,7 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             if (buffers.size() == 0)
                 continue;
             
-            buffersDone[t] = b;
+            buffersDone.at(t) = b;
             
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
@@ -279,33 +279,33 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
 void DBG::consolidate() {
     
     // release memory from consumed buffers
-    uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
-    
-    {
-
-        std::lock_guard<std::mutex> lck(mtx);
-
-        for (uint32_t b : buffersDone) {
-
-            if (b < bufferDone)
-                bufferDone = b;
-
-        }
-
-        for (uint32_t b = 0; b<bufferDone; ++b) {
-
-            Buf<kmer>* buffer = buffers[b];
-
-            if (buffer != NULL) {
-                freed += buffer->size * sizeof(kmer);
-                delete[] buffer->seq;
-                delete buffer;
-                buffers[b] = NULL;
-            }
-
-        }
-
-    }
+//    {
+//
+//        std::lock_guard<std::mutex> lck(mtx);
+//
+//        uint32_t bufferDone = buffersDone[0]; // find the max buffer consumed by all threads
+//
+//        for (uint32_t b : buffersDone) {
+//
+//            if (b < bufferDone)
+//                bufferDone = b;
+//
+//        }
+//
+//        for (uint32_t b = 0; b<bufferDone; ++b) {
+//
+//            Buf<kmer>* buffer = buffers[b];
+//
+//            if (buffer != NULL) {
+//                freed += buffer->size * sizeof(kmer);
+//                delete[] buffer->seq;
+//                delete buffer;
+//                buffers[b] = NULL;
+//            }
+//
+//        }
+//
+//    }
     
     if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
         

@@ -61,28 +61,25 @@ void DBG::initHashing(){
     readingDone = false;
     buffersDone.clear();
     
-    int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 1, buffThreads = threadN - hashThreads - 1, mapsN = mapCount / buffThreads;
-    
-    if (buffThreads < 1)
-        buffThreads = 1;
+    int16_t threadN = std::thread::hardware_concurrency(), hashThreads = 1;
     
     for (uint8_t t = 0; t < hashThreads; t++) {
         threads.push_back(std::thread(&DBG::hashSequences, this, t));
     }
     
-    uint8_t t = 0;
+    uint8_t t = 0, mapsN = mapCount/threadN - buffThreads;
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
     while(mapRange[1] < mapCount) {
         
+        buffersDone.push_back(0);
+                
         mapRange[0] = mapRange[1];
         mapRange[1] += mapsN;
         
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
-        
-        std::cout<<mapRange[0]<<" "<<mapRange[1]<<std::endl;
         
         threads.push_back(std::thread(&DBG::processBuffers, this, t++, mapRange));
         
@@ -206,8 +203,6 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             if (buffers.size() == 0)
                 continue;
             
-            buffersDone[t] = b;
-            
             alloc += final_size - initial_size;
             initial_size = 0, final_size = 0;
             
@@ -217,8 +212,7 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
             if(b >= buffers.size())
                 continue;
             
-            buf = buffers[b];
-            ++b;
+            buf = buffers[b++];
             
         }
         
@@ -250,6 +244,11 @@ bool DBG::processBuffers(uint8_t t, std::array<uint16_t, 2> mapRange) {
                 
             }
             
+        }
+        
+        {
+            std::lock_guard<std::mutex> lck(mtx);
+            buffersDone[t] = b;
         }
         
         for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)

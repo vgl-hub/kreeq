@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
                     userInput.prefix = optarg;
                     break;
                     
-                case 'm': // memory limit
+                case 'm': // prefix for temporary files
                     userInput.maxMem = atof(optarg);
                     break;
                     

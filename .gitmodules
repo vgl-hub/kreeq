@@ -3,9 +3,3 @@
 	url = https://github.com/vgl-hub/gfalibs.git
     ignore = untracked
     ignore = dirty
-
-[submodule "ntHash"]
-	path = ntHash
-	url = https://github.com/bcgsc/ntHash.git
-    ignore = untracked
-    ignore = dirty

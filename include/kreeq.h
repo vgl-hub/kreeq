@@ -5,26 +5,6 @@ struct kmer {
     
     uint64_t hash = 0;
     bool fw[4] = {0}, bw[4] = {0};
-
-    friend std::ostream & operator << (std::ostream & outs, const kmer &k)
-    {
-        outs << k.hash << " ";
-        for (uint8_t i = 0; i < 4; ++i)
-            outs << k.fw[i] << " ";
-        for (uint8_t i = 0; i < 4; ++i)
-            outs << k.bw[i] << " ";
-      return outs;
-    }
-
-    friend std::istream & operator >> ( std::istream & ins, kmer & k )
-    {
-        ins >> k.hash;
-        for (uint8_t i = 0; i < 4; ++i)
-            ins >> k.fw[i];
-        for (uint8_t i = 0; i < 4; ++i)
-        return ins;
-    }
-
     
 };
 

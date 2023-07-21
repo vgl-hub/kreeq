@@ -187,8 +187,7 @@ bool DBG::hashSequences(uint8_t t) {
         alloc += buf->size * sizeof(kmer);
         
         auto bufFile = std::fstream(userInput.prefix + "/.buffer.bin", std::fstream::app | std::ios::out | std::ios::binary);
-        for (uint64_t i = 0; i < buf->pos; i++)
-            bufFile << buf->seq[i];
+        bufFile.write(reinterpret_cast<const char*>(&buf), sizeof(buf));
         bufFile.close();
         ++buffers;
         
@@ -206,7 +205,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     Buf<kmer> *buf = new Buf<kmer>(bufSize);
     bool mapUpdated = false; // maps are updated at most once per job
     
-    std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::binary);
+    std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
     
     while (true) {
         
@@ -235,15 +234,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-            buf->pos = 0;
-
-            for (uint64_t i = 0; i < buf->size; i++) {
-                bufFile >> buf->seq[buf->pos];
-                if (bufFile.eof())
-                    break;
-                else
-                    buf->pos++;
-            }
+            bufFile.read(reinterpret_cast<char*>(&buf),sizeof(buf));
             
             ++b;
             
@@ -259,6 +250,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             kmer &khmer = buf->seq[c];
             
             i = khmer.hash / moduloMap;
+            
+//            std::cout<<khmer.hash<<std::endl;
             
             if (i >= mapRange[0] && i < mapRange[1]) {
                 
@@ -285,8 +278,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     }
     
     freed += buf->size * sizeof(kmer);
-    delete[] buf->seq;
-    delete buf;
+//    delete[] buf->seq;
+//    delete buf;
     bufFile.close();
     
     return true;

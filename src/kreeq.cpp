@@ -245,7 +245,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
         uint64_t len = buf->pos; // how many positions in the buffer have data
         
-//        std::cout<<len<<std::endl;
+        std::cout<<len<<std::endl;
         
         for (uint64_t c = 0; c<len; ++c) {
             

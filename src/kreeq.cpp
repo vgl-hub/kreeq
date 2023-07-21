@@ -251,7 +251,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             i = khmer.hash / moduloMap;
             
-//            std::cout<<khmer.hash<<std::endl;
+            std::cout<<khmer.hash<<std::endl;
             
             if (i >= mapRange[0] && i < mapRange[1]) {
                 

@@ -23,7 +23,7 @@ SOURCES := main input kreeq
 OBJECTS := $(addprefix $(BINDIR)/, $(SOURCES))
 
 head: $(OBJECTS) gfalibs | $(BUILD)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(LIB_DIR) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(GFALIBS_DIR)/*.o $(LIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(BUILD)/$(TARGET) $(wildcard $(BINDIR)/*) $(GFALIBS_DIR)/*.o $(LIBS) $(LIB_DIR)
 
 debug: CXXFLAGS += -DDEBUG
 debug: CCFLAGS += -DDEBUG

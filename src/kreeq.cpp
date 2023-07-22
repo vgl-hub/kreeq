@@ -213,6 +213,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     Buf<kmer> *buf;
     bool mapUpdated = false; // maps are updated at most once per job
     
+    std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
+    
     while (true) {
         
         if (dumpMaps && !mapUpdated) {
@@ -240,9 +242,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
             
-            bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos) + 1 * b);
+            bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos));
             
             bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
     //
@@ -254,8 +255,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
 //
-            if (bufFile.is_open())
-                bufFile.close();
+//            if (bufFile.is_open())
+//                bufFile.close();
             
             ++b;
             

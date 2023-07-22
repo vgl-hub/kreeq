@@ -187,9 +187,13 @@ bool DBG::hashSequences(uint8_t t) {
         alloc += buf->size * sizeof(kmer);
         
         auto bufFile = std::fstream(userInput.prefix + "/.buffer.bin", std::fstream::app | std::ios::out | std::ios::binary);
-        bufFile.write(reinterpret_cast<const char*>(&buf), sizeof(buf));
+        bufFile.write(reinterpret_cast<const char *>(&buf->pos), sizeof(buf->pos));
+        bufFile.write(reinterpret_cast<const char *>(&buf->size), sizeof(buf->size));
+        bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(buf->seq) * buf->size);
         bufFile.close();
         ++buffers;
+        delete[] buf->seq;
+        delete buf;
         
     }
     
@@ -201,11 +205,9 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     uint16_t i;
     uint32_t b = 0;
-    int64_t initial_size = 0, final_size = 0, bufSize = 10000 * sizeof(kmer);
+    int64_t initial_size = 0, final_size = 0, bufSize = 10000;
     Buf<kmer> *buf = new Buf<kmer>(bufSize);
     bool mapUpdated = false; // maps are updated at most once per job
-    
-    std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
     
     while (true) {
         
@@ -234,7 +236,15 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-            bufFile.read(reinterpret_cast<char*>(&buf),sizeof(buf));
+            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
+            
+            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(buf->size) + sizeof(buf->seq) * buf->size));
+            bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(buf->pos));
+            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(buf->size));
+            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(buf->seq) * buf->size);
+            
+            if (bufFile.is_open())
+                bufFile.close();
             
             ++b;
             
@@ -245,15 +255,11 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
         uint64_t len = buf->pos; // how many positions in the buffer have data
         
-        std::cout<<len<<std::endl;
-        
         for (uint64_t c = 0; c<len; ++c) {
             
             kmer &khmer = buf->seq[c];
             
             i = khmer.hash / moduloMap;
-            
-//            std::cout<<khmer.hash<<std::endl;
             
             if (i >= mapRange[0] && i < mapRange[1]) {
                 
@@ -282,7 +288,6 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     freed += buf->size * sizeof(kmer);
 //    delete[] buf->seq;
 //    delete buf;
-    bufFile.close();
     
     return true;
     

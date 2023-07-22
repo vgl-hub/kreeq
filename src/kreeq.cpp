@@ -71,7 +71,7 @@ void DBG::initHashing(){
     uint8_t t = 0;
     double mapsN = pow(10,log10(mapCount)/buffThreads);
     
-    std::array<uint16_t, 2> mapRange = {0,1024};
+    std::array<uint16_t, 2> mapRange = {0,0};
     
     while(mapRange[1] < mapCount) {
 
@@ -210,8 +210,6 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     Buf<kmer> *buf;
     bool mapUpdated = false; // maps are updated at most once per job
     
-    std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
-    
     while (true) {
         
         if (dumpMaps && !mapUpdated) {
@@ -239,31 +237,27 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-            if (!bufFile.is_open())
-                bufFile.open(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
-                        
-            bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
-
-            std::cout<<"pos2: "<<pos<<std::endl;
-            
-            buf = new Buf<kmer>(pos);
-            buf->pos = pos;
-            
-            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
-            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-            
-            ++b;
-            
         }
+        
+        std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
+        bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos));
+        bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
+        
+        buf = new Buf<kmer>(pos);
+        buf->pos = pos;
+        
+        bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
+        bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
+        bufFile.close();
+        
+        ++b;
         
         for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
             initial_size += mapSize(*maps[m]);
         
-
         for (uint64_t c = 0; c<pos; ++c) {
 
             kmer &khmer = buf->seq[c];
-
             i = khmer.hash % mapCount;
 
             if (i >= mapRange[0] && i < mapRange[1]) {
@@ -581,7 +575,7 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
         
         key = hash(str+c, &isFw);
         
-        i = key / moduloMap;
+        i = key % mapCount;
         
 //        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
         

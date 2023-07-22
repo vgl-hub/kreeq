@@ -353,7 +353,7 @@ void DBG::consolidate() {
 
         threads.clear();
         
-        remove((userInput.prefix + "/.buffer.bin").c_str())
+        remove((userInput.prefix + "/.buffer.bin").c_str());
         
         lg.verbose("Resuming hashing.");
         

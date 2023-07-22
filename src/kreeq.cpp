@@ -270,8 +270,9 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //                std::cout<<i<<std::endl;
                 
                 DBGkmer dbgkmer;
+                std::pair<uint64_t,DBGkmer> pair(khmer.hash,dbgkmer);
                 
-                thisMap.insert(std::make_pair<uint64_t,DBGkmer>(khmer.hash,dbgkmer));
+                thisMap.insert(pair);
 //
 //                for (uint64_t w = 0; w<4; ++w) { // update weights
 //

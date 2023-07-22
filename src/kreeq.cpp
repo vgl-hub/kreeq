@@ -272,9 +272,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if (i >= mapRange[0] && i < mapRange[1]) {
 
                 phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
-//                std::cout<<i<<std::endl;
 
-//                std::cout<<khmer.hash<<std::endl;
                 DBGkmer &dbgkmer = thisMap[khmer.hash];
 
 //
@@ -292,8 +290,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 
         }
 
-//        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-//            final_size += mapSize(*maps[m]);
+        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+            final_size += mapSize(*maps[m]);
 
         delete[] buf->seq;
         delete buf;

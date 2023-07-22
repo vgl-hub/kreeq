@@ -96,6 +96,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     {
         std::lock_guard<std::mutex> lck(mtx);
         readBatches.push(readBatch);
+        alloc += readBatch.size() * sizeof(char);
     }
     
     return true;
@@ -184,7 +185,7 @@ bool DBG::hashSequences(uint8_t t) {
         //    logs.push_back(threadLog);
         
         std::lock_guard<std::mutex> lck(mtx);
-        alloc += buf->size * sizeof(kmer);
+        freed += buf->size * sizeof(kmer);
         
         auto bufFile = std::fstream(userInput.prefix + "/.buffer.bin", std::fstream::app | std::ios::out | std::ios::binary);
         bufFile.write(reinterpret_cast<const char *>(&buf->pos), sizeof(uint64_t));
@@ -237,12 +238,12 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 continue;
             
 //            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
-//            
+//
 //            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
 //            bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
 //            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
 //            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-//            
+//
 //            if (bufFile.is_open())
 //                bufFile.close();
             

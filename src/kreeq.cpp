@@ -192,8 +192,8 @@ bool DBG::hashSequences(uint8_t t) {
         bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(kmer) * buf->pos);
         bufFile.close();
         ++buffers;
-//        delete[] buf->seq;
-//        delete buf;
+        delete[] buf->seq;
+        delete buf;
         
     }
     
@@ -236,15 +236,15 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
-            
-            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
-            bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
-            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
-            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-            
-            if (bufFile.is_open())
-                bufFile.close();
+//            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
+//            
+//            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
+//            bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
+//            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
+//            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
+//            
+//            if (bufFile.is_open())
+//                bufFile.close();
             
             ++b;
             
@@ -285,8 +285,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
     }
     
-//    delete[] buf->seq;
-//    delete buf;
+    delete[] buf->seq;
+    delete buf;
     
     return true;
     

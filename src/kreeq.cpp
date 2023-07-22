@@ -33,7 +33,7 @@ uint64_t mapSize(phmap::flat_hash_map<uint64_t, DBGkmer>& m) {
     
     return (m.size() * (sizeof(DBGkmer) + sizeof(void*)) + // data list
      m.bucket_count() * (sizeof(void*) + sizeof(uint64_t))) // bucket index
-    * 1.5; // estimated allocation overheads
+    * 1.4; // estimated allocation overheads
     
 }
 
@@ -103,7 +103,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     {
         std::lock_guard<std::mutex> lck(mtx);
         readBatches.push(readBatch);
-//        alloc += readBatch->size() * sizeof(char);
+        alloc += readBatch->size() * sizeof(char);
     }
     
     return true;
@@ -191,7 +191,7 @@ bool DBG::hashSequences(uint8_t t) {
         //    logs.push_back(threadLog);
         
         std::lock_guard<std::mutex> lck(hashMtx);
-//        freed += len * sizeof(char);
+        freed += len * sizeof(char);
         
         auto bufFile = std::fstream(userInput.prefix + "/.buffer.bin", std::fstream::app | std::ios::out | std::ios::binary);
         bufFile.write(reinterpret_cast<const char *>(&buf->pos), sizeof(uint64_t));

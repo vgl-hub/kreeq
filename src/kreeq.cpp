@@ -322,8 +322,17 @@ void DBG::consolidate() {
         
     }
     
-    while (readBatches.size() > 10) // avoid loading in too many buffers
-        threadPool.status();
+    while (readBatches.size() > 10) {
+        
+        std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - past;
+        
+        if (elapsed.count() > 0.1) {
+            lg.verbose("Hash buffers: " + std::to_string(readBatches.size()) + ". Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+        
+            past = std::chrono::high_resolution_clock::now();
+        }
+        
+    }
 
 }
 

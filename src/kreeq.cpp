@@ -243,6 +243,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos));
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
+        std::cout<<pos<<std::endl;
+        
         buf = new Buf<kmer>(pos);
         buf->pos = pos;
         

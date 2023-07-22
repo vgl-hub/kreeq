@@ -163,17 +163,17 @@ bool DBG::hashSequences(uint8_t t) {
             
             khmer.hash = hash(str+p, &isFw);
             
-            if (isFw){
-                if (ctoi[*(first+p+k)] <= 3)
-                    khmer.fw[ctoi[*(first+p+k)]] = 1;
-                if (p > 0 && *(str+p-1) <= 3)
-                    khmer.bw[*(str+p-1)] = 1;
-            }else{
-                if (p > 0 && *(str+p-1) <= 3)
-                    khmer.fw[3-*(str+p-1)] = 1;
-                if (ctoi[*(first+p+k)] <= 3)
-                    khmer.bw[3-ctoi[*(first+p+k)]] = 1;
-            }
+//            if (isFw){
+//                if (ctoi[*(first+p+k)] <= 3)
+//                    khmer.fw[ctoi[*(first+p+k)]] = 1;
+//                if (p > 0 && *(str+p-1) <= 3)
+//                    khmer.bw[*(str+p-1)] = 1;
+//            }else{
+//                if (p > 0 && *(str+p-1) <= 3)
+//                    khmer.fw[3-*(str+p-1)] = 1;
+//                if (ctoi[*(first+p+k)] <= 3)
+//                    khmer.bw[3-ctoi[*(first+p+k)]] = 1;
+//            }
             
         }
         
@@ -267,15 +267,15 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
                 DBGkmer &dbgkmer = thisMap[khmer.hash]; // insert or find this kmer in the hash table
                 
-                for (uint64_t w = 0; w<4; ++w) { // update weights
-                    
-                    if (255 - dbgkmer.fw[w] >= khmer.fw[w])
-                        dbgkmer.fw[w] += khmer.fw[w];
-                    if (255 - dbgkmer.bw[w] >= khmer.bw[w])
-                        dbgkmer.bw[w] += khmer.bw[w];
-                }
-                if (dbgkmer.cov < 255)
-                    ++dbgkmer.cov; // increase kmer coverage
+//                for (uint64_t w = 0; w<4; ++w) { // update weights
+//                    
+//                    if (255 - dbgkmer.fw[w] >= khmer.fw[w])
+//                        dbgkmer.fw[w] += khmer.fw[w];
+//                    if (255 - dbgkmer.bw[w] >= khmer.bw[w])
+//                        dbgkmer.bw[w] += khmer.bw[w];
+//                }
+//                if (dbgkmer.cov < 255)
+//                    ++dbgkmer.cov; // increase kmer coverage
                 
             }
             

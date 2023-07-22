@@ -277,7 +277,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //                if (dbgkmer.cov < 255)
 //                    ++dbgkmer.cov; // increase kmer coverage
 //
-//            }
+            }
             
         }
         

@@ -192,8 +192,8 @@ bool DBG::hashSequences(uint8_t t) {
         bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(kmer) * buf->pos);
         bufFile.close();
         ++buffers;
-        delete[] buf->seq;
-        delete buf;
+//        delete[] buf->seq;
+//        delete buf;
         
     }
     
@@ -285,8 +285,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
     }
     
-//    delete[] buf->seq;
-//    delete buf;
+    delete[] buf->seq;
+    delete buf;
     
     return true;
     

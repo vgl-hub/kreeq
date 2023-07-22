@@ -243,7 +243,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 continue;
             
             if (!bufFile.is_open()) {
-                bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
+                bufFile.open(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
                 std::cout<<"hello"<<std::endl;
             }
             

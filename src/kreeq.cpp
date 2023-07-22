@@ -269,8 +269,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
 //                std::cout<<i<<std::endl;
                 
-                auto it = thisMap.find(key);
-                DBGkmer *dbgkmer = (it == map->end() ? NULL : &it->second);
+                auto it = thisMap.find(khmer.hash);
+                DBGkmer *dbgkmer = (it == thisMap.end() ? NULL : &it->second);
 
 //
 //                for (uint64_t w = 0; w<4; ++w) { // update weights

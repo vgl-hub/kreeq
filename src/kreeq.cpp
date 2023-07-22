@@ -239,20 +239,20 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
-            
-            bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos));
-            
-            bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
-            
-            buf = new Buf<kmer>(pos);
-            buf->pos = pos;
-            
-            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
-            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-
-            if (bufFile.is_open())
-                bufFile.close();
+//            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
+//            
+//            bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos));
+//            
+//            bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
+//            
+//            buf = new Buf<kmer>(pos);
+//            buf->pos = pos;
+//            
+//            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
+//            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
+//
+//            if (bufFile.is_open())
+//                bufFile.close();
             
             ++b;
             
@@ -262,20 +262,20 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //            initial_size += mapSize(*maps[m]);
         
 //        uint64_t len = buf->pos; // how many positions in the buffer have data
-//        
+//
 //        std::cout<<"len: "<<len<<std::endl;
-//        
+//
 //        for (uint64_t c = 0; c<len; ++c) {
-//            
+//
 //            kmer &khmer = buf->seq[c];
-//            
+//
 //            i = khmer.hash % mapCount;
-//            
+//
 //            if (i >= mapRange[0] && i < mapRange[1]) {
 //
 //                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
 ////                std::cout<<i<<std::endl;
-//                
+//
 ////                std::cout<<khmer.hash<<std::endl;
 //                DBGkmer &dbgkmer = thisMap[khmer.hash];
 //
@@ -291,12 +291,12 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 ////                    ++dbgkmer.cov; // increase kmer coverage
 ////
 //            }
-//            
+//
 //        }
-//        
+//
 ////        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
 ////            final_size += mapSize(*maps[m]);
-//        
+//
 //        delete[] buf->seq;
 //        delete buf;
         

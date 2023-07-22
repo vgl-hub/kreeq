@@ -38,7 +38,7 @@ public:
     DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
         
         lg.verbose("Deleting any tmp file");
-        remove((userInput.prefix + "/.buffer.bin").c_str());
+        threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buffer.bin").c_str()); });
         for(uint16_t m = 0; m<mapCount; ++m) // remove tmp maps
             threadPool.queueJob([=]{ return remove((userInput.prefix + "/.kmap." + std::to_string(m) + ".bin").c_str()); });
         

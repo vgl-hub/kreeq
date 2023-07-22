@@ -322,6 +322,8 @@ void DBG::consolidate() {
         
     }
     
+    std::chrono::high_resolution_clock::time_point past;
+    
     while (readBatches.size() > 10) {
         
         std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - past;

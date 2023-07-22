@@ -239,7 +239,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
 
-            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
+            bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
             bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
@@ -261,6 +261,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             kmer &khmer = buf->seq[c];
             
             i = khmer.hash / moduloMap;
+            
+            std::cout<<khmer.hash<<std::endl;
             
             if (i >= mapRange[0] && i < mapRange[1]) {
                 

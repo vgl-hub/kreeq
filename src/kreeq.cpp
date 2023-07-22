@@ -260,8 +260,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             kmer &khmer = buf->seq[c];
             
-//            i = khmer.hash / moduloMap;
-//            
+            i = khmer.hash % mapCount;
+            
 //            if (i >= mapRange[0] && i < mapRange[1]) {
 //                
 //                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer

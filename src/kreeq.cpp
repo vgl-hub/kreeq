@@ -11,6 +11,7 @@
 #include <chrono>
 #include <array>
 #include <atomic>
+#include <future>
 
 #include "parallel_hashmap/phmap.h"
 #include "parallel_hashmap/phmap_dump.h"
@@ -65,8 +66,12 @@ void DBG::initHashing(){
         buffThreads = 1;
     
     for (uint8_t t = 0; t < hashThreads; t++) {
-        threads.push_back(std::thread(&DBG::hashSequences, this, t));
+        std::packaged_task<bool()> task([this, t] { return hashSequences(t); });
+        futures.push_back(task.get_future());
+        threads.push_back(std::thread(std::move(task)));
     }
+    
+
     
     uint8_t t = 0;
     double mapsN = mapCount/buffThreads;
@@ -84,7 +89,9 @@ void DBG::initHashing(){
         if (mapRange[1] >= mapCount)
             mapRange[1] = mapCount;
         
-        threads.push_back(std::thread(&DBG::processBuffers, this, mapRange));
+        std::packaged_task<bool()> task([this, mapRange] { return processBuffers(mapRange); });
+        futures.push_back(task.get_future());
+        threads.push_back(std::thread(std::move(task)));
         t++;
 
     }
@@ -306,16 +313,16 @@ void DBG::consolidate() {
         dumpMaps = true;
         readingDone = true;
         
-        for(std::thread& activeThread : threads) {
+        for(std::thread& activeThread : threads)
             activeThread.join();
-        }
+
         threads.clear();
         
         initHashing();
         
     }
     
-    lg.verbose("Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+    lg.verbose("Hash buffers: " + std::to_string(readBatches.size()) + ". Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
 
 }
 
@@ -386,10 +393,25 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
 void DBG::summary() {
     
     readingDone = true;
-    
-    for(std::thread& activeThread : threads)
-        activeThread.join();
 
+    uint8_t threadsDone = 0;
+    bool done = false;
+    
+    while (!done) {
+        for (uint8_t i = 0; i < futures.size(); ++i) {
+            if (futures[i].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+                if (threads[i].joinable()) {
+                    threads[i].join();
+                    ++threadsDone;
+                }
+            }else{
+                threadPool.status();
+            }
+        }
+        if (threadsDone == futures.size())
+            done = true;
+    }
+    
     threads.clear();
     
     if (tmp) {

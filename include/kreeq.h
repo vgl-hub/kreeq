@@ -1,6 +1,8 @@
 #ifndef KREEQ_H
 #define KREEQ_H
 
+#include <future>
+
 struct kmer {
     
     uint64_t hash = 0;
@@ -21,6 +23,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     bool tmp = false;
     std::atomic<bool> readingDone{false}, dumpMaps{false};
     std::vector<std::thread> threads;
+    std::vector<std::future<bool>> futures;
     uint8_t hashThreads = 3;
     std::mutex hashMtx;
     

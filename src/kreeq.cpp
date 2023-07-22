@@ -73,23 +73,21 @@ void DBG::initHashing(){
     
     std::array<uint16_t, 2> mapRange = {0,1024};
     
-//    while(mapRange[1] < mapCount) {
-//
-//        mapRange[0] = mapRange[1];
-//        mapRange[1] = std::ceil(pow(mapsN,t));
-//
-//        if (mapRange[0] >= mapRange[1])
-//            mapRange[1] = mapRange[0] + 1;
-//
-//        if (mapRange[1] >= mapCount)
-//            mapRange[1] = mapCount;
-//
-//        std::cout<<mapRange[0]<<"\t"<<mapRange[1]<<std::endl;
+    while(mapRange[1] < mapCount) {
+
+        mapRange[0] = mapRange[1];
+        mapRange[1] = std::ceil(pow(mapsN,t));
+
+        if (mapRange[0] >= mapRange[1])
+            mapRange[1] = mapRange[0] + 1;
+
+        if (mapRange[1] >= mapCount)
+            mapRange[1] = mapCount;
         
         threads.push_back(std::thread(&DBG::processBuffers, this, mapRange));
-//        t++;
-//
-//    }
+        t++;
+
+    }
     
 }
 
@@ -193,7 +191,6 @@ bool DBG::hashSequences(uint8_t t) {
         bufFile.write(reinterpret_cast<const char *>(&buf->size), sizeof(uint64_t));
         bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(kmer) * buf->pos);
         bufFile.close();
-        std::cout<<"pos: "<<buf->pos<<std::endl;
         ++buffers;
         delete[] buf->seq;
         delete buf;
@@ -274,7 +271,6 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
 
                 DBGkmer &dbgkmer = thisMap[khmer.hash];
-
 
                 for (uint64_t w = 0; w<4; ++w) { // update weights
 

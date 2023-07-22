@@ -276,7 +276,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
 //                std::cout<<i<<std::endl;
                 
-                std::cout<<khmer.hash<<std::endl;
+//                std::cout<<khmer.hash<<std::endl;
                 DBGkmer &dbgkmer = thisMap[khmer.hash];
 
 //

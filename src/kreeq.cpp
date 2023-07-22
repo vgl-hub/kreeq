@@ -263,7 +263,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             initial_size += mapSize(*maps[m]);
         
 
-        for (uint64_t c = 0; c<len; ++c) {
+        for (uint64_t c = 0; c<pos; ++c) {
 
             kmer &khmer = buf->seq[c];
 

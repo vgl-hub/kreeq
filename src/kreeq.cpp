@@ -251,8 +251,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
         }
         
-        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-            initial_size += mapSize(*maps[m]);
+//        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+//            initial_size += mapSize(*maps[m]);
         
         uint64_t len = buf->pos; // how many positions in the buffer have data
         
@@ -281,8 +281,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
         }
         
-        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-            final_size += mapSize(*maps[m]);
+//        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+//            final_size += mapSize(*maps[m]);
         
     }
     

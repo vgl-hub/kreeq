@@ -162,10 +162,6 @@ bool DBG::hashSequences(uint8_t t) {
                 continue;
             
             kmer &khmer = buf->seq[buf->pos++];
-            
-            if(buf->pos > kcount)
-                std::cout<<"ARGH!!: "<<kcount<<std::endl;
-            
             khmer.hash = hash(str+p, &isFw);
             
 //            if (isFw){
@@ -212,8 +208,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     uint16_t i;
     uint32_t b = 0;
-    int64_t initial_size = 0, final_size = 0, bufSize = 10000000;
-    Buf<kmer> *buf = new Buf<kmer>(bufSize);
+    int64_t initial_size = 0, final_size = 0;
+    Buf<kmer> *buf;
     bool mapUpdated = false; // maps are updated at most once per job
     
     while (true) {
@@ -244,9 +240,16 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 continue;
             
             std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
-
+            
             bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
-            bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
+            
+            uint64_t len;
+            
+            bufFile.read(reinterpret_cast<char *>(&len), sizeof(uint64_t));
+            
+            buf = new Buf<kmer>(len);
+            buf->pos = len;
+            
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
 

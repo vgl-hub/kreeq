@@ -70,23 +70,23 @@ void DBG::initHashing(){
     
 //    uint8_t t = 0;
 //    double mapsN = pow(10,log10(mapCount)/buffThreads);
-//    
+//
 //    std::array<uint16_t, 2> mapRange = {0,0};
-//    
+//
 //    while(mapRange[1] < mapCount) {
-//                
+//
 //        mapRange[0] = mapRange[1];
 //        mapRange[1] = std::ceil(pow(mapsN,t));
-//        
+//
 //        if (mapRange[0] >= mapRange[1])
 //            mapRange[1] = mapRange[0] + 1;
-//        
+//
 //        if (mapRange[1] >= mapCount)
 //            mapRange[1] = mapCount;
-//        
+//
 //        threads.push_back(std::thread(&DBG::processBuffers, this, mapRange));
 //        t++;
-//        
+//
 //    }
     
 }
@@ -184,7 +184,7 @@ bool DBG::hashSequences(uint8_t t) {
         //    std::lock_guard<std::mutex> lck(mtx);
         //    logs.push_back(threadLog);
         
-        auto bufFile = std::fstream(userInput.prefix + "/.buffer." + t + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
+        auto bufFile = std::fstream(userInput.prefix + "/.buffer." + std::to_string(t) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
         bufFile.write(reinterpret_cast<const char *>(&buf->pos), sizeof(uint64_t));
         bufFile.write(reinterpret_cast<const char *>(&buf->size), sizeof(uint64_t));
         bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(kmer) * buf->pos);

@@ -45,7 +45,7 @@ double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // esti
 
 bool DBG::memoryOk() {
     
-    return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.8 : userInput.maxMem);
+    return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem);
     
 }
 
@@ -324,7 +324,7 @@ void DBG::consolidate() {
     
     std::chrono::high_resolution_clock::time_point past;
     
-    while (readBatches.size() > 10) {
+    while (readBatches.size() > hashThreads * 2) {
         
         std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - past;
         

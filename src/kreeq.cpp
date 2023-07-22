@@ -299,10 +299,10 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
 //            final_size += mapSize(*maps[m]);
         
+        delete[] buf->seq;
+        delete buf;
+        
     }
-    
-    delete[] buf->seq;
-    delete buf;
     
     return true;
     

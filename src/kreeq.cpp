@@ -87,7 +87,7 @@ void DBG::initHashing(){
         threads.push_back(std::thread(&DBG::processBuffers, this, mapRange));
         t++;
 
-    }
+//    }
     
 }
 

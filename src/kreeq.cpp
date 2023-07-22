@@ -285,8 +285,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
     }
     
-    delete[] buf->seq;
-    delete buf;
+//    delete[] buf->seq;
+//    delete buf;
     
     return true;
     

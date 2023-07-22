@@ -163,17 +163,17 @@ bool DBG::hashSequences(uint8_t t) {
             
             khmer.hash = hash(str+p, &isFw);
             
-            if (isFw){
-                if (ctoi[*(first+p+k)] <= 3)
-                    khmer.fw[ctoi[*(first+p+k)]] = 1;
-                if (p > 0 && *(str+p-1) <= 3)
-                    khmer.bw[*(str+p-1)] = 1;
-            }else{
-                if (p > 0 && *(str+p-1) <= 3)
-                    khmer.fw[3-*(str+p-1)] = 1;
-                if (ctoi[*(first+p+k)] <= 3)
-                    khmer.bw[3-ctoi[*(first+p+k)]] = 1;
-            }
+//            if (isFw){
+//                if (ctoi[*(first+p+k)] <= 3)
+//                    khmer.fw[ctoi[*(first+p+k)]] = 1;
+//                if (p > 0 && *(str+p-1) <= 3)
+//                    khmer.bw[*(str+p-1)] = 1;
+//            }else{
+//                if (p > 0 && *(str+p-1) <= 3)
+//                    khmer.fw[3-*(str+p-1)] = 1;
+//                if (ctoi[*(first+p+k)] <= 3)
+//                    khmer.bw[3-ctoi[*(first+p+k)]] = 1;
+//            }
             
         }
         

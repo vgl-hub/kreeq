@@ -191,7 +191,7 @@ bool DBG::hashSequences(uint8_t t) {
         //    logs.push_back(threadLog);
         
         std::lock_guard<std::mutex> lck(hashMtx);
-        freed += buf->size * sizeof(char);
+        freed += buf->size * sizeof(kmer);
         
         auto bufFile = std::fstream(userInput.prefix + "/.buffer.bin", std::fstream::app | std::ios::out | std::ios::binary);
         bufFile.write(reinterpret_cast<const char *>(&buf->pos), sizeof(uint64_t));

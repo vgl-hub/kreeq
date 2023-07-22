@@ -68,26 +68,26 @@ void DBG::initHashing(){
         threads.push_back(std::thread(&DBG::hashSequences, this, t));
     }
     
-//    uint8_t t = 0;
-//    double mapsN = pow(10,log10(mapCount)/buffThreads);
-//
-//    std::array<uint16_t, 2> mapRange = {0,0};
-//
-//    while(mapRange[1] < mapCount) {
-//
-//        mapRange[0] = mapRange[1];
-//        mapRange[1] = std::ceil(pow(mapsN,t));
-//
-//        if (mapRange[0] >= mapRange[1])
-//            mapRange[1] = mapRange[0] + 1;
-//
-//        if (mapRange[1] >= mapCount)
-//            mapRange[1] = mapCount;
-//
-//        threads.push_back(std::thread(&DBG::processBuffers, this, mapRange));
-//        t++;
-//
-//    }
+    uint8_t t = 0;
+    double mapsN = pow(10,log10(mapCount)/buffThreads);
+
+    std::array<uint16_t, 2> mapRange = {0,0};
+
+    while(mapRange[1] < mapCount) {
+
+        mapRange[0] = mapRange[1];
+        mapRange[1] = std::ceil(pow(mapsN,t));
+
+        if (mapRange[0] >= mapRange[1])
+            mapRange[1] = mapRange[0] + 1;
+
+        if (mapRange[1] >= mapCount)
+            mapRange[1] = mapCount;
+
+        threads.push_back(std::thread(&DBG::processBuffers, this, mapRange));
+        t++;
+
+    }
     
 }
 
@@ -236,7 +236,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
+            std::ifstream bufFile(userInput.prefix + "/.buffer." + std::to_string(0) + ".bin", std::ios::in | std::ios::binary);
 
             bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
             bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));

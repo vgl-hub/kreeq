@@ -71,23 +71,25 @@ void DBG::initHashing(){
     uint8_t t = 0;
     double mapsN = pow(10,log10(mapCount)/buffThreads);
     
-    std::array<uint16_t, 2> mapRange = {0,1024};
+    std::array<uint16_t, 2> mapRange = {0,0};
     
-//    while(mapRange[1] < mapCount) {
-//
-//        mapRange[0] = mapRange[1];
-//        mapRange[1] = std::ceil(pow(mapsN,t));
-//
-//        if (mapRange[0] >= mapRange[1])
-//            mapRange[1] = mapRange[0] + 1;
-//
-//        if (mapRange[1] >= mapCount)
-//            mapRange[1] = mapCount;
+    while(mapRange[1] < mapCount) {
+                
+        mapRange[0] = mapRange[1];
+        mapRange[1] = std::ceil(pow(mapsN,t));
+        
+        if (mapRange[0] >= mapRange[1])
+            mapRange[1] = mapRange[0] + 1;
+        
+        if (mapRange[1] >= mapCount)
+            mapRange[1] = mapCount;
+        
+        std::cout<<mapRange[0]<<"\t"<<mapRange[1]<<std::endl;
         
         threads.push_back(std::thread(&DBG::processBuffers, this, mapRange));
-//        t++;
-//        
-//    }
+        t++;
+        
+    }
     
 }
 

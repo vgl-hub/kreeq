@@ -64,7 +64,7 @@ void DBG::initHashing(){
     if (buffThreads < 1)
         buffThreads = 1;
     
-    for (uint8_t t = 0; t < hashThreads; t++) {
+    for (uint8_t t = 0; t < threadN; t++) {
         threads.push_back(std::thread(&DBG::hashSequences, this, t));
     }
     
@@ -237,15 +237,15 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-//            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
-//
-//            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
-//            bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
-//            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
-//            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-//
-//            if (bufFile.is_open())
-//                bufFile.close();
+            std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
+
+            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
+            bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
+            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
+            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
+
+            if (bufFile.is_open())
+                bufFile.close();
             
             ++b;
             

@@ -268,7 +268,10 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 
                 phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
 //                std::cout<<i<<std::endl;
-                thisMap[khmer.hash].cov = 0; // insert or find this kmer in the hash table
+                
+                DBGkmer dbgkmer;
+                
+                thisMap.insert(std::make_pair<uint64_t,DBGkmer>(khmer.hash,dbgkmer));
 //
 //                for (uint64_t w = 0; w<4; ++w) { // update weights
 //

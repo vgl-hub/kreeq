@@ -261,44 +261,44 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
 //            initial_size += mapSize(*maps[m]);
         
-        uint64_t len = buf->pos; // how many positions in the buffer have data
-        
-        std::cout<<"len: "<<len<<std::endl;
-        
-        for (uint64_t c = 0; c<len; ++c) {
-            
-            kmer &khmer = buf->seq[c];
-            
-            i = khmer.hash % mapCount;
-            
-            if (i >= mapRange[0] && i < mapRange[1]) {
-
-                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
-//                std::cout<<i<<std::endl;
-                
-//                std::cout<<khmer.hash<<std::endl;
-                DBGkmer &dbgkmer = thisMap[khmer.hash];
-
+//        uint64_t len = buf->pos; // how many positions in the buffer have data
+//        
+//        std::cout<<"len: "<<len<<std::endl;
+//        
+//        for (uint64_t c = 0; c<len; ++c) {
+//            
+//            kmer &khmer = buf->seq[c];
+//            
+//            i = khmer.hash % mapCount;
+//            
+//            if (i >= mapRange[0] && i < mapRange[1]) {
 //
-//                for (uint64_t w = 0; w<4; ++w) { // update weights
+//                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
+////                std::cout<<i<<std::endl;
+//                
+////                std::cout<<khmer.hash<<std::endl;
+//                DBGkmer &dbgkmer = thisMap[khmer.hash];
 //
-//                    if (255 - dbgkmer.fw[w] >= khmer.fw[w])
-//                        dbgkmer.fw[w] += khmer.fw[w];
-//                    if (255 - dbgkmer.bw[w] >= khmer.bw[w])
-//                        dbgkmer.bw[w] += khmer.bw[w];
-//                }
-//                if (dbgkmer.cov < 255)
-//                    ++dbgkmer.cov; // increase kmer coverage
-//
-            }
-            
-        }
-        
-//        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-//            final_size += mapSize(*maps[m]);
-        
-        delete[] buf->seq;
-        delete buf;
+////
+////                for (uint64_t w = 0; w<4; ++w) { // update weights
+////
+////                    if (255 - dbgkmer.fw[w] >= khmer.fw[w])
+////                        dbgkmer.fw[w] += khmer.fw[w];
+////                    if (255 - dbgkmer.bw[w] >= khmer.bw[w])
+////                        dbgkmer.bw[w] += khmer.bw[w];
+////                }
+////                if (dbgkmer.cov < 255)
+////                    ++dbgkmer.cov; // increase kmer coverage
+////
+//            }
+//            
+//        }
+//        
+////        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+////            final_size += mapSize(*maps[m]);
+//        
+//        delete[] buf->seq;
+//        delete buf;
         
     }
     

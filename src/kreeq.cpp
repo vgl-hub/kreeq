@@ -244,15 +244,17 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos));
             
             bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
+    //
+            std::cout<<"pos: "<<pos<<std::endl;
             
             buf = new Buf<kmer>(pos);
             buf->pos = pos;
             
-//            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
-//            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
+            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
+            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
 //
-//            if (bufFile.is_open())
-//                bufFile.close();
+            if (bufFile.is_open())
+                bufFile.close();
             
             ++b;
             
@@ -261,9 +263,6 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
 //            initial_size += mapSize(*maps[m]);
         
-        uint64_t len = buf->pos; // how many positions in the buffer have data
-//
-        std::cout<<"len: "<<len<<std::endl;
 //
 //        for (uint64_t c = 0; c<len; ++c) {
 //

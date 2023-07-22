@@ -236,61 +236,52 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             if(b == buffers)
                 continue;
             
-            std::cout<<"hello1"<<std::endl;
-            
             std::ifstream bufFile(userInput.prefix + "/.buffer." + std::to_string(0) + ".bin", std::ios::in | std::ios::binary);
 
             bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
-            std::cout<<"hello2"<<std::endl;
             bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
-            std::cout<<"hello3"<<std::endl;
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
-            std::cout<<"hello4"<<std::endl;
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-            
-            std::cout<<"hello5"<<std::endl;
 
             if (bufFile.is_open())
                 bufFile.close();
-            
-            std::cout<<"hello6"<<std::endl;
             
             ++b;
             
         }
         
-        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-            initial_size += mapSize(*maps[m]);
-        
-        uint64_t len = buf->pos; // how many positions in the buffer have data
-        
-        for (uint64_t c = 0; c<len; ++c) {
-            
-            kmer &khmer = buf->seq[c];
-            
-            i = khmer.hash / moduloMap;
-            
-            if (i >= mapRange[0] && i < mapRange[1]) {
-                
-                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
-                DBGkmer &dbgkmer = thisMap[khmer.hash]; // insert or find this kmer in the hash table
-                
-                for (uint64_t w = 0; w<4; ++w) { // update weights
-                    
-                    if (255 - dbgkmer.fw[w] >= khmer.fw[w])
-                        dbgkmer.fw[w] += khmer.fw[w];
-                    if (255 - dbgkmer.bw[w] >= khmer.bw[w])
-                        dbgkmer.bw[w] += khmer.bw[w];
-                }
-                if (dbgkmer.cov < 255)
-                    ++dbgkmer.cov; // increase kmer coverage
-                
-            }
-            
-        }
-        
-        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-            final_size += mapSize(*maps[m]);
+//        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+//            initial_size += mapSize(*maps[m]);
+//        
+//        uint64_t len = buf->pos; // how many positions in the buffer have data
+//        
+//        for (uint64_t c = 0; c<len; ++c) {
+//            
+//            kmer &khmer = buf->seq[c];
+//            
+//            i = khmer.hash / moduloMap;
+//            
+//            if (i >= mapRange[0] && i < mapRange[1]) {
+//                
+//                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
+//                DBGkmer &dbgkmer = thisMap[khmer.hash]; // insert or find this kmer in the hash table
+//                
+//                for (uint64_t w = 0; w<4; ++w) { // update weights
+//                    
+//                    if (255 - dbgkmer.fw[w] >= khmer.fw[w])
+//                        dbgkmer.fw[w] += khmer.fw[w];
+//                    if (255 - dbgkmer.bw[w] >= khmer.bw[w])
+//                        dbgkmer.bw[w] += khmer.bw[w];
+//                }
+//                if (dbgkmer.cov < 255)
+//                    ++dbgkmer.cov; // increase kmer coverage
+//                
+//            }
+//            
+//        }
+//        
+//        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+//            final_size += mapSize(*maps[m]);
         
     }
     

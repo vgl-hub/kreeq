@@ -255,8 +255,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
 //
-//            if (bufFile.is_open())
-//                bufFile.close();
+            if (bufFile.is_open())
+                std::cout<<"hello"<<std::endl;
             
             ++b;
             

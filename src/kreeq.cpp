@@ -64,7 +64,7 @@ void DBG::initHashing(){
     if (buffThreads < 1)
         buffThreads = 1;
     
-    for (uint8_t t = 0; t < threadN; t++) {
+    for (uint8_t t = 0; t < hashThreads; t++) {
         threads.push_back(std::thread(&DBG::hashSequences, this, t));
     }
     

@@ -93,6 +93,8 @@ void DBG::initHashing(){
     
     dumpMaps = false;
     readingDone = false;
+    buffers = 0;
+    buffingDone = std::vector<bool>(hashThreads, false);
     
     int16_t threadN = std::thread::hardware_concurrency(), buffThreads = threadN - hashThreads - 1;
     
@@ -104,8 +106,6 @@ void DBG::initHashing(){
         futures.push_back(task.get_future());
         threads.push_back(std::thread(std::move(task)));
     }
-    
-
     
     uint8_t t = 0;
     double mapsN = mapCount/buffThreads;
@@ -351,6 +351,7 @@ void DBG::consolidate() {
         
         joinThreads();
 
+        futures.clear();
         threads.clear();
         
         remove((userInput.prefix + "/.buffer.bin").c_str());
@@ -436,6 +437,7 @@ void DBG::summary() {
     
     joinThreads();
     
+    futures.clear();
     threads.clear();
     
     if (tmp) {

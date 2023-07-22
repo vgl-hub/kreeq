@@ -32,7 +32,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
     std::queue<std::string*> readBatches;
     std::vector<uint32_t> buffersDone;
-    std::vector<bool> buffingDone = std::vector<bool>(hashThreads, false);
+    std::vector<bool> buffingDone;
 
 public:
     

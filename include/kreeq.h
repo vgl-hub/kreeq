@@ -24,7 +24,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     std::atomic<bool> readingDone{false}, dumpMaps{false};
     std::vector<std::thread> threads;
     std::vector<std::future<bool>> futures;
-    uint8_t hashThreads = 4;
+    uint8_t hashThreads = 3;
     std::mutex hashMtx;
     std::chrono::high_resolution_clock::time_point past;
     

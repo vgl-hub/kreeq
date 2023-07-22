@@ -21,7 +21,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     bool tmp = false;
     std::atomic<bool> readingDone{false}, dumpMaps{false};
     std::vector<std::thread> threads;
-    uint8_t hashThreads = 2;
+    uint8_t hashThreads = 4;
     std::mutex hashMtx;
     
     UserInputKreeq& userInput;

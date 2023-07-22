@@ -241,16 +241,19 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             std::ifstream bufFile(userInput.prefix + "/.buffer." + std::to_string(0) + ".bin", std::ios::in | std::ios::binary);
 
             bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
+            std::cout<<"hello2"<<std::endl;
             bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(uint64_t));
+            std::cout<<"hello3"<<std::endl;
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
+            std::cout<<"hello4"<<std::endl;
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
             
-            std::cout<<"hello2"<<std::endl;
+            std::cout<<"hello5"<<std::endl;
 
             if (bufFile.is_open())
                 bufFile.close();
             
-            std::cout<<"hello3"<<std::endl;
+            std::cout<<"hello6"<<std::endl;
             
             ++b;
             

@@ -208,7 +208,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     uint16_t i;
     uint32_t b = 0;
-    int64_t initial_size = 0, final_size = 0;
+    int64_t pos = 0, initial_size = 0, final_size = 0;
     Buf<kmer> *buf;
     bool mapUpdated = false; // maps are updated at most once per job
     
@@ -241,14 +241,12 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
             
-            bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * buf->pos));
+            bufFile.seekg(b * (sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos));
             
-            uint64_t len;
+            bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
             
-            bufFile.read(reinterpret_cast<char *>(&len), sizeof(uint64_t));
-            
-            buf = new Buf<kmer>(len);
-            buf->pos = len;
+            buf = new Buf<kmer>(pos);
+            buf->pos = pos;
             
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);

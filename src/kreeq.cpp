@@ -271,7 +271,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 
                 uint64_t pos = 1;
                 
-                thisMap[pos];
+                thisMap.at(pos);
 //
 //                for (uint64_t w = 0; w<4; ++w) { // update weights
 //

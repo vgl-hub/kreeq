@@ -194,6 +194,7 @@ bool DBG::hashSequences(uint8_t t) {
         bufFile.write(reinterpret_cast<const char *>(&buf->size), sizeof(uint64_t));
         bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(kmer) * buf->pos);
         bufFile.close();
+        std::cout<<"pos: "<<buf->pos<<std::endl;
         ++buffers;
         delete[] buf->seq;
         delete buf;
@@ -272,8 +273,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //                std::cout<<i<<std::endl;
                 
                 std::cout<<khmer.hash<<std::endl;
-                auto it = thisMap.find(khmer.hash);
-                DBGkmer *dbgkmer = (it == thisMap.end() ? NULL : &it->second);
+                DBGkmer &dbgkmer = thisMap[khmer.hash];
 
 //
 //                for (uint64_t w = 0; w<4; ++w) { // update weights

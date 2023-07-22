@@ -189,7 +189,7 @@ bool DBG::hashSequences(uint8_t t) {
         auto bufFile = std::fstream(userInput.prefix + "/.buffer.bin", std::fstream::app | std::ios::out | std::ios::binary);
         bufFile.write(reinterpret_cast<const char *>(&buf->pos), sizeof(buf->pos));
         bufFile.write(reinterpret_cast<const char *>(&buf->size), sizeof(buf->size));
-        bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(buf->seq) * buf->size);
+        bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(kmer) * buf->pos);
         bufFile.close();
         ++buffers;
         delete[] buf->seq;
@@ -238,10 +238,10 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
             
-            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(buf->size) + sizeof(buf->seq) * buf->size));
+            bufFile.seekg(b * (sizeof(buf->pos) + sizeof(buf->size) + sizeof(kmer) * buf->pos));
             bufFile.read(reinterpret_cast<char *>(&buf->pos), sizeof(buf->pos));
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(buf->size));
-            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(buf->seq) * buf->size);
+            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
             
             if (bufFile.is_open())
                 bufFile.close();
@@ -260,8 +260,6 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             kmer &khmer = buf->seq[c];
             
             i = khmer.hash / moduloMap;
-            
-            std::cout<<khmer.hash<<std::endl;
             
             if (i >= mapRange[0] && i < mapRange[1]) {
                 

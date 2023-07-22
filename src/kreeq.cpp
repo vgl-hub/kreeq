@@ -205,7 +205,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
     uint16_t i;
     uint32_t b = 0;
-    int64_t initial_size = 0, final_size = 0, bufSize = 10000000;
+    int64_t initial_size = 0, final_size = 0, bufSize = 100000;
     Buf<kmer> *buf = new Buf<kmer>(bufSize);
     bool mapUpdated = false; // maps are updated at most once per job
     
@@ -261,6 +261,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             i = khmer.hash / moduloMap;
             
+            std::cout<<khmer.hash<<std::endl;
+            
             if (i >= mapRange[0] && i < mapRange[1]) {
                 
                 phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
@@ -285,9 +287,8 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
     }
     
-    freed += buf->size * sizeof(kmer);
-//    delete[] buf->seq;
-//    delete buf;
+    delete[] buf->seq;
+    delete buf;
     
     return true;
     
@@ -626,7 +627,7 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
 
 void DBG::cleanup() {
     
-//    remove((userInput.prefix + "/.buffer.bin").c_str());
+    remove((userInput.prefix + "/.buffer.bin").c_str());
     
     if(tmp && userInput.inDBG != userInput.prefix) {
         

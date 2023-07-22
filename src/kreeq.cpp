@@ -96,7 +96,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     {
         std::lock_guard<std::mutex> lck(mtx);
         readBatches.push(readBatch);
-        alloc += readBatch.size() * sizeof(char);
+        alloc += readBatch->size() * sizeof(char);
     }
     
     return true;

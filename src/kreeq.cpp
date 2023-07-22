@@ -69,14 +69,14 @@ void DBG::initHashing(){
     }
     
     uint8_t t = 0;
-    double mapsN = pow(10,log10(mapCount)/buffThreads);
+    double mapsN = mapCount/buffThreads;
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
     while(mapRange[1] < mapCount) {
 
         mapRange[0] = mapRange[1];
-        mapRange[1] = std::ceil(pow(mapsN,t));
+        mapRange[1] += mapsN;
 
         if (mapRange[0] >= mapRange[1])
             mapRange[1] = mapRange[0] + 1;

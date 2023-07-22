@@ -26,6 +26,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     std::vector<std::future<bool>> futures;
     uint8_t hashThreads = 4;
     std::mutex hashMtx;
+    std::chrono::high_resolution_clock::time_point past;
     
     UserInputKreeq& userInput;
     
@@ -49,6 +50,10 @@ public:
     };
     
     std::vector<Log> logs;
+    
+    void status();
+    
+    void joinThreads();
     
     bool memoryOk();
     

@@ -43,6 +43,40 @@ double errorRate(uint64_t missingKmers, uint64_t totalKmers, uint8_t k){ // esti
     
 }
 
+void DBG::status() {
+    
+    std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - past;
+    
+    if (elapsed.count() > 0.1) {
+        lg.verbose("Hash buffers: " + std::to_string(readBatches.size()) + ". Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+    
+        past = std::chrono::high_resolution_clock::now();
+    }
+    
+}
+
+void DBG::joinThreads() {
+    
+    uint8_t threadsDone = 0;
+    bool done = false;
+    
+    while (!done) {
+        for (uint8_t i = 0; i < futures.size(); ++i) {
+            if (futures[i].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+                if (threads[i].joinable()) {
+                    threads[i].join();
+                    ++threadsDone;
+                }
+            }else{
+                status();
+            }
+        }
+        if (threadsDone == futures.size())
+            done = true;
+    }
+    
+}
+
 bool DBG::memoryOk() {
     
     return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem);
@@ -309,32 +343,24 @@ void DBG::consolidate() {
     
     if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
         
+        lg.verbose("Reached memory limit. Dumping maps to disk.");
+        
         tmp = true;
         dumpMaps = true;
         readingDone = true;
         
-        for(std::thread& activeThread : threads)
-            activeThread.join();
+        joinThreads();
 
         threads.clear();
+        
+        lg.verbose("Resuming hashing.");
         
         initHashing();
         
     }
     
-    std::chrono::high_resolution_clock::time_point past;
-    
-    while (readBatches.size() > hashThreads * 2) {
-        
-        std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - past;
-        
-        if (elapsed.count() > 0.1) {
-            lg.verbose("Hash buffers: " + std::to_string(readBatches.size()) + ". Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
-        
-            past = std::chrono::high_resolution_clock::now();
-        }
-        
-    }
+    while (readBatches.size() >= hashThreads * 2)
+        status();
 
 }
 
@@ -405,24 +431,8 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
 void DBG::summary() {
     
     readingDone = true;
-
-    uint8_t threadsDone = 0;
-    bool done = false;
     
-    while (!done) {
-        for (uint8_t i = 0; i < futures.size(); ++i) {
-            if (futures[i].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-                if (threads[i].joinable()) {
-                    threads[i].join();
-                    ++threadsDone;
-                }
-            }else{
-                threadPool.status();
-            }
-        }
-        if (threadsDone == futures.size())
-            done = true;
-    }
+    joinThreads();
     
     threads.clear();
     

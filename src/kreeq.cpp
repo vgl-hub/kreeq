@@ -164,7 +164,7 @@ bool DBG::hashSequences(uint8_t t) {
             kmer &khmer = buf->seq[buf->pos++];
             
             if(buf->pos > 10000000)
-                std::cout<<"ARGH!!"<<std::endl;
+                std::cout<<"ARGH!!: "<<kcount<<std::endl;
             
             khmer.hash = hash(str+p, &isFw);
             

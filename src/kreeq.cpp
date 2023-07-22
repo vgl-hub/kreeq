@@ -262,11 +262,11 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             i = khmer.hash % mapCount;
             
-//            if (i >= mapRange[0] && i < mapRange[1]) {
-//                
-//                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
-//                DBGkmer &dbgkmer = thisMap[khmer.hash]; // insert or find this kmer in the hash table
-//                
+            if (i >= mapRange[0] && i < mapRange[1]) {
+
+                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
+                DBGkmer &dbgkmer = thisMap[khmer.hash]; // insert or find this kmer in the hash table
+//
 //                for (uint64_t w = 0; w<4; ++w) { // update weights
 //
 //                    if (255 - dbgkmer.fw[w] >= khmer.fw[w])
@@ -276,7 +276,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //                }
 //                if (dbgkmer.cov < 255)
 //                    ++dbgkmer.cov; // increase kmer coverage
-//                
+//
 //            }
             
         }

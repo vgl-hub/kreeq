@@ -108,8 +108,7 @@ void DBG::consolidate() {
     
     status();
     
-    if(readBatches.size() > std::thread::hardware_concurrency() || !memoryOk())
-        dumpBuffers();
+    dumpBuffers();
     
     while (!memoryOk()){}
 

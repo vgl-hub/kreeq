@@ -71,7 +71,6 @@ int main(int, char **argv) {
     //  {{set of test file paths}, {list of command line args to run with}}
     };
     
-    std::fstream fstream;
     for(const auto &pair : file_args) {
         for(const std::string &file : pair.first) {
             for(const std::string &args : pair.second) {

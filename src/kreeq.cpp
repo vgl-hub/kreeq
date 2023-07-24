@@ -154,7 +154,7 @@ bool DBG::hashSequences() {
         unsigned char *first = (unsigned char*) readBatch->c_str();
         uint8_t *str = new uint8_t[len];
         uint8_t e = 0;
-        uint64_t key, kcount = len-k+1;
+        uint64_t key, pos = 0, kcount = len-k+1;
         bool isFw = false;
         Buf<kmer>* buffer;
         
@@ -179,7 +179,8 @@ bool DBG::hashSequences() {
             key = hash(str+p, &isFw);
 
             buffer = &buffers[key % mapCount];
-            kmer &khmer = buffer->seq[buffer->newPos()];
+            pos = buffer->newPos();
+            kmer &khmer = buffer->seq[pos];
             khmer.hash = key;
             
             if (isFw){
@@ -206,23 +207,23 @@ bool DBG::hashSequences() {
         std::lock_guard<std::mutex> lck(hashMtx);
         freed += len * sizeof(char);
         
-//        for (uint16_t m = 0; m<mapCount; ++m) {
-//            
-//            buffer = &buffers[m];
-//            auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
-//            bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
-//            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
-//            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
-//            bufFile.close();
-//            
-//        }
+        for (uint16_t m = 0; m<mapCount; ++m) {
+            
+            buffer = &buffers[m];
+            auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
+            bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
+            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
+            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
+            bufFile.close();
+            
+        }
         
     }
     
-//    for (uint16_t m = 0; m<mapCount; ++m)
-//        delete[] buffers[m].seq;
-//    
-//    delete[] buffers;
+    for (uint16_t m = 0; m<mapCount; ++m)
+        delete[] buffers[m].seq;
+    
+    delete[] buffers;
     
     return true;
     

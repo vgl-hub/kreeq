@@ -20,11 +20,9 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
     std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0}, buffers{0};
     std::vector<uint32_t> dependencies;
-    bool tmp = false;
     std::atomic<bool> readingDone{false}, dumpMaps{false};
     std::vector<std::thread> threads;
     std::vector<std::future<bool>> futures;
-    uint8_t hashThreads = 3;
     std::mutex hashMtx;
     std::chrono::high_resolution_clock::time_point past;
     
@@ -39,10 +37,11 @@ public:
     DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
         
         lg.verbose("Deleting any tmp file");
-        threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buffer.bin").c_str()); });
-        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp maps
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.kmap." + std::to_string(m) + ".bin").c_str()); });
-        
+        for(uint16_t m = 0; m<mapCount; ++m) {// remove tmp buffers and maps if any
+            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
+            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str()); });
+        }
+            
         jobWait(threadPool);
         
         initHashing();
@@ -59,11 +58,15 @@ public:
     
     bool memoryOk(int64_t delta);
     
-    void initHashing();
-    
     bool traverseInReads(std::string *readBatch);
     
-    bool hashSequences(uint8_t t);
+    void consolidate();
+    
+    void initHashing();
+    
+    bool hashSequences();
+    
+    bool loadMaps();
     
     bool processBuffers(std::array<uint16_t, 2> mapRange);
     
@@ -80,8 +83,6 @@ public:
     bool validateSegments(std::array<uint16_t, 2> mapRange, std::vector<InSegment*> *segments);
     
     bool validateSegment(InSegment *segment, std::array<uint16_t, 2> mapRange);
-    
-    void consolidate();
     
     bool dumpMap(std::string prefix, uint16_t m);
     

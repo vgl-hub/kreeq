@@ -75,6 +75,9 @@ void DBG::joinThreads() {
             done = true;
     }
     
+    futures.clear();
+    threads.clear();
+    
 }
 
 bool DBG::memoryOk() {
@@ -86,49 +89,6 @@ bool DBG::memoryOk() {
 bool DBG::memoryOk(int64_t delta) {
     
     return get_mem_inuse(3) + convert_memory(delta, 3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem);
-    
-}
-
-void DBG::initHashing(){
-    
-    dumpMaps = false;
-    readingDone = false;
-    buffers = 0;
-    buffingDone = std::vector<bool>(hashThreads, false);
-    
-    int16_t threadN = std::thread::hardware_concurrency(), buffThreads = threadN - hashThreads - 1;
-    
-    if (buffThreads < 1)
-        buffThreads = 1;
-    
-    for (uint8_t t = 0; t < hashThreads; t++) {
-        std::packaged_task<bool()> task([this, t] { return hashSequences(t); });
-        futures.push_back(task.get_future());
-        threads.push_back(std::thread(std::move(task)));
-    }
-    
-    uint8_t t = 0;
-    double mapsN = mapCount/buffThreads;
-    
-    std::array<uint16_t, 2> mapRange = {0,0};
-    
-    while(mapRange[1] < mapCount) {
-
-        mapRange[0] = mapRange[1];
-        mapRange[1] += mapsN;
-
-        if (mapRange[0] >= mapRange[1])
-            mapRange[1] = mapRange[0] + 1;
-
-        if (mapRange[1] >= mapCount)
-            mapRange[1] = mapCount;
-        
-        std::packaged_task<bool()> task([this, mapRange] { return processBuffers(mapRange); });
-        futures.push_back(task.get_future());
-        threads.push_back(std::thread(std::move(task)));
-        t++;
-
-    }
     
 }
 
@@ -144,10 +104,28 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
     
 }
 
-bool DBG::hashSequences(uint8_t t) {
-    //   Log threadLog;
+void DBG::consolidate() {
     
+    status();
+
+}
+
+void DBG::initHashing(){
+    
+    int16_t threadN = std::thread::hardware_concurrency() - 1;
+    
+    for (uint8_t t = 0; t < threadN; t++) {
+        std::packaged_task<bool()> task([this] { return hashSequences(); });
+        futures.push_back(task.get_future());
+        threads.push_back(std::thread(std::move(task)));
+    }
+    
+}
+
+bool DBG::hashSequences() {
+    //   Log threadLog;
     std::string *readBatch;
+    Buf<kmer> *buffers = new Buf<kmer>[mapCount];
     
     while (true) {
             
@@ -155,10 +133,8 @@ bool DBG::hashSequences(uint8_t t) {
             
             std::unique_lock<std::mutex> lck(mtx);
             
-            if (readingDone && readBatches.size() == 0) {
-                buffingDone[t] = true;
+            if (readingDone && readBatches.size() == 0)
                 return true;
-            }
 
             if (readBatches.size() == 0)
                 continue;
@@ -167,7 +143,7 @@ bool DBG::hashSequences(uint8_t t) {
             readBatches.pop();
             
         }
-        
+
         uint64_t len = readBatch->size();
         
         if (len<k) {
@@ -178,9 +154,9 @@ bool DBG::hashSequences(uint8_t t) {
         unsigned char *first = (unsigned char*) readBatch->c_str();
         uint8_t *str = new uint8_t[len];
         uint8_t e = 0;
-        uint64_t kcount = len-k+1;
+        uint64_t key, kcount = len-k+1;
         bool isFw = false;
-        Buf<kmer> *buf = new Buf<kmer>(len);
+        Buf<kmer>* buffer;
         
         for (uint64_t p = 0; p<kcount; ++p) {
             
@@ -199,9 +175,12 @@ bool DBG::hashSequences(uint8_t t) {
             
             if (e == 0) // not enough bases for a kmer
                 continue;
-            
-            kmer &khmer = buf->seq[buf->pos++];
-            khmer.hash = hash(str+p, &isFw);
+
+            key = hash(str+p, &isFw);
+
+            buffer = &buffers[key % mapCount];
+            kmer &khmer = buffer->seq[buffer->newPos()];
+            khmer.hash = key;
             
             if (isFw){
                 if (ctoi[*(first+p+k)] <= 3)
@@ -227,94 +206,107 @@ bool DBG::hashSequences(uint8_t t) {
         std::lock_guard<std::mutex> lck(hashMtx);
         freed += len * sizeof(char);
         
-        auto bufFile = std::fstream(userInput.prefix + "/.buffer.bin", std::fstream::app | std::ios::out | std::ios::binary);
-        bufFile.write(reinterpret_cast<const char *>(&buf->pos), sizeof(uint64_t));
-        bufFile.write(reinterpret_cast<const char *>(&buf->size), sizeof(uint64_t));
-        bufFile.write(reinterpret_cast<const char *>(buf->seq), sizeof(kmer) * buf->pos);
-        bufFile.close();
-        ++buffers;
-        delete[] buf->seq;
-        delete buf;
+        for (uint16_t m = 0; m<mapCount; ++m) {
+            
+            buffer = &buffers[m];
+            auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
+            bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
+            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
+            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
+            bufFile.close();
+            
+        }
         
     }
+    
+    for (uint16_t m = 0; m<mapCount; ++m)
+        delete[] buffers[m].seq;
+        delete[] buffers;
     
     return true;
     
 }
 
-bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
+bool DBG::loadMaps() {
     
-    uint16_t i;
-    uint32_t b = 0;
-    uint64_t pos = 0, curPos = 0;
-    int64_t initial_size = 0, final_size = 0;
-    Buf<kmer> *buf;
-    bool mapUpdated = false; // maps are updated at most once per job
-    
-    while (true) {
+    int16_t threadN = std::thread::hardware_concurrency() - 1;
+    std::array<uint16_t, 2> mapRange = {0,0};
+//    int16_t threadN = std::thread::hardware_concurrency();
+
+    while(mapRange[1] < mapCount - 1) {
         
-        if (dumpMaps && !mapUpdated) {
+        uint64_t max = 0;
+
+        for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
             
-            for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-                updateMap(userInput.prefix, m);
-            
-            mapUpdated = true;
-            
-        }
-        
-        {
-            
-            std::lock_guard<std::mutex> lck(mtx);
-            
-            if (buffers == 0)
-                continue;
-            
-            alloc += final_size - initial_size;
-            initial_size = 0, final_size = 0;
-            
-            if (readingDone && b == buffers && std::find(buffingDone.begin(), buffingDone.end(), false) == buffingDone.end() && readBatches.size() == 0)
+            max += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
+
+            if(!memoryOk(max))
                 break;
             
-            if(b == buffers)
-                continue;
+            mapRange[1] = m;
             
         }
         
-        std::ifstream bufFile(userInput.prefix + "/.buffer.bin", std::ios::in | std::ios::binary);
-        bufFile.seekg(curPos);
-        bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
+        uint16_t mapN = (mapRange[1] - mapRange[0])/threadN;
         
-//        std::cout<<pos<<std::endl;
+        std::array<uint16_t, 2> mapRange2 = {0,0};
         
-        buf = new Buf<kmer>(pos);
-        buf->pos = pos;
-        
-        bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
-        bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-        bufFile.close();
-        
-        curPos += sizeof(uint64_t) + sizeof(uint64_t) + sizeof(kmer) * pos;
-        
-        ++b;
-        
-        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-            initial_size += mapSize(*maps[m]);
-        
-        for (uint64_t c = 0; c<pos; ++c) {
-
-            kmer &khmer = buf->seq[c];
-            i = khmer.hash % mapCount;
+        for(uint16_t t = 0; t<threadN; ++t) {
             
-//            std::cout<<khmer.hash<<std::endl;
+            mapRange2[0] = mapRange2[1];
+            mapRange2[1] += mapN;
 
-            if (i >= mapRange[0] && i < mapRange[1]) {
+            if (mapRange2[1] >= mapCount || t + 1 == threadN)
+                mapRange2[1] = mapCount;
+            
+            std::packaged_task<bool()> task([this, mapRange2] { return processBuffers(mapRange2); });
+            futures.push_back(task.get_future());
+            threads.push_back(std::thread(std::move(task)));
+            
+        }
+        
+        joinThreads();
 
-                phmap::flat_hash_map<uint64_t, DBGkmer>& thisMap = *maps[i]; // the map associated to this buffer
+    }
+    
+    return true;
 
-                DBGkmer &dbgkmer = thisMap[khmer.hash];
+}
 
+bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
+    
+    uint32_t b = 0;
+    uint64_t pos = 0;
+//    int64_t initial_size = 0, final_size = 0;
+    Buf<kmer> *buf;
+    
+    for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m) {
+        
+        phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
+        
+        std::ifstream bufFile(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::ios::in | std::ios::binary);
+        
+        while(bufFile.peek() != EOF) {
+            
+            bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
+            
+            buf = new Buf<kmer>(pos);
+            buf->pos = pos;
+            
+            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
+            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
+            
+            ++b;
+            
+            for (uint64_t c = 0; c<pos; ++c) {
+                
+                kmer &khmer = buf->seq[c];
+                
+                DBGkmer &dbgkmer = map[khmer.hash];
+                
                 for (uint64_t w = 0; w<4; ++w) { // update weights
-
+                    
                     if (255 - dbgkmer.fw[w] >= khmer.fw[w])
                         dbgkmer.fw[w] += khmer.fw[w];
                     if (255 - dbgkmer.bw[w] >= khmer.bw[w])
@@ -322,16 +314,20 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 }
                 if (dbgkmer.cov < 255)
                     ++dbgkmer.cov; // increase kmer coverage
-
+                
             }
-
+            
         }
-
-        for (uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-            final_size += mapSize(*maps[m]);
-
+        
+        bufFile.close();
+        
+        alloc += mapSize(*maps[m]);
+        
         delete[] buf->seq;
         delete buf;
+        remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
+        
+        dumpMap(userInput.prefix, m);
         
     }
     
@@ -339,93 +335,18 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
 }
 
-void DBG::consolidate() {
+bool DBG::dumpMap(std::string prefix, uint16_t m) {
     
-    if (!memoryOk()) { // if out of memory, stop reading and consolidate maps
-        
-        lg.verbose("Reached memory limit. Dumping maps to disk.");
-        
-        tmp = true;
-        dumpMaps = true;
-        readingDone = true;
-        
-        joinThreads();
-
-        futures.clear();
-        threads.clear();
-        
-        remove((userInput.prefix + "/.buffer.bin").c_str());
-        
-        lg.verbose("Resuming hashing.");
-        
-        initHashing();
-        
-    }
+    prefix.append("/.map." + std::to_string(m) + ".bin");
     
-    while (readBatches.size() >= hashThreads * 2)
-        status();
-
-}
-
-bool DBG::updateMap(std::string prefix, uint16_t m) {
+    phmap::BinaryOutputArchive ar_out(prefix.c_str());
+    maps[m]->phmap_dump(ar_out);
     
     uint64_t map_size = mapSize(*maps[m]);
-    
-    prefix.append("/.kmap." + std::to_string(m) + ".bin");
-    
-    if (fileExists(prefix)) {
-    
-        phmap::flat_hash_map<uint64_t, DBGkmer> *dumpMap = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-        phmap::BinaryInputArchive ar_in(prefix.c_str());
-        dumpMap->phmap_load(ar_in);
-    
-        unionSum(*maps[m], *dumpMap); // merges the current map and the existing map
-    
-        phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
-        dumpMap->phmap_dump(ar_out);
-    
-        delete dumpMap;
-    
-    }else{
-    
-        phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
-        maps[m]->phmap_dump(ar_out);
-    
-    }
-    
-    freed += map_size;
     delete maps[m];
+    freed += map_size;
+    
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-    
-    return true;
-    
-}
-
-bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2) {
-    
-    for (auto pair : map1) { // for each element in map1, find it in map2 and increase its value
-        
-        DBGkmer &dbgkmerMap = map2[pair.first]; // insert or find this kmer in the hash table
-        
-        for (uint64_t w = 0; w<4; ++w) { // update weights
-            
-            if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
-                dbgkmerMap.fw[w] += pair.second.fw[w];
-            else
-                dbgkmerMap.fw[w] = 255;
-            if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
-                dbgkmerMap.bw[w] += pair.second.bw[w];
-            else
-                dbgkmerMap.bw[w] = 255;
-            
-        }
-        
-        if (255 - dbgkmerMap.cov >= pair.second.cov)
-            dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
-        else
-            dbgkmerMap.cov = 255;
-        
-    }
     
     return true;
     
@@ -437,19 +358,7 @@ void DBG::summary() {
     
     joinThreads();
     
-    futures.clear();
-    threads.clear();
-    
-    if (tmp) {
-        
-        for (uint16_t m = 0; m<mapCount; ++m)
-            threadPool.queueJob([=]{ return updateMap(userInput.prefix, m); });
-        
-        lg.verbose("Updating maps");
-        
-        jobWait(threadPool);
-        
-    }
+    loadMaps();
     
     lg.verbose("Computing summary statistics");
     
@@ -473,8 +382,7 @@ bool DBG::histogram(uint16_t m) {
     uint64_t kmersUnique = 0, kmersDistinct = 0, map_size = 0;
     phmap::flat_hash_map<uint64_t, uint64_t> hist;
     
-    if (tmp)
-        loadMap(userInput.prefix, m);
+    loadMap(userInput.prefix, m);
     
     for (auto pair : *maps[m]) {
         
@@ -486,13 +394,11 @@ bool DBG::histogram(uint16_t m) {
         
     }
     
-    if (tmp) {
-        map_size = mapSize(*maps[m]);
-        delete maps[m];
-        maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-        freed += map_size;
-    }
-    
+    map_size = mapSize(*maps[m]);
+    delete maps[m];
+    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    freed += map_size;
+ 
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
     totKmersDistinct += kmersDistinct;
@@ -522,8 +428,7 @@ void DBG::validateSequences(InSequences &inSequences) {
         
         for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
             
-            if (tmp)
-                max += fileSize(userInput.prefix + "/.kmap." + std::to_string(m) + ".bin");
+            max += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
 
             if(!memoryOk(max))
                 break;
@@ -531,35 +436,27 @@ void DBG::validateSequences(InSequences &inSequences) {
             mapRange[1] = m;
             
         }
-    
-        if (tmp) {
             
-            for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
-                threadPool.queueJob([=]{ return loadMap(userInput.prefix, m); });
-            
-            jobWait(threadPool);
-            
-        }
+        for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
+            threadPool.queueJob([=]{ return loadMap(userInput.prefix, m); });
+        
+        jobWait(threadPool);
         
         for (InSegment* segment : *segments)
             threadPool.queueJob([=]{ return validateSegment(segment, mapRange); });
         
         jobWait(threadPool);
-        
-        if (tmp) {
             
-            for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m) {
-                
-                uint64_t map_size = mapSize(*maps[m]);
-                delete maps[m];
-                maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-                freed += map_size;
-                
-            }
+        for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m) {
             
-            mapRange[0] = mapRange[1] + 1;
+            uint64_t map_size = mapSize(*maps[m]);
+            delete maps[m];
+            maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+            freed += map_size;
             
         }
+        
+        mapRange[0] = mapRange[1] + 1;
         
     }
     
@@ -679,14 +576,12 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
 
 void DBG::cleanup() {
     
-    threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buffer.bin").c_str()); });
-    
-    if(tmp && userInput.inDBG != userInput.prefix) {
+    if(userInput.inDBG != userInput.prefix) {
         
         lg.verbose("Deleting tmp files");
         
         for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.kmap." + std::to_string(m) + ".bin").c_str()); });
+            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
         
         if (userInput.prefix != ".")
             rm_dir(userInput.prefix.c_str());
@@ -697,34 +592,15 @@ void DBG::cleanup() {
     
 }
 
-bool DBG::dumpMap(std::string prefix, uint16_t m) {
-    
-    prefix.append("/.kmap." + std::to_string(m) + ".bin");
-    
-    phmap::BinaryOutputArchive ar_out(prefix.c_str());
-    maps[m]->phmap_dump(ar_out);
-    
-    uint64_t map_size = mapSize(*maps[m]);
-    
-    delete maps[m];
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-    
-    freed += map_size;
-    
-    return true;
-    
-}
-
 void DBG::load() {
     
-    tmp = true;
     userInput.prefix = userInput.inDBG;
     
 }
 
 bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     
-    prefix.append("/.kmap." + std::to_string(m) + ".bin");
+    prefix.append("/.map." + std::to_string(m) + ".bin");
     
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     maps[m]->phmap_load(ar_in);
@@ -733,6 +609,70 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     
     return true;
 
+}
+
+bool DBG::updateMap(std::string prefix, uint16_t m) {
+    
+    uint64_t map_size = mapSize(*maps[m]);
+    
+    prefix.append("/.map." + std::to_string(m) + ".bin");
+    
+    if (fileExists(prefix)) {
+    
+        phmap::flat_hash_map<uint64_t, DBGkmer> *dumpMap = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+        phmap::BinaryInputArchive ar_in(prefix.c_str());
+        dumpMap->phmap_load(ar_in);
+    
+        unionSum(*maps[m], *dumpMap); // merges the current map and the existing map
+    
+        phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
+        dumpMap->phmap_dump(ar_out);
+    
+        delete dumpMap;
+    
+    }else{
+    
+        phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
+        maps[m]->phmap_dump(ar_out);
+    
+    }
+    
+    freed += map_size;
+    delete maps[m];
+    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    
+    return true;
+    
+}
+
+bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2) {
+    
+    for (auto pair : map1) { // for each element in map1, find it in map2 and increase its value
+        
+        DBGkmer &dbgkmerMap = map2[pair.first]; // insert or find this kmer in the hash table
+        
+        for (uint64_t w = 0; w<4; ++w) { // update weights
+            
+            if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                dbgkmerMap.fw[w] += pair.second.fw[w];
+            else
+                dbgkmerMap.fw[w] = 255;
+            if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                dbgkmerMap.bw[w] += pair.second.bw[w];
+            else
+                dbgkmerMap.bw[w] = 255;
+            
+        }
+        
+        if (255 - dbgkmerMap.cov >= pair.second.cov)
+            dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+        else
+            dbgkmerMap.cov = 255;
+        
+    }
+    
+    return true;
+    
 }
 
 void DBG::report() { // generates the output from the program

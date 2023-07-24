@@ -206,23 +206,23 @@ bool DBG::hashSequences() {
         std::lock_guard<std::mutex> lck(hashMtx);
         freed += len * sizeof(char);
         
-        for (uint16_t m = 0; m<mapCount; ++m) {
-            
-            buffer = &buffers[m];
-            auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
+//        for (uint16_t m = 0; m<mapCount; ++m) {
+//            
+//            buffer = &buffers[m];
+//            auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
 //            bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
 //            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
 //            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
-            bufFile.close();
-            
-        }
+//            bufFile.close();
+//            
+//        }
         
     }
     
-    for (uint16_t m = 0; m<mapCount; ++m)
-        delete[] buffers[m].seq;
-    
-    delete[] buffers;
+//    for (uint16_t m = 0; m<mapCount; ++m)
+//        delete[] buffers[m].seq;
+//    
+//    delete[] buffers;
     
     return true;
     

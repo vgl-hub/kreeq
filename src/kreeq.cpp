@@ -107,6 +107,7 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
 void DBG::consolidate() {
     
     status();
+    while (!memoryOk())
 
 }
 

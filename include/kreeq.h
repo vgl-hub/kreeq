@@ -43,7 +43,8 @@ public:
             
         jobWait(threadPool);
         
-        initHashing();
+        if (userInput.inDBG.size() == 0)
+            initHashing();
         
     };
     
@@ -67,7 +68,7 @@ public:
     
     bool dumpBuffers();
     
-    bool loadMaps();
+    bool buffersToMaps();
     
     bool processBuffers(std::array<uint16_t, 2> mapRange);
     

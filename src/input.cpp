@@ -38,11 +38,11 @@ void Input::loadInput(UserInputKreeq userInput) {
 
 void Input::read(uint8_t mode, InSequences& inSequences) {
     
-    if (userInput.prefix != ".")
-        make_dir(userInput.prefix.c_str());
-    
     if (userInput.outFile != "")
         userInput.prefix = userInput.outFile;
+    
+    if (userInput.prefix != ".")
+        make_dir(userInput.prefix.c_str());
     
     switch (mode) {
             

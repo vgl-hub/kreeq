@@ -258,7 +258,7 @@ bool DBG::dumpBuffers() {
     
 }
 
-bool DBG::loadMaps() {
+bool DBG::buffersToMaps() {
     
     int16_t threadN = std::thread::hardware_concurrency() - 1;
     std::array<uint16_t, 2> mapRange = {0,0};
@@ -396,7 +396,7 @@ void DBG::summary() {
         
         lg.verbose("Loading buffers in maps");
         
-        loadMaps();
+        buffersToMaps();
         
     }
     
@@ -622,7 +622,7 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
 
 void DBG::cleanup() {
     
-    if(userInput.inDBG.size() == 1 && userInput.outFile == "") {
+    if(!(userInput.inDBG.size() == 1) && userInput.outFile == "") {
         
         lg.verbose("Deleting tmp files");
         

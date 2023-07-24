@@ -221,7 +221,8 @@ bool DBG::hashSequences() {
     
     for (uint16_t m = 0; m<mapCount; ++m)
         delete[] buffers[m].seq;
-        delete[] buffers;
+    
+    delete[] buffers;
     
     return true;
     
@@ -276,7 +277,6 @@ bool DBG::loadMaps() {
 
 bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
     
-    uint32_t b = 0;
     uint64_t pos = 0;
 //    int64_t initial_size = 0, final_size = 0;
     Buf<kmer> *buf;
@@ -287,7 +287,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
         
         std::ifstream bufFile(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::ios::in | std::ios::binary);
         
-        while(bufFile.peek() != EOF) {
+        while(bufFile && !(bufFile.peek() == EOF)) {
             
             bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
             
@@ -296,8 +296,6 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-            
-            ++b;
             
             for (uint64_t c = 0; c<pos; ++c) {
                 
@@ -317,14 +315,14 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
                 
             }
             
+            delete[] buf->seq;
+            delete buf;
+            
         }
         
         bufFile.close();
         
         alloc += mapSize(*maps[m]);
-        
-        delete[] buf->seq;
-        delete buf;
         remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
         
         dumpMap(userInput.prefix, m);

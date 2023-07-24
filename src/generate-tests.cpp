@@ -36,8 +36,10 @@ int main(int, char **argv) {
     
     const std::set<std::string> exclude {};
 
-    const std::map<std::set<std::string>, std::vector<std::string>> file_args = {
-        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq"}}
+    std::map<std::set<std::string>, std::vector<std::string>> file_args = {
+        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq"}},
+        {{"random1.fasta"}, {"-d testFiles/test1.kreeq"}},
+        {{"random1.fasta"}, {"-d testFiles/test2.kreeq"}}
     //  {{set of test file paths}, {list of command line args to run with}}
     };
 
@@ -60,6 +62,20 @@ int main(int, char **argv) {
             fstream.close();
             for(const std::string &args : pair.second) {
                 genTest(exePath, file, args, "validate");
+            }
+        }
+    }
+    
+    file_args = {
+        {{"-d testFiles/test1.kreeq testFiles/test2.kreeq"}, {"-o testFiles/test3.kreeq"}}
+    //  {{set of test file paths}, {list of command line args to run with}}
+    };
+    
+    std::fstream fstream;
+    for(const auto &pair : file_args) {
+        for(const std::string &file : pair.first) {
+            for(const std::string &args : pair.second) {
+                genTestUnion(exePath, file, args, "union");
             }
         }
     }

@@ -267,7 +267,7 @@ bool DBG::loadMaps() {
 
         for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
             
-            max += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
+            max += 2 * fileSize(userInput.prefix + "/.buf." + std::to_string(m) + ".bin");
 
             if(!memoryOk(max))
                 break;

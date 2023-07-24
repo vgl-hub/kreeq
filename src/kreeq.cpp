@@ -209,6 +209,9 @@ bool DBG::hashSequences() {
         //    logs.push_back(threadLog);
         
         std::lock_guard<std::mutex> lck(hashMtx);
+        for (uint16_t b = 0; b<mapCount; ++b)
+            alloc += buffers[b].size * sizeof(kmer);
+
         freed += len * sizeof(char);
         buffersVec.push_back(buffers);
         
@@ -236,9 +239,9 @@ bool DBG::dumpBuffers() {
             
             Buf<kmer>* buffer = &buffers[m];
             bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
-            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
             bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
             delete[] buffers[m].seq;
+            freed += buffers[m].size * sizeof(kmer);
             
         }
         
@@ -320,8 +323,9 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             
             buf = new Buf<kmer>(pos);
             buf->pos = pos;
+            buf->size = pos;
+            alloc += buf->size * sizeof(kmer);
             
-            bufFile.read(reinterpret_cast<char *>(&buf->size), sizeof(uint64_t));
             bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
             
             for (uint64_t c = 0; c<pos; ++c) {
@@ -343,6 +347,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
             }
             
             delete[] buf->seq;
+            freed += buf->size * sizeof(kmer);
             delete buf;
             
         }

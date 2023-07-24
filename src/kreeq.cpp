@@ -211,8 +211,8 @@ bool DBG::hashSequences() {
             buffer = &buffers[m];
             auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
             bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
-            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
-            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
+//            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
+//            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
             bufFile.close();
             
         }

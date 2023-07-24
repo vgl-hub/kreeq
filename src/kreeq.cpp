@@ -358,6 +358,8 @@ void DBG::summary() {
     
     joinThreads();
     
+    lg.verbose("Loading buffers in maps");
+    
     loadMaps();
     
     lg.verbose("Computing summary statistics");

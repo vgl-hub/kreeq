@@ -48,6 +48,7 @@ void printHelp() {
     printf("kreeq [mode]\n-h for additional help.\n");
     printf("\nModes:\n");
     printf("validate\n");
+    printf("union\n");
     exit(0);
     
 }
@@ -59,7 +60,7 @@ int main(int argc, char **argv) {
     
     bool arguments = true;
     bool isPipe = false; // to check if input is from pipe
-    bool mode = 0;
+    uint8_t mode = 0;
     
     std::string cmd;
 
@@ -147,7 +148,7 @@ int main(int argc, char **argv) {
                     }else{ // input is a regular file
                         
                         ifFileExists(optarg);
-                        userInput.inDBG = optarg;
+                        userInput.inDBG.push_back(optarg);
                         
                     }
                     
@@ -230,7 +231,8 @@ int main(int argc, char **argv) {
                     printf("\t-f --input-sequence sequence input file (fasta,gfa1/2).\n");
                     printf("\t-r --input-reads read input files (fastq).\n");
                     printf("\t-k --kmer-length length of kmers.\n");
-                    printf("\t-o --out-format dumps hashmaps to file (supported extensions: .kreeq).\n");
+                    printf("\t-o --out-format supported extensions:\n");
+                    printf("\t\t .kreeq dumps hashmaps to file for reuse.\n");
                     printf("\t-t --tmp-prefix prefix to temporary directory.\n");
                     printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.5 of max).\n");
                     printf("\t-j --threads <n> numbers of threads (default: max).\n");
@@ -245,6 +247,106 @@ int main(int argc, char **argv) {
                 
             }
             
+        }
+        
+    }else if(strcmp(argv[1],"union") == 0){
+        
+        mode = 1;
+        
+        static struct option long_options[] = { // struct mapping long options
+            {"databases", required_argument, 0, 'd'},
+            {"out-format", required_argument, 0, 'o'},
+            
+            {"threads", required_argument, 0, 'j'},
+            {"verbose", no_argument, &verbose_flag, 1},
+            {"cmd", no_argument, &cmd_flag, 1},
+            {"help", no_argument, 0, 'h'},
+            
+            {0, 0, 0, 0}
+        };
+        
+        while (true) { // loop through argv
+            
+            int option_index = 1;
+            
+            c = getopt_long(argc, argv, "-:d:j:o:h",
+                            long_options, &option_index);
+            
+            if (c == -1) { // exit the loop if run out of options
+                break;
+                
+            }
+            
+            switch (c) {
+                case ':': // handle options without arguments
+                    switch (optopt) { // the command line option last matched
+                        case 'b':
+                            break;
+                            
+                        default:
+                            fprintf(stderr, "option -%c is missing a required argument\n", optopt);
+                            return EXIT_FAILURE;
+                    }
+                    break;
+                default: // handle positional arguments
+                    
+                case 0: // case for long options without short options
+                    
+                    //                if (strcmp(long_options[option_index].name,"line-length") == 0)
+                    //                  splitLength = atoi(optarg);
+                    
+                    break;
+                    
+                case 'd': // input sequence
+                    
+                    if (isPipe && userInput.pipeType == 'n') { // check whether input is from pipe and that pipe input was not already set
+                        
+                        userInput.pipeType = 'f'; // pipe input is a sequence
+                        
+                    }else{ // input is a regular file
+                        
+                        optind--;
+                        for( ;optind < argc && *argv[optind] != '-' && !isInt(argv[optind]); optind++){
+                            
+                            ifFileExists(argv[optind]);
+                            userInput.inDBG.push_back(argv[optind]);
+                            
+                        }
+                        
+                    }
+                    
+                    break;
+                    
+                case 'j': // max threads
+                    maxThreads = atoi(optarg);
+                    break;
+                    
+                case 'o': // handle output (file or stdout)
+                    userInput.outFile = optarg;
+                    outFile_flag = 1;
+                    break;
+                    
+                case 'h': // help
+                    printf("kreeq union [options]\n");
+                    printf("\nOptions:\n");
+                    printf("\t-d --databases DBG databases to merge.\n");
+                    printf("\t-j --threads <n> numbers of threads (default: max).\n");
+                    printf("\t-o --out-format generates various kinds of outputs (currently supported: .kreeq).\n");
+                    printf("\t--cmd print $0 to stdout.\n");
+                    exit(0);
+            }
+            
+            if    (argc == 2 || // handle various cases in which the output should include default outputs
+                   (argc == 3 && pos_op == 2) ||
+                   (argc == 4 && pos_op == 3)) {
+                
+            }
+            
+        }
+        
+        if (userInput.inDBG.size() < 2) {
+            fprintf(stderr, "At least two databases required (-d).\n");
+            return EXIT_FAILURE;
         }
         
     }else{
@@ -274,7 +376,6 @@ int main(int argc, char **argv) {
     InSequences inSequences; // initialize sequence collection object
     in.loadSequences(inSequences); // read input genome
     lg.verbose("Sequences loaded");
-    
     in.read(mode, inSequences); // read input reads
 
     threadPool.join(); // join threads

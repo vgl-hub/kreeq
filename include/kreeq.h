@@ -79,6 +79,8 @@ public:
     
     bool histogram(uint16_t m);
     
+    void DBGstats();
+    
     void validateSequences(InSequences &inSequences);
     
     bool validateSegments(std::array<uint16_t, 2> mapRange, std::vector<InSegment*> *segments);
@@ -94,6 +96,10 @@ public:
     void report();
     
     bool updateMap(std::string prefix, uint16_t m);
+    
+    void kunion();
+    
+    bool mergeMaps(uint16_t m);
     
     bool unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2);
     

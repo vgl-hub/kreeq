@@ -36,51 +36,109 @@ void Input::loadInput(UserInputKreeq userInput) {
     
 }
 
-void Input::read(bool mode, InSequences& inSequences) {
-    
-    if (userInput.inSequence.empty()) {return;}
+void Input::read(uint8_t mode, InSequences& inSequences) {
     
     if (userInput.prefix != ".")
         make_dir(userInput.prefix.c_str());
     
-    if (mode == 0) { // sequence validation
+    if (userInput.outFile != "")
+        userInput.prefix = userInput.outFile;
+    
+    switch (mode) {
+            
+        case 0: // sequence validation
         
-        DBG knav(userInput); // navigational kmerdb
-        
-        if (userInput.inReads.size() > 0) {
+        {
             
-            lg.verbose("Loading input reads");
+            if (userInput.inSequence.empty()) {return;}
             
-            unsigned int numFiles = userInput.inReads.size(); // number of input files
+            DBG knav(userInput); // navigational kmerdb
             
-            for (unsigned int i = 0; i < numFiles; i++) // load each input file in the kmerdb
-                loadKmers(userInput, &knav, 'r', &i);
+            if (userInput.inReads.size() > 0) {
+                
+                lg.verbose("Loading input reads.");
+                
+                unsigned int numFiles = userInput.inReads.size(); // number of input files
+                
+                for (unsigned int i = 0; i < numFiles; i++) // load each input file in the kmerdb
+                    loadKmers(userInput, &knav, 'r', &i);
+                
+                lg.verbose("Reads loaded.");
+                
+            }else{
+                
+                std::ifstream file;
+                
+                file.open(userInput.inDBG[0] + "/.index"); // reads the kmer length from the index file
+                std::string line;
+                
+                getline(file, line);
+                file.close();
+                
+                knav.load(); // loads kmers into the new kreeqdb
+                
+            }
             
-            lg.verbose("Reads loaded");
+            knav.summary();
             
-        }else{
+            knav.validateSequences(inSequences); // validate the input sequence
             
-            std::ifstream file;
+            knav.report(); // output
             
-            file.open(userInput.inSequence + "/.index"); // reads the kmer length from the index file
-            std::string line;
+            knav.cleanup(); // delete tmp files
             
-            getline(file, line);
-            file.close();
-            
-            knav.load(); // loads kmers into the new kreeqdb
+            break;
             
         }
         
-        knav.summary();
+        case 1: // union of multiple kmerdbs
         
-        knav.validateSequences(inSequences); // validate the input sequence
+        {
+            std::ifstream file;
+            
+            lg.verbose("Merging input databases.");
+            unsigned int numFiles = userInput.inDBG.size(); // number of input kmerdbs
+            
+            short unsigned int k = 0;
+            
+            for (unsigned int i = 0; i < numFiles; i++) {  // reads the kmer length from the index files checking consistency between kmerdbs
+                
+                file.open(userInput.inDBG[i] + "/.index");
+                std::string line;
+                
+                getline(file, line);
+                file.close();
+                
+                if (k == 0)
+                    k = stoi(line);
+                
+                if (k != stoi(line)) {
+                    fprintf(stderr, "Cannot merge databases with different kmer length.\n");
+                    exit(1);
+                }
+                
+            }
+            
+            if (k == 0 || k > 32) {
+                fprintf(stderr, "Invalid kmer length.\n");
+                exit(1);
+            }
+            
+            DBG knav(userInput); // a new empty kmerdb with the specified kmer length
+            
+            lg.verbose("DBG object generated. Merging.");
+            
+            knav.kunion(); // union set
+            
+            knav.report(); // output
+            
+            break;
+        }
         
-        knav.report(); // output
-        
-        knav.cleanup(); // delete tmp files
-        
-    }else{
+        default:
+            
+            fprintf(stderr, "Invalid mode.\n");
+            exit(1);
         
     }
     
@@ -124,7 +182,7 @@ void Input::loadSequences(InSequences& inSequences) {
                     
                     getline(*stream, *inSequence, '>');
                     
-                    lg.verbose("Individual fasta sequence read");
+                    lg.verbose("Individual fasta sequence read.");
                     
                     Sequence* sequence = new Sequence {seqHeader, seqComment, inSequence};
                     
@@ -192,11 +250,11 @@ void Input::loadSequences(InSequences& inSequences) {
             
         }
         
-        lg.verbose("End of file");
+        lg.verbose("End of file.");
             
     }else{
 
-        fprintf(stderr, "Stream not successful: %s", userInput.inSequence.c_str());
+        fprintf(stderr, "Stream not successful: %s.", userInput.inSequence.c_str());
         exit(1);
 
     }

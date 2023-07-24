@@ -48,7 +48,7 @@ void DBG::status() {
     std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - past;
     
     if (elapsed.count() > 0.1) {
-        lg.verbose("Hash buffers: " + std::to_string(readBatches.size()) + ". Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
+        lg.verbose("Read batches: " + std::to_string(readBatches.size()) + "Hash buffers: " + std::to_string(buffersVec.size()) + ". Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
     
         past = std::chrono::high_resolution_clock::now();
     }
@@ -107,6 +107,9 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
 void DBG::consolidate() {
     
     status();
+    
+    dumpBuffers();
+    
     while (!memoryOk()){}
 
 }
@@ -126,7 +129,6 @@ void DBG::initHashing(){
 bool DBG::hashSequences() {
     //   Log threadLog;
     std::string *readBatch;
-    Buf<kmer> *buffers = new Buf<kmer>[mapCount];
     
     while (true) {
             
@@ -152,6 +154,7 @@ bool DBG::hashSequences() {
             return true;
         }
         
+        Buf<kmer> *buffers = new Buf<kmer>[mapCount];
         unsigned char *first = (unsigned char*) readBatch->c_str();
         uint8_t *str = new uint8_t[len];
         uint8_t e = 0;
@@ -207,24 +210,46 @@ bool DBG::hashSequences() {
         
         std::lock_guard<std::mutex> lck(hashMtx);
         freed += len * sizeof(char);
-        
-        for (uint16_t m = 0; m<mapCount; ++m) {
-            
-            buffer = &buffers[m];
-            auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
-            bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
-            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
-            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
-            bufFile.close();
-            
-        }
+        buffersVec.push_back(buffers);
         
     }
     
-    for (uint16_t m = 0; m<mapCount; ++m)
-        delete[] buffers[m].seq;
+    return true;
     
-    delete[] buffers;
+}
+
+bool DBG::dumpBuffers() {
+    
+    std::vector<Buf<kmer>*> buffersVecCpy;
+    
+    {
+        std::unique_lock<std::mutex> lck(mtx);
+        buffersVecCpy = buffersVec;
+        buffersVec.clear();
+    }
+    
+    for (uint16_t m = 0; m<mapCount; ++m) {
+        
+        auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
+        
+        for (Buf<kmer>* buffers : buffersVecCpy) {
+            
+            Buf<kmer>* buffer = &buffers[m];
+            bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
+            bufFile.write(reinterpret_cast<const char *>(&buffer->size), sizeof(uint64_t));
+            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
+            delete[] buffers[m].seq;
+            
+        }
+        
+        bufFile.close();
+        
+    }
+    
+    for (Buf<kmer>* buffers : buffersVecCpy)
+        delete[] buffers;
+    
+    buffersVecCpy.clear();
     
     return true;
     
@@ -357,6 +382,10 @@ void DBG::summary() {
     readingDone = true;
     
     joinThreads();
+    
+    lg.verbose("Writing residual buffers");
+    
+    dumpBuffers();
     
     lg.verbose("Loading buffers in maps");
     

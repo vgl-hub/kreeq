@@ -280,9 +280,13 @@ bool DBG::dumpBuffers() {
 }
 
 bool DBG::buffersToMaps() {
-
+    
+    std::vector<std::function<bool()>> jobs;
+    
     for (uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return processBuffers(m); });
+        jobs.push_back([this, m] { return processBuffers(m); });
+        
+    threadPool.queueJobs(jobs);
     
     jobWait(threadPool);
     

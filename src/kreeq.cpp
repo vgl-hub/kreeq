@@ -280,115 +280,65 @@ bool DBG::dumpBuffers() {
 }
 
 bool DBG::buffersToMaps() {
-    
-    int16_t threadN = std::thread::hardware_concurrency() - 1;
-    std::array<uint16_t, 2> mapRange = {0,0};
 
-    while(mapRange[1] < mapCount - 1) {
-        
-        uint64_t max = 0;
-
-        for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
-            
-            max += fileSize(userInput.prefix + "/.buf." + std::to_string(m) + ".bin");
-
-            if(!memoryOk(max))
-                break;
-            
-            mapRange[1] = m;
-            
-        }
-        
-//        std::cout<<"mapRange[0]: "<<mapRange[0]<<"mapRange[1]: "<<mapRange[1]<<std::endl;
-        
-        uint16_t mapN = (mapRange[1] - mapRange[0])/threadN;
-        
-        if (mapN < 1)
-            mapN = 1;
-        
-        std::array<uint16_t, 2> mapRange2 = {mapRange[0],mapRange[0]};
-        
-        for(uint16_t t = 0; t<threadN; ++t) {
-            
-            mapRange2[0] = mapRange2[1];
-            mapRange2[1] += mapN;
-
-            if (mapRange2[1] >= mapRange[1] || t + 1 == threadN)
-                mapRange2[1] = mapRange[1] + 1;
-            
-//            std::cout<<"mapRange2[0]: "<<mapRange2[0]<<"mapRange2[1]: "<<mapRange2[1]<<std::endl;
-            
-            std::packaged_task<bool()> task([this, mapRange2] { return processBuffers(mapRange2); });
-            futures.push_back(task.get_future());
-            threads.push_back(std::thread(std::move(task)));
-            
-        }
-        
-        joinThreads();
-        
-        mapRange[0] = mapRange[1] + 1;
-
-    }
+    for (uint16_t m = 0; m<mapCount; ++m)
+        processBuffers(m);
     
     return true;
 
 }
 
-bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
+bool DBG::processBuffers(uint16_t m) {
     
     uint64_t pos = 0;
 //    int64_t initial_size = 0, final_size = 0;
     Buf<kmer> *buf;
+        
+    phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
     
-    for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m) {
+    std::ifstream bufFile(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::ios::in | std::ios::binary);
+    
+    while(bufFile && !(bufFile.peek() == EOF)) {
         
-        phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
+        bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
-        std::ifstream bufFile(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::ios::in | std::ios::binary);
+        buf = new Buf<kmer>(pos);
+        buf->pos = pos;
+        buf->size = pos;
+        alloc += buf->size * sizeof(kmer);
         
-        while(bufFile && !(bufFile.peek() == EOF)) {
+        bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
+        
+        for (uint64_t c = 0; c<pos; ++c) {
             
-            bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
+            kmer &khmer = buf->seq[c];
             
-            buf = new Buf<kmer>(pos);
-            buf->pos = pos;
-            buf->size = pos;
-            alloc += buf->size * sizeof(kmer);
+            DBGkmer &dbgkmer = map[khmer.hash];
             
-            bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-            
-            for (uint64_t c = 0; c<pos; ++c) {
+            for (uint64_t w = 0; w<4; ++w) { // update weights
                 
-                kmer &khmer = buf->seq[c];
-                
-                DBGkmer &dbgkmer = map[khmer.hash];
-                
-                for (uint64_t w = 0; w<4; ++w) { // update weights
-                    
-                    if (255 - dbgkmer.fw[w] >= khmer.fw[w])
-                        dbgkmer.fw[w] += khmer.fw[w];
-                    if (255 - dbgkmer.bw[w] >= khmer.bw[w])
-                        dbgkmer.bw[w] += khmer.bw[w];
-                }
-                if (dbgkmer.cov < 255)
-                    ++dbgkmer.cov; // increase kmer coverage
-                
+                if (255 - dbgkmer.fw[w] >= khmer.fw[w])
+                    dbgkmer.fw[w] += khmer.fw[w];
+                if (255 - dbgkmer.bw[w] >= khmer.bw[w])
+                    dbgkmer.bw[w] += khmer.bw[w];
             }
-            
-            delete[] buf->seq;
-            freed += buf->size * sizeof(kmer);
-            delete buf;
+            if (dbgkmer.cov < 255)
+                ++dbgkmer.cov; // increase kmer coverage
             
         }
         
-        bufFile.close();
-        
-        alloc += mapSize(*maps[m]);
-        remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
-        
-        dumpMap(userInput.prefix, m);
+        delete[] buf->seq;
+        freed += buf->size * sizeof(kmer);
+        delete buf;
         
     }
+    
+    bufFile.close();
+    
+    alloc += mapSize(*maps[m]);
+    remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
+    
+    dumpMap(userInput.prefix, m);
     
     return true;
     

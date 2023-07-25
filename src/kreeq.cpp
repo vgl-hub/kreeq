@@ -292,8 +292,8 @@ bool DBG::buffersToMaps() {
             mapRange2[0] = mapRange2[1];
             mapRange2[1] += mapN;
 
-            if (mapRange2[1] >= mapCount || t + 1 == threadN)
-                mapRange2[1] = mapCount;
+            if (mapRange2[1] >= mapRange[1] || t + 1 == threadN)
+                mapRange2[1] = mapRange[1];
             
             std::cout<<"mapRange2[0]: "<<mapRange2[0]<<"mapRange2[1]: "<<mapRange2[1]<<std::endl;
             

@@ -284,6 +284,8 @@ bool DBG::buffersToMaps() {
     for (uint16_t m = 0; m<mapCount; ++m)
         processBuffers(m);
     
+    jobWait(threadPool);
+    
     return true;
 
 }

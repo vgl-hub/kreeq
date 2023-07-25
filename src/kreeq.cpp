@@ -383,8 +383,12 @@ void DBG::summary() {
     
     lg.verbose("Computing summary statistics");
     
+    std::vector<std::function<bool()>> jobs;
+    
     for (uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return histogram(m); });
+        jobs.push_back([this, m] { return histogram(m); });
+        
+    threadPool.queueJobs(jobs);
     
     jobWait(threadPool);
     
@@ -463,14 +467,22 @@ void DBG::validateSequences(InSequences &inSequences) {
             mapRange[1] = m;
             
         }
-            
+        
+        std::vector<std::function<bool()>> jobs;
+        
         for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
-            threadPool.queueJob([=]{ return loadMap(userInput.prefix, m); });
+            jobs.push_back([this, m] { return loadMap(userInput.prefix, m); });
+            
+        threadPool.queueJobs(jobs);
         
         jobWait(threadPool);
         
+        jobs.clear();
+        
         for (InSegment* segment : *segments)
-            threadPool.queueJob([=]{ return validateSegment(segment, mapRange); });
+            jobs.push_back([this, segment, mapRange] { return validateSegment(segment, mapRange); });
+        
+        threadPool.queueJobs(jobs);
         
         jobWait(threadPool);
             
@@ -607,8 +619,12 @@ void DBG::cleanup() {
         
         lg.verbose("Deleting tmp files");
         
+        std::vector<std::function<bool()>> jobs;
+        
         for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
+            jobs.push_back([this, m] { return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
+        
+        threadPool.queueJobs(jobs);
         
         if (userInput.prefix != ".")
             rm_dir(userInput.prefix.c_str());
@@ -681,9 +697,13 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
 }
 
 void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
-        
+    
+    std::vector<std::function<bool()>> jobs;
+    
     for(uint16_t m = 0; m<mapCount; ++m)
-        threadPool.queueJob([=]{ return mergeMaps(m); });
+        jobs.push_back([this, m] { return mergeMaps(m); });
+    
+    threadPool.queueJobs(jobs);
     
     jobWait(threadPool);
     

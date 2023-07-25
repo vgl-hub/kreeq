@@ -88,7 +88,7 @@ bool DBG::memoryOk() {
 
 bool DBG::memoryOk(int64_t delta) {
     
-    return get_mem_inuse(3) + convert_memory(delta, 3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem);
+    return get_mem_inuse(3) + convert_memory(delta, 3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem);
     
 }
 
@@ -110,7 +110,7 @@ void DBG::consolidate() {
     
     dumpBuffers();
     
-    while (!memoryOk()){}
+    while (!memoryOk()){status();}
 
 }
 
@@ -262,7 +262,6 @@ bool DBG::buffersToMaps() {
     
     int16_t threadN = std::thread::hardware_concurrency() - 1;
     std::array<uint16_t, 2> mapRange = {0,0};
-//    int16_t threadN = std::thread::hardware_concurrency();
 
     while(mapRange[1] < mapCount - 1) {
         
@@ -298,6 +297,8 @@ bool DBG::buffersToMaps() {
         }
         
         joinThreads();
+        
+        mapRange[0] = mapRange[1] + 1;
 
     }
     

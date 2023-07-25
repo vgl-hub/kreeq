@@ -282,7 +282,7 @@ bool DBG::dumpBuffers() {
 bool DBG::buffersToMaps() {
 
     for (uint16_t m = 0; m<mapCount; ++m)
-        processBuffers(m);
+        threadPool.queueJob([=]{ return processBuffers(m); });
     
     jobWait(threadPool);
     

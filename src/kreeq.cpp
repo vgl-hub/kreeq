@@ -319,7 +319,7 @@ bool DBG::processBuffers(std::array<uint16_t, 2> mapRange) {
 //    int64_t initial_size = 0, final_size = 0;
     Buf<kmer> *buf;
     
-    for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m) {
+    for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m) {
         
         phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
         

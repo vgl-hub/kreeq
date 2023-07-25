@@ -95,7 +95,7 @@ bool DBG::memoryOk(int64_t delta) {
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
     {
-        std::lock_guard<std::mutex> lck(mtx);
+        std::lock_guard<std::mutex> lck(readMtx);
         readBatches.push(readBatch);
         alloc += readBatch->size() * sizeof(char);
     }
@@ -108,15 +108,17 @@ void DBG::consolidate() {
     
     status();
     
-    dumpBuffers();
-    
     while (!memoryOk()){status();}
 
 }
 
 void DBG::initHashing(){
     
-    int16_t threadN = std::thread::hardware_concurrency() - 1;
+    std::packaged_task<bool()> task([this] { return dumpBuffers(); });
+    futures.push_back(task.get_future());
+    threads.push_back(std::thread(std::move(task)));
+    
+    int16_t threadN = std::thread::hardware_concurrency() - 2; // the master thread and the writing thread will continue to run so -2
     
     for (uint8_t t = 0; t < threadN; t++) {
         std::packaged_task<bool()> task([this] { return hashSequences(); });
@@ -134,7 +136,7 @@ bool DBG::hashSequences() {
             
         {
             
-            std::unique_lock<std::mutex> lck(mtx);
+            std::unique_lock<std::mutex> lck(readMtx);
             
             if (readingDone && readBatches.size() == 0)
                 return true;
@@ -223,36 +225,55 @@ bool DBG::hashSequences() {
 
 bool DBG::dumpBuffers() {
     
+    bool hashing = true;
     std::vector<Buf<kmer>*> buffersVecCpy;
+    std::ofstream bufFile[mapCount];
     
-    {
-        std::unique_lock<std::mutex> lck(mtx);
-        buffersVecCpy = buffersVec;
-        buffersVec.clear();
-    }
+    for (uint16_t b = 0; b<mapCount; ++b) // we open all files at once
+        bufFile[b] = std::ofstream(userInput.prefix + "/.buf." + std::to_string(b) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
     
-    for (uint16_t m = 0; m<mapCount; ++m) {
+    while (hashing) {
         
-        auto bufFile = std::fstream(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
-        
-        for (Buf<kmer>* buffers : buffersVecCpy) {
+        if (readingDone) { // if we have finished reading the input
             
-            Buf<kmer>* buffer = &buffers[m];
-            bufFile.write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
-            bufFile.write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
-            delete[] buffers[m].seq;
-            freed += buffers[m].size * sizeof(kmer);
+            uint8_t hashingDone = 0;
+        
+            for (uint8_t i = 1; i < futures.size(); ++i) { // we check how many hashing threads are still running
+                if (futures[i].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+                    ++hashingDone;
+            }
+            
+            if (hashingDone == futures.size() - 1) // if all hashing threads are done we exit the loop after one more iteration
+                hashing = false;
+                    
+        }
+        
+        {
+            std::unique_lock<std::mutex> lck(hashMtx); // we safely collect the new buffers
+            buffersVecCpy = buffersVec;
+            buffersVec.clear();
+        }
+        
+        for (Buf<kmer>* buffers : buffersVecCpy) { // for each array of buffers
+            
+            for (uint16_t b = 0; b<mapCount; ++b) { // for each buffer file
+                
+                Buf<kmer>* buffer = &buffers[b];
+                bufFile[b].write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
+                bufFile[b].write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
+                delete[] buffers[b].seq;
+                freed += buffers[b].size * sizeof(kmer);
+                
+            }
+            
+            delete[] buffers;
             
         }
         
-        bufFile.close();
-        
     }
     
-    for (Buf<kmer>* buffers : buffersVecCpy)
-        delete[] buffers;
-    
-    buffersVecCpy.clear();
+    for (uint16_t b = 0; b<mapCount; ++b) // we close all files
+        bufFile[b].close();
     
     return true;
     
@@ -397,11 +418,7 @@ void DBG::summary() {
         readingDone = true;
         
         joinThreads();
-        
-        lg.verbose("Writing residual buffers");
-        
-        dumpBuffers();
-        
+                
         lg.verbose("Loading buffers in maps");
         
         buffersToMaps();

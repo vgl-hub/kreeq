@@ -19,11 +19,10 @@ struct DBGkmer {
 class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
     std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0}, buffers{0};
-    std::vector<uint32_t> dependencies;
-    std::atomic<bool> readingDone{false}, dumpMaps{false};
+    std::atomic<bool> readingDone{false};
     std::vector<std::thread> threads;
     std::vector<std::future<bool>> futures;
-    std::mutex hashMtx;
+    std::mutex readMtx, hashMtx;
     std::chrono::high_resolution_clock::time_point past;
     
     UserInputKreeq& userInput;

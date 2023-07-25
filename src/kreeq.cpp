@@ -285,7 +285,7 @@ bool DBG::buffersToMaps() {
         if (mapN < 1)
             mapN = 1;
         
-        std::array<uint16_t, 2> mapRange2 = {mapRange[0],0};
+        std::array<uint16_t, 2> mapRange2 = {mapRange[0],mapRange[0]};
         
         for(uint16_t t = 0; t<threadN; ++t) {
             

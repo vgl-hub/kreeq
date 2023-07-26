@@ -501,7 +501,7 @@ void DBG::validateSequences(InSequences &inSequences) {
         
         threadPool.queueJobs(jobs);
         
-        jobWait(threadPool);
+        jobWait(threadPool, true);
             
         for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m) {
             

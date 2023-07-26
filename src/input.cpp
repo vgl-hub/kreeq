@@ -50,8 +50,6 @@ void Input::read(uint8_t mode, InSequences& inSequences) {
         
         {
             
-            if (userInput.inSequence.empty()) {return;}
-            
             DBG knav(userInput); // navigational kmerdb
             
             if (userInput.inReads.size() > 0) {
@@ -81,7 +79,8 @@ void Input::read(uint8_t mode, InSequences& inSequences) {
             
             knav.summary();
             
-            knav.validateSequences(inSequences); // validate the input sequence
+            if (!userInput.inSequence.empty())
+                knav.validateSequences(inSequences); // validate the input sequence
             
             knav.report(); // output
             

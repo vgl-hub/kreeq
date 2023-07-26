@@ -372,11 +372,15 @@ int main(int argc, char **argv) {
     
     lg.verbose("Loaded user input");
     
-    lg.verbose("Loading input sequences");
     InSequences inSequences; // initialize sequence collection object
-    in.loadSequences(inSequences); // read input genome
-    lg.verbose("Sequences loaded");
-    in.read(mode, inSequences); // read input reads
+    
+    if (!userInput.inSequence.empty()) {
+        lg.verbose("Loading input sequences");
+        in.loadSequences(inSequences); // read input genome
+        lg.verbose("Sequences loaded");
+    }
+    
+    in.read(mode, inSequences); // read input reads and validate
 
     threadPool.join(); // join threads
     

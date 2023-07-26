@@ -94,11 +94,8 @@ bool DBG::memoryOk(int64_t delta) {
 
 bool DBG::traverseInReads(baseStr *readBatch) { // specialized for string objects
     
-    {
-        std::lock_guard<std::mutex> lck(readMtx);
-        readBatches.push(readBatch);
-//        alloc += readBatch->size() * sizeof(char);
-    }
+    std::lock_guard<std::mutex> lck(readMtx);
+    readBatches.push(readBatch);
     
     return true;
     
@@ -149,6 +146,7 @@ bool DBG::hashSequences() {
             
             readBatch = readBatches.front();
             readBatches.pop();
+            alloc += readBatch->len * sizeof(char);
             
         }
 

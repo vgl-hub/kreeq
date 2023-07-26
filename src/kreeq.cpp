@@ -286,8 +286,15 @@ bool DBG::buffersToMaps() {
     
     std::vector<std::function<bool()>> jobs;
     
-    for (uint16_t m = 0; m<mapCount; ++m)
-        jobs.push_back([this, m] { return processBuffers(m); });
+    std::vector<uint64_t> fileSizes;
+    
+    for (uint16_t m = 0; m<mapCount; ++m) // compute size of buffer files
+        fileSizes.push_back(fileSize(userInput.prefix + "/.buf." + std::to_string(m) + ".bin"));
+    
+    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
+    
+    for (uint32_t i : idx)
+        jobs.push_back([this, i] { return processBuffers(i); });
         
     threadPool.queueJobs(jobs);
     
@@ -388,8 +395,15 @@ void DBG::summary() {
     
     std::vector<std::function<bool()>> jobs;
     
-    for (uint16_t m = 0; m<mapCount; ++m)
-        jobs.push_back([this, m] { return histogram(m); });
+    std::vector<uint64_t> fileSizes;
+    
+    for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
+        fileSizes.push_back(fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin"));
+    
+    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
+    
+    for (uint32_t i : idx)
+        jobs.push_back([this, i] { return histogram(i); });
         
     threadPool.queueJobs(jobs);
     
@@ -703,8 +717,15 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
     std::vector<std::function<bool()>> jobs;
     
-    for(uint16_t m = 0; m<mapCount; ++m)
-        jobs.push_back([this, m] { return mergeMaps(m); });
+    std::vector<uint64_t> fileSizes;
+    
+    for (uint16_t m = 0; m<mapCount; ++m) // compute size of buffer files
+        fileSizes.push_back(fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin"));
+    
+    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
+    
+    for(uint32_t i : idx)
+        jobs.push_back([this, i] { return mergeMaps(i); });
     
     threadPool.queueJobs(jobs);
     

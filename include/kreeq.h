@@ -27,7 +27,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     
     UserInputKreeq& userInput;
     
-    std::queue<std::string*> readBatches;
+    std::queue<baseStr*> readBatches;
     std::vector<Buf<kmer>*> buffersVec;
 
 public:
@@ -57,7 +57,7 @@ public:
     
     bool memoryOk(int64_t delta);
     
-    bool traverseInReads(std::string *readBatch);
+    bool traverseInReads(baseStr *readBatch);
     
     void consolidate();
     

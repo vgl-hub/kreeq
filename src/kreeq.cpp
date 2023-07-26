@@ -92,12 +92,12 @@ bool DBG::memoryOk(int64_t delta) {
     
 }
 
-bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
+bool DBG::traverseInReads(baseStr *readBatch) { // specialized for string objects
     
     {
         std::lock_guard<std::mutex> lck(readMtx);
         readBatches.push(readBatch);
-        alloc += readBatch->size() * sizeof(char);
+//        alloc += readBatch->size() * sizeof(char);
     }
     
     return true;
@@ -133,7 +133,7 @@ void DBG::initHashing(){
 
 bool DBG::hashSequences() {
     //   Log threadLog;
-    std::string *readBatch;
+    baseStr *readBatch;
     
     while (true) {
             
@@ -152,7 +152,7 @@ bool DBG::hashSequences() {
             
         }
 
-        uint64_t len = readBatch->size();
+        uint64_t len = readBatch->pos;
         
         if (len<k) {
             delete readBatch;
@@ -160,9 +160,8 @@ bool DBG::hashSequences() {
         }
         
         Buf<kmer> *buffers = new Buf<kmer>[mapCount];
-        unsigned char *first = (unsigned char*) readBatch->c_str();
         uint8_t *str = new uint8_t[len];
-        uint8_t e = 0;
+        uint8_t e = 0, *first = readBatch->chars;
         uint64_t key, pos = 0, kcount = len-k+1;
         bool isFw = false;
         Buf<kmer>* buffer;
@@ -207,6 +206,7 @@ bool DBG::hashSequences() {
         }
         
         delete[] str;
+        delete[] readBatch->chars;
         delete readBatch;
         
         //    threadLog.add("Processed sequence: " + sequence->header);

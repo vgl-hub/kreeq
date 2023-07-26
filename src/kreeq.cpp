@@ -298,7 +298,7 @@ bool DBG::buffersToMaps() {
         
     threadPool.queueJobs(jobs);
     
-    jobWait(threadPool);
+    jobWait(threadPool, true);
     
     return true;
 
@@ -407,7 +407,7 @@ void DBG::summary() {
         
     threadPool.queueJobs(jobs);
     
-    jobWait(threadPool);
+    jobWait(threadPool, true);
     
     DBGstats();
 
@@ -492,7 +492,7 @@ void DBG::validateSequences(InSequences &inSequences) {
             
         threadPool.queueJobs(jobs);
         
-        jobWait(threadPool);
+        jobWait(threadPool, true);
         
         jobs.clear();
         
@@ -648,7 +648,7 @@ void DBG::cleanup() {
         
     }
     
-    jobWait(threadPool);
+    jobWait(threadPool, true);
     
 }
 
@@ -729,7 +729,7 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
     threadPool.queueJobs(jobs);
     
-    jobWait(threadPool);
+    jobWait(threadPool, true);
     
     DBGstats();
     

@@ -152,7 +152,7 @@ bool DBG::hashSequences() {
             
         }
 
-        uint64_t len = readBatch->pos;
+        uint64_t len = readBatch->len;
         
         if (len<k) {
             delete readBatch;

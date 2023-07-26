@@ -229,8 +229,8 @@ bool DBG::dumpBuffers() {
     std::vector<Buf<kmer>*> buffersVecCpy;
     std::ofstream bufFile[mapCount];
     
-    for (uint16_t b = 0; b<mapCount; ++b) // we open all files at once
-        bufFile[b] = std::ofstream(userInput.prefix + "/.buf." + std::to_string(b) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
+//    for (uint16_t b = 0; b<mapCount; ++b) // we open all files at once
+
     
     while (hashing) {
         
@@ -258,11 +258,15 @@ bool DBG::dumpBuffers() {
             
             for (uint16_t b = 0; b<mapCount; ++b) { // for each buffer file
                 
+                bufFile[b] = std::ofstream(userInput.prefix + "/.buf." + std::to_string(b) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
+                
                 Buf<kmer>* buffer = &buffers[b];
                 bufFile[b].write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
                 bufFile[b].write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
                 delete[] buffers[b].seq;
                 freed += buffers[b].size * sizeof(kmer);
+                
+                bufFile[b].close();
                 
             }
             
@@ -272,8 +276,8 @@ bool DBG::dumpBuffers() {
         
     }
     
-    for (uint16_t b = 0; b<mapCount; ++b) // we close all files
-        bufFile[b].close();
+//    for (uint16_t b = 0; b<mapCount; ++b) // we close all files
+        
     
     return true;
     

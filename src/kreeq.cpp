@@ -120,6 +120,9 @@ void DBG::initHashing(){
     
     int16_t threadN = std::thread::hardware_concurrency() - 2; // the master thread and the writing thread will continue to run so -2
     
+    if (threadN == 0)
+        threadN = 1;
+    
     for (uint8_t t = 0; t < threadN; t++) {
         std::packaged_task<bool()> task([this] { return hashSequences(); });
         futures.push_back(task.get_future());
@@ -229,8 +232,8 @@ bool DBG::dumpBuffers() {
     std::vector<Buf<kmer>*> buffersVecCpy;
     std::ofstream bufFile[mapCount];
     
-//    for (uint16_t b = 0; b<mapCount; ++b) // we open all files at once
-
+    for (uint16_t b = 0; b<mapCount; ++b) // we open all files at once
+        bufFile[b] = std::ofstream(userInput.prefix + "/.buf." + std::to_string(b) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
     
     while (hashing) {
         
@@ -258,15 +261,11 @@ bool DBG::dumpBuffers() {
             
             for (uint16_t b = 0; b<mapCount; ++b) { // for each buffer file
                 
-                bufFile[b] = std::ofstream(userInput.prefix + "/.buf." + std::to_string(b) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
-                
                 Buf<kmer>* buffer = &buffers[b];
                 bufFile[b].write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
                 bufFile[b].write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
                 delete[] buffers[b].seq;
                 freed += buffers[b].size * sizeof(kmer);
-                
-                bufFile[b].close();
                 
             }
             
@@ -276,8 +275,8 @@ bool DBG::dumpBuffers() {
         
     }
     
-//    for (uint16_t b = 0; b<mapCount; ++b) // we close all files
-        
+    for (uint16_t b = 0; b<mapCount; ++b) // we close all files
+        bufFile[b].close();
     
     return true;
     

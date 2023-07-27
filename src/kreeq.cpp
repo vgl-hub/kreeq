@@ -305,6 +305,8 @@ bool DBG::buffersToMaps() {
         
         std::vector<uint64_t> fileSizes;
         
+        std::cout<<mapRange[0]<<"\t"<<mapRange[1]<<std::endl;
+        
         for (uint16_t b = mapRange[0]; b<mapRange[1]; ++b) // compute size of buffer files
             fileSizes.push_back(fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin"));
         

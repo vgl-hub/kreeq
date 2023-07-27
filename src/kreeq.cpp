@@ -301,7 +301,7 @@ bool DBG::buffersToMaps() {
             jobs.push_back([this, i] { return processBuffers(i); });
             ++i;
             
-            if (!memoryOk()) {
+            if (i == mapCount || !memoryOk()) {
                 threadPool.queueJobs(jobs);
                 break;
             }

@@ -303,6 +303,7 @@ bool DBG::buffersToMaps() {
                 threadPool.queueJobs(jobs);
                 jobWait(threadPool);
                 jobs.clear();
+                break;
             }
             
         }

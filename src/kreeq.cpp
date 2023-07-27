@@ -134,6 +134,7 @@ void DBG::initHashing(){
 bool DBG::hashSequences() {
     //   Log threadLog;
     std::string *readBatch;
+    uint64_t len;
     
     while (true) {
             
@@ -149,10 +150,11 @@ bool DBG::hashSequences() {
             
             readBatch = readBatches.front();
             readBatches.pop();
+            len = readBatch->size();
+            
+            alloc += len * sizeof(uint8_t); // this is for the string we allocate next
             
         }
-
-        uint64_t len = readBatch->size();
         
         if (len<k) {
             delete readBatch;
@@ -217,7 +219,7 @@ bool DBG::hashSequences() {
         for (uint16_t b = 0; b<mapCount; ++b)
             alloc += buffers[b].size * sizeof(kmer);
 
-        freed += len * sizeof(char);
+        freed += len * sizeof(char) * 2;
         buffersVec.push_back(buffers);
         
     }
@@ -284,31 +286,52 @@ bool DBG::dumpBuffers() {
 
 bool DBG::buffersToMaps() {
     
-    std::vector<std::function<bool()>> jobs;
+    int16_t threadN = std::thread::hardware_concurrency() - 1; // the master thread will continue to run so -1
     
-    uint16_t b = 0;
+    if (threadN == 0)
+        threadN = 1;
+    
+    uint16_t b = 0, t = 0;
+    uint64_t sum = 0, fl = 0;
+    uint8_t threadsDone = 0;
+    bool done = false;
     
     while (b < mapCount) {
         
-        uint64_t sum = 0;
-    
-        while (true) {
+        fl = fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin");
+        sum += fl;
+        
+        std::packaged_task<bool()> task([this, b] { return processBuffers(b); });
+        futures.push_back(task.get_future());
+        threads.push_back(std::thread(std::move(task)));
+        
+        ++b;
+        
+        if (b == mapCount || t == threadN || !memoryOk(sum)) {
             
-            sum += fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin");
-            
-            jobs.push_back([this, b] { return processBuffers(b); });
-            ++b;
-            
-            if (b == mapCount || !memoryOk(sum)) {
-                threadPool.queueJobs(jobs);
-                jobWait(threadPool);
-                jobs.clear();
-                break;
+            while (!done) {
+                for (uint8_t i = 0; i < futures.size(); ++i) {
+                    if (futures[i].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+                        if (threads[i].joinable()) {
+                            threads[i].join();
+                            ++threadsDone;
+                            futures.erase(futures.begin()+i);
+                            threads.erase(threads.begin()+i);
+                            --t;
+                        }
+                    }else{
+                        status();
+                    }
+                }
+                if (threadsDone > 0)
+                    done = true;
             }
             
         }
         
     }
+    
+    joinThreads();
     
     return true;
 
@@ -331,9 +354,11 @@ bool DBG::processBuffers(uint16_t m) {
         buf = new Buf<kmer>(pos);
         buf->pos = pos;
         buf->size = pos;
-        alloc += buf->size * sizeof(kmer);
+        
+        map.reserve(pos);
         
         bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
+        alloc += buf->size * sizeof(kmer);
         
         for (uint64_t c = 0; c<pos; ++c) {
             

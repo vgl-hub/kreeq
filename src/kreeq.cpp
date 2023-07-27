@@ -284,35 +284,33 @@ bool DBG::dumpBuffers() {
 
 bool DBG::buffersToMaps() {
     
-    std::array<uint16_t, 2> mapRange = {0,0};
-
-    while(mapRange[1] < mapCount - 1) {
-
-        uint64_t max = 0;
-
-        for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
-
-            max += fileSize(userInput.prefix + "/.buf." + std::to_string(m) + ".bin");
-
-            if(!memoryOk(max))
-                break;
-
-            mapRange[1] = m;
-
-        }
-
-        std::vector<std::function<bool()>> jobs;
-        
-        for (uint16_t b = mapRange[0]; b<=mapRange[1]; ++b)
-            jobs.push_back([this, b] { return processBuffers(b); });
+    std::vector<std::function<bool()>> jobs;
+    
+    std::vector<uint64_t> fileSizes;
+    
+    for (uint16_t m = 0; m<mapCount; ++m) // compute size of buffer files
+        fileSizes.push_back(fileSize(userInput.prefix + "/.buf." + std::to_string(m) + ".bin"));
+    
+    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
+    
+    uint16_t i = 0
+    while (i < mapCount) {
+    
+        while (true) {
             
-        threadPool.queueJobs(jobs);
+            jobs.push_back([this, i] { return processBuffers(i); });
+            ++i;
+            
+            if (!memoryOk()) {
+                threadPool.queueJobs(jobs);
+                break;
+            }
+            
+        }
         
-        jobWait(threadPool);
-
-        mapRange[0] = mapRange[1] + 1;
-
     }
+    
+    jobWait(threadPool);
     
     return true;
 

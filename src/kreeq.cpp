@@ -286,31 +286,27 @@ bool DBG::buffersToMaps() {
     
     std::vector<std::function<bool()>> jobs;
     
-    std::vector<uint64_t> fileSizes;
+    uint16_t b = 0;
     
-    for (uint16_t m = 0; m<mapCount; ++m) // compute size of buffer files
-        fileSizes.push_back(fileSize(userInput.prefix + "/.buf." + std::to_string(m) + ".bin"));
-    
-    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
-    
-    uint16_t i = 0;
-    while (i < mapCount) {
+    while (b < mapCount) {
+        
+        uint64_t max = 0;
     
         while (true) {
             
-            jobs.push_back([this, i] { return processBuffers(i); });
-            ++i;
+            max += fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin");
             
-            if (i == mapCount || !memoryOk()) {
+            jobs.push_back([this, b] { return processBuffers(b); });
+            ++b;
+            
+            if (!memoryOk(max)) {
                 threadPool.queueJobs(jobs);
-                break;
+                jobWait(threadPool);
             }
             
         }
         
     }
-    
-    jobWait(threadPool);
     
     return true;
 

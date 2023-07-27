@@ -69,7 +69,7 @@ public:
     
     bool buffersToMaps();
     
-    bool processBuffers(std::array<uint16_t, 2> mapRange);
+    bool processBuffers(uint16_t m);
     
     void cleanup();
     

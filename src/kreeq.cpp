@@ -293,7 +293,7 @@ bool DBG::buffersToMaps() {
     
     std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
     
-    uint16_t i = 0
+    uint16_t i = 0;
     while (i < mapCount) {
     
         while (true) {

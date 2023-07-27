@@ -302,6 +302,7 @@ bool DBG::buffersToMaps() {
             if (b == mapCount || !memoryOk(sum)) {
                 threadPool.queueJobs(jobs);
                 jobWait(threadPool);
+                jobs.clear();
             }
             
         }

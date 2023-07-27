@@ -302,7 +302,7 @@ bool DBG::buffersToMaps() {
 
         }
 
-//        std::cout<<"mapRange[0]: "<<mapRange[0]<<"mapRange[1]: "<<mapRange[1]<<std::endl;
+        std::cout<<"mapRange[0]: "<<mapRange[0]<<"mapRange[1]: "<<mapRange[1]<<std::endl;
 
         uint16_t mapN = (mapRange[1] - mapRange[0])/threadN;
 
@@ -319,7 +319,7 @@ bool DBG::buffersToMaps() {
             if (mapRange2[1] >= mapRange[1] || t + 1 == threadN)
                 mapRange2[1] = mapRange[1] + 1;
 
-//            std::cout<<"mapRange2[0]: "<<mapRange2[0]<<"mapRange2[1]: "<<mapRange2[1]<<std::endl;
+            std::cout<<"mapRange2[0]: "<<mapRange2[0]<<"mapRange2[1]: "<<mapRange2[1]<<std::endl;
 
             std::packaged_task<bool()> task([this, mapRange2] { return processBuffers(mapRange2); });
             futures.push_back(task.get_future());

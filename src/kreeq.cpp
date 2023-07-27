@@ -290,16 +290,16 @@ bool DBG::buffersToMaps() {
     
     while (b < mapCount) {
         
-        uint64_t max = 0;
+        uint64_t sum = 0;
     
         while (true) {
             
-            max += fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin");
+            sum += fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin");
             
             jobs.push_back([this, b] { return processBuffers(b); });
             ++b;
             
-            if (!memoryOk(max)) {
+            if (b == mapCount || !memoryOk(sum)) {
                 threadPool.queueJobs(jobs);
                 jobWait(threadPool);
             }

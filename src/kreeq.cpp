@@ -303,14 +303,9 @@ bool DBG::buffersToMaps() {
 
         std::vector<std::function<bool()>> jobs;
         
-        std::vector<uint64_t> fileSizes;
-        
         for (uint16_t b = mapRange[0]; b<=mapRange[1]; ++b) // compute size of buffer files
             fileSizes.push_back(fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin"));
         
-        std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
-        
-        for (uint32_t i : idx)
             jobs.push_back([this, i] { return processBuffers(i); });
             
         threadPool.queueJobs(jobs);

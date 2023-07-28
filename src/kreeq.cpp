@@ -161,13 +161,13 @@ bool DBG::hashSequences() {
             return true;
         }
         
-        Buf<kmer> *buffers = new Buf<kmer>[mapCount];
+        Buf<uint8_t> *buffers = new Buf<uint8_t>[mapCount];
         unsigned char *first = (unsigned char*) readBatch->c_str();
         uint8_t *str = new uint8_t[len];
         uint8_t e = 0;
         uint64_t key, pos = 0, kcount = len-k+1;
         bool isFw = false;
-        Buf<kmer>* buffer;
+        Buf<uint8_t>* buffer;
         
         for (uint64_t p = 0; p<kcount; ++p) {
             
@@ -190,21 +190,23 @@ bool DBG::hashSequences() {
             key = hash(str+p, &isFw);
 
             buffer = &buffers[key % mapCount];
-            pos = buffer->newPos();
-            kmer &khmer = buffer->seq[pos];
-            khmer.hash = key;
+            pos = buffer->newPos(9);;
+            memcpy(&buffer->seq[pos-9], &key, 8);
+            edgeBit edges;
             
             if (isFw){
                 if (ctoi[*(first+p+k)] <= 3)
-                    khmer.fw[ctoi[*(first+p+k)]] = 1;
+                    edges.assign(ctoi[*(first+p+k)]);
                 if (p > 0 && *(str+p-1) <= 3)
-                    khmer.bw[*(str+p-1)] = 1;
+                    edges.assign(4+*(str+p-1));
             }else{
                 if (p > 0 && *(str+p-1) <= 3)
-                    khmer.fw[3-*(str+p-1)] = 1;
+                    edges.assign(3-*(str+p-1));
                 if (ctoi[*(first+p+k)] <= 3)
-                    khmer.bw[3-ctoi[*(first+p+k)]] = 1;
+                    edges.assign(4+3-ctoi[*(first+p+k)]);
             }
+            
+            memcpy(&buffer->seq[pos-1], &edges, 1);
             
         }
         
@@ -217,7 +219,7 @@ bool DBG::hashSequences() {
         
         std::lock_guard<std::mutex> lck(hashMtx);
         for (uint16_t b = 0; b<mapCount; ++b)
-            alloc += buffers[b].size * sizeof(kmer);
+            alloc += buffers[b].size * sizeof(uint8_t);
 
         freed += len * sizeof(char) * 2;
         buffersVec.push_back(buffers);
@@ -231,7 +233,7 @@ bool DBG::hashSequences() {
 bool DBG::dumpBuffers() {
     
     bool hashing = true;
-    std::vector<Buf<kmer>*> buffersVecCpy;
+    std::vector<Buf<uint8_t>*> buffersVecCpy;
     std::ofstream bufFile[mapCount];
     
     for (uint16_t b = 0; b<mapCount; ++b) // we open all files at once
@@ -259,15 +261,15 @@ bool DBG::dumpBuffers() {
             buffersVec.clear();
         }
         
-        for (Buf<kmer>* buffers : buffersVecCpy) { // for each array of buffers
+        for (Buf<uint8_t>* buffers : buffersVecCpy) { // for each array of buffers
             
             for (uint16_t b = 0; b<mapCount; ++b) { // for each buffer file
                 
-                Buf<kmer>* buffer = &buffers[b];
+                Buf<uint8_t>* buffer = &buffers[b];
                 bufFile[b].write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
-                bufFile[b].write(reinterpret_cast<const char *>(buffer->seq), sizeof(kmer) * buffer->pos);
+                bufFile[b].write(reinterpret_cast<const char *>(buffer->seq), sizeof(uint8_t) * buffer->pos);
                 delete[] buffers[b].seq;
-                freed += buffers[b].size * sizeof(kmer);
+                freed += buffers[b].size * sizeof(uint8_t);
                 
             }
             
@@ -303,9 +305,10 @@ bool DBG::processBuffers(uint16_t m) {
     
     while (!memoryOk()){}
     
-    uint64_t pos = 0;
+    uint64_t pos = 0, hash;
 //    int64_t initial_size = 0, final_size = 0;
-    Buf<kmer> *buf;
+    Buf<uint8_t> *buf;
+    edgeBit edges;
         
     phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
     
@@ -315,27 +318,28 @@ bool DBG::processBuffers(uint16_t m) {
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
-        buf = new Buf<kmer>(pos);
+        buf = new Buf<uint8_t>(pos);
         buf->pos = pos;
         buf->size = pos;
         
-        map.reserve(pos);
+        map.reserve(pos * 8);
         
-        bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(kmer) * buf->pos);
-        alloc += buf->size * sizeof(kmer);
+        bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(uint8_t) * buf->pos);
+        alloc += buf->size * sizeof(uint8_t);
         
-        for (uint64_t c = 0; c<pos; ++c) {
+        for (uint64_t c = 0; c<pos; c+=9) {
             
-            kmer &khmer = buf->seq[c];
+            memcpy(&hash, &buf->seq[c], 8);
+            memcpy(&edges, &buf->seq[c+8], 1);
             
-            DBGkmer &dbgkmer = map[khmer.hash];
+            DBGkmer &dbgkmer = map[hash];
             
             for (uint64_t w = 0; w<4; ++w) { // update weights
                 
-                if (255 - dbgkmer.fw[w] >= khmer.fw[w])
-                    dbgkmer.fw[w] += khmer.fw[w];
-                if (255 - dbgkmer.bw[w] >= khmer.bw[w])
-                    dbgkmer.bw[w] += khmer.bw[w];
+                if (255 - dbgkmer.fw[w] >= edges.read(w))
+                    dbgkmer.fw[w] += edges.read(w);
+                if (255 - dbgkmer.bw[w] >= edges.read(4+w))
+                    dbgkmer.bw[w] += edges.read(4+w);
             }
             if (dbgkmer.cov < 255)
                 ++dbgkmer.cov; // increase kmer coverage
@@ -343,7 +347,7 @@ bool DBG::processBuffers(uint16_t m) {
         }
         
         delete[] buf->seq;
-        freed += buf->size * sizeof(kmer);
+        freed += buf->size * sizeof(uint8_t);
         delete buf;
         
     }

@@ -10,6 +10,27 @@ struct kmer {
     
 };
 
+struct edgeBit {
+    
+    uint8_t edges = 0;
+    
+    void assign(const uint8_t edge) {
+        edges |= 1 << (7 - edge);
+    }
+    
+    bool read(const uint8_t edge) {
+        return edges & 1 << (7 - edge);
+    }
+    
+};
+
+struct kmer2 {
+    
+    uint64_t hash = 0;
+    edgeBit edges;
+    
+};
+
 struct DBGkmer {
     
     uint8_t fw[4] = {0}, bw[4] = {0}, cov = 0;
@@ -28,7 +49,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     UserInputKreeq& userInput;
     
     std::queue<std::string*> readBatches;
-    std::vector<Buf<kmer>*> buffersVec;
+    std::vector<Buf<uint8_t>*> buffersVec;
 
 public:
     

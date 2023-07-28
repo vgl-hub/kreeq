@@ -295,17 +295,20 @@ bool DBG::buffersToMaps() {
     uint64_t sum = 0, fl = 0;
     uint8_t threadsDone = 0;
     bool done = false;
+    std::vector<uint64_t> jobSizes;
     
     while (b < mapCount) {
         
-        fl = fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin");
-        sum += fl;
+        jobSize = fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin");
+        jobSizes.push_back(jobSize);
+        sum += jobSize;
         
         std::packaged_task<bool()> task([this, b] { return processBuffers(b); });
         futures.push_back(task.get_future());
         threads.push_back(std::thread(std::move(task)));
         
         ++b;
+        ++t;
         
         if (b == mapCount || t == threadN || !memoryOk(sum)) {
             
@@ -318,6 +321,8 @@ bool DBG::buffersToMaps() {
                             futures.erase(futures.begin()+i);
                             threads.erase(threads.begin()+i);
                             --t;
+                            sum -= jobSizes[i];
+                            break;
                         }
                     }else{
                         status();

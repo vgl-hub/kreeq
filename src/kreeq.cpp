@@ -286,63 +286,22 @@ bool DBG::dumpBuffers() {
 
 bool DBG::buffersToMaps() {
     
-    int16_t threadN = std::thread::hardware_concurrency() - 1; // the master thread will continue to run so -1
+    std::vector<std::function<bool()>> jobs;
     
-    if (threadN == 0)
-        threadN = 1;
+    for(uint16_t b = 0; b<mapCount; ++b)
+        jobs.push_back([this, b] { return processBuffers(b); });
+        
+    threadPool.queueJobs(jobs);
     
-    uint16_t b = 0, t = 0;
-    uint64_t sum = 0, jobSize = 0;
-    uint8_t threadsDone = 0;
-    bool done = false;
-    std::vector<uint64_t> jobSizes;
-    
-    while (b < mapCount) {
-        
-        jobSize = fileSize(userInput.prefix + "/.buf." + std::to_string(b) + ".bin");
-        jobSizes.push_back(jobSize);
-        sum += jobSize;
-        
-        std::packaged_task<bool()> task([this, b] { return processBuffers(b); });
-        futures.push_back(task.get_future());
-        threads.push_back(std::thread(std::move(task)));
-        
-        ++b;
-        ++t;
-        
-        if (b == mapCount || t == threadN || !memoryOk(sum)) {
-            
-            while (!done) {
-                for (uint8_t i = 0; i < futures.size(); ++i) {
-                    if (futures[i].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-                        if (threads[i].joinable()) {
-                            threads[i].join();
-                            ++threadsDone;
-                            futures.erase(futures.begin()+i);
-                            threads.erase(threads.begin()+i);
-                            --t;
-                            sum -= jobSizes[i];
-                            break;
-                        }
-                    }else{
-                        status();
-                    }
-                }
-                if (threadsDone > 0)
-                    done = true;
-            }
-            
-        }
-        
-    }
-    
-    joinThreads();
+    jobWait(threadPool);
     
     return true;
 
 }
 
 bool DBG::processBuffers(uint16_t m) {
+    
+    while (!memoryOk()){}
     
     uint64_t pos = 0;
 //    int64_t initial_size = 0, final_size = 0;

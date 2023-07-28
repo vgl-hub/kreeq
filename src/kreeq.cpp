@@ -292,7 +292,7 @@ bool DBG::buffersToMaps() {
         threadN = 1;
     
     uint16_t b = 0, t = 0;
-    uint64_t sum = 0, fl = 0;
+    uint64_t sum = 0, jobSize = 0;
     uint8_t threadsDone = 0;
     bool done = false;
     std::vector<uint64_t> jobSizes;

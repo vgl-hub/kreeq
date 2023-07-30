@@ -624,11 +624,11 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
             map = maps[i];
             
             auto it = map->find(key);
-
+            
+            DBGkmer khmer;
+            
             if (it != map->end()) {
-                DBGkmer khmer = it->second;
-                memcpy(DBGsequence[c].fw, khmer.fw, sizeof(khmer.fw));
-                memcpy(DBGsequence[c].bw, khmer.bw, sizeof(khmer.bw));
+                khmer = it->second;
                 DBGsequence[c].cov = khmer.cov;
                 DBGsequence[c].isFw = isFw;
             }
@@ -641,16 +641,20 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
 
                 if (DBGsequence[c].isFw){
 
-                    if ((c<kcount-1 && DBGsequence[c].fw[*(str+c+k)] == 0) && (c>0 && DBGsequence[c].bw[*(str+c-1)] == 0)){
-                        edgeMissingKmers.push_back(c);
+                    if (c<kcount-1 && khmer.fw[*(str+c+k)] != 0)
+                        DBGsequence[c].fw = khmer.fw[*(str+c+k)];
+                        
+                    if (c>0 && khmer.bw[*(str+c-1)] != 0)
+                        DBGsequence[c].bw = khmer.bw[*(str+c-1)];
                         //                        std::cout<<"edge error1"<<std::endl;
-                    }
                 }else{
 
-                    if ((c>0 && DBGsequence[c].fw[3-*(str+c-1)] == 0) && (c<kcount-1 && DBGsequence[c].bw[3-*(str+c+k)] == 0)){
-                        edgeMissingKmers.push_back(c);
+                    if (c>0 && khmer.fw[3-*(str+c-1)] != 0)
+                        DBGsequence[c].fw = khmer.fw[3-*(str+c-1)];
+                        
+                    if (c<kcount-1 && khmer.bw[3-*(str+c+k)] != 0)
+                        DBGsequence[c].bw = khmer.bw[3-*(str+c+k)];
                         //                        std::cout<<"edge error2"<<std::endl;
-                    }
                 }
             }
             ++kmers;
@@ -684,7 +688,7 @@ bool DBG::validateSegment(uint32_t s) {
 
 void DBG::cleanup() {
     
-    if(!(userInput.inDBG.size() == 1) && userInput.outFile == "") {
+    if(!(userInput.inDBG.size() == 1) && userInput.outFile.find(".kreeq") == std::string::npos) {
         
         lg.verbose("Deleting tmp files");
         
@@ -901,7 +905,120 @@ void DBG::printTable() {
     
     std::ofstream ofs(userInput.outFile);
     
-    ofs<<+k<<"\n"<<mapCount<<std::endl;
+    genome->sortPathsByOriginal();
+    
+    std::vector<InPath> inPaths = genome->getInPaths();
+    std::vector<InSegment*> *inSegments = genome->getInSegments();
+    std::vector<InGap> *inGaps = genome->getInGaps();
+    std::vector<DBGbase*> *dbgbases = genome->getInSegmentsDBG();
+    
+    for (InPath& path : inPaths) {
+        
+        unsigned int cUId = 0, gapLen = 0, sIdx = 0;
+        
+        std::vector<PathComponent> pathComponents = path.getComponents();
+        
+        uint64_t absPos = 0;
+        
+        for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
+            
+            cUId = component->id;
+            
+            if (component->type == SEGMENT) {
+                
+                auto inSegment = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
+                
+                if (inSegment != inSegments->end()) {sIdx = std::distance(inSegments->begin(), inSegment);} // gives us the segment index
+                
+                DBGbase *dbgbase = (*dbgbases)[sIdx];
+                
+                std::vector<uint8_t> kmerCov(k-1,0);
+                std::vector<uint8_t> edgeCovFw(k-1,0);
+                std::vector<uint8_t> edgeCovBw(k-1,0);
+                
+                if (component->orientation == '+') {
+                    
+                    for (uint64_t i = 0; i < (*inSegment)->getSegmentLen(); ++i) {
+                        
+                        ofs<<path.getHeader()
+                           <<"\t"<<absPos<<"\t";
+                        
+                        kmerCov.push_back(dbgbase[i].cov);
+                        
+                        for(uint8_t c = 0; c<k; ++c){
+                            ofs<<std::to_string(kmerCov[c]);
+                            if (c < k - 1)
+                                ofs<<":";
+                        }
+                        
+                        ofs<<",";
+                        
+                        edgeCovFw.push_back(dbgbase[i].isFw ? dbgbase[i].fw : dbgbase[i].bw);
+                        
+                        for(uint8_t c = 0; c<k; ++c){
+                            ofs<<std::to_string(edgeCovFw[c]);
+                            if (c < k - 1)
+                                ofs<<":";
+                        }
+                        
+                        ofs<<",";
+                        
+                        edgeCovBw.push_back(dbgbase[i].isFw ? dbgbase[i].bw : dbgbase[i].fw);
+                        
+                        for(uint8_t c = 0; c<k; ++c){
+                            ofs<<std::to_string(edgeCovBw[c]);
+                            if (c < k - 1)
+                                ofs<<":";
+                        }
+                        
+                        ofs<<std::endl;
+                        
+                        kmerCov.erase(kmerCov.begin());
+                        edgeCovFw.erase(edgeCovFw.begin());
+                        edgeCovBw.erase(edgeCovBw.begin());
+                        
+                        ++absPos;
+                        
+                    }
+                    
+                }else{
+                    
+                    // GFA not handled yet
+                    
+                }
+                
+                kmerCov.clear();
+                
+            }else if (component->type == GAP){
+                
+                auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
+                
+                gapLen += inGap->getDist(component->start - component->end);
+                
+                absPos += gapLen;
+                
+            }else{} // need to handle edges, cigars etc
+            
+        }
+        
+//        for (uint64_t p = 0; p<kcount; ++p) {
+//
+//            for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
+//
+//                str[p+c] = ctoi[*(first+p+c)]; // convert the next base
+//                if (str[p+c] > 3) { // if non-canonical base is found
+//                    p = p+c; // move position
+//                    e = 0; // reset base counter
+//                    break;
+//                }
+//
+//                e = k-1;
+//
+//            }
+//
+//        }
+        
+    }
     
     ofs.close();
     

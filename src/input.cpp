@@ -63,7 +63,7 @@ void Input::loadInput(UserInputKreeq userInput) {
 
 void Input::read(uint8_t mode) {
     
-    if (userInput.outFile != "")
+    if (userInput.outFile.find(".kreeq") != std::string::npos)
         userInput.prefix = userInput.outFile;
     
     if (userInput.prefix != ".")
@@ -104,17 +104,17 @@ void Input::read(uint8_t mode) {
             
             knav.finalize();
             
+            InSequencesDBG genome; // initialize sequence collection object
+            
             if (!userInput.inSequence.empty()) {
-                
-                InSequencesDBG inSequences; // initialize sequence collection object
                 
                 if (!userInput.inSequence.empty()) {
                     lg.verbose("Loading input sequences");
-                    loadGenome(inSequences); // read input genome
+                    loadGenome(genome); // read input genome
                     lg.verbose("Sequences loaded");
                 }
                 
-                knav.loadGenome(&inSequences);
+                knav.loadGenome(&genome);
                 knav.validateSequences(); // validate the input sequence
                 
             }

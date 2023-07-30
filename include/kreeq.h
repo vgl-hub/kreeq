@@ -36,6 +36,8 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     InSequencesDBG *genome;
     
     std::queue<std::string*> readBatches;
+    
+    uint64_t totEdgeCount = 0;
 
 public:
     
@@ -82,9 +84,9 @@ public:
     
     bool joinBuff(uint16_t m);
     
-    void summary();
+    void finalize();
     
-    bool histogram(uint16_t m);
+    bool summary(uint16_t m);
     
     void DBGstats();
     

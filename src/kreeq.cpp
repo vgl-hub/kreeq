@@ -382,7 +382,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     
 }
 
-void DBG::summary() {
+void DBG::finalize() {
     
     if (userInput.inDBG.size() == 0) {
         
@@ -408,7 +408,7 @@ void DBG::summary() {
     std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
     
     for (uint32_t i : idx)
-        jobs.push_back([this, i] { return histogram(i); });
+        jobs.push_back([this, i] { return summary(i); });
         
     threadPool.queueJobs(jobs);
     
@@ -418,9 +418,9 @@ void DBG::summary() {
 
 }
 
-bool DBG::histogram(uint16_t m) {
+bool DBG::summary(uint16_t m) {
     
-    uint64_t kmersUnique = 0, kmersDistinct = 0, map_size = 0;
+    uint64_t kmersUnique = 0, kmersDistinct = 0, map_size = 0, edgeCount = 0;
     phmap::flat_hash_map<uint64_t, uint64_t> hist;
     
     loadMap(userInput.prefix, m);
@@ -429,6 +429,9 @@ bool DBG::histogram(uint16_t m) {
         
         if (pair.second.cov == 1)
             ++kmersUnique;
+        
+        for (uint64_t w = 0; w<4; ++w) // update weights
+            edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
         
         ++kmersDistinct;
         ++hist[pair.second.cov];
@@ -443,6 +446,7 @@ bool DBG::histogram(uint16_t m) {
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
     totKmersDistinct += kmersDistinct;
+    totEdgeCount += edgeCount;
     
     for (auto pair : hist) {
         
@@ -830,7 +834,7 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     freed += map_size;
     
-    histogram(m);
+    summary(m);
     
     return true;
 

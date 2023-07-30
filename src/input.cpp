@@ -102,7 +102,7 @@ void Input::read(uint8_t mode) {
                 
             }
             
-            knav.summary();
+            knav.finalize();
             
             if (!userInput.inSequence.empty()) {
                 

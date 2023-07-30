@@ -580,6 +580,9 @@ void DBG::validateSequences() {
 
 bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     
+    std::vector<uint64_t> missingKmers;
+    std::vector<uint64_t> edgeMissingKmers;
+    
     std::vector<InSegment*> *segments = genome->getInSegments();
     std::vector<DBGbase*> *dbgbases = genome->getInSegmentsDBG();
     
@@ -591,7 +594,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     if (len<k)
         return true;
     
-    uint64_t kcount = len-k+1;
+    uint64_t kcount = len-k+1, kmers = 0;
     
     unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
     uint8_t* str = new uint8_t[len];
@@ -629,6 +632,28 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
                 DBGsequence[c].cov = khmer.cov;
                 DBGsequence[c].isFw = isFw;
             }
+            
+            if (DBGsequence[c].cov == 0) // merqury QV
+                missingKmers.push_back(c);
+            else if (DBGsequence[c].cov < userInput.covCutOff) // merqury QV with cutoff
+                missingKmers.push_back(c);
+            else { // kreeq QV
+
+                if (DBGsequence[c].isFw){
+
+                    if ((c<kcount-1 && DBGsequence[c].fw[*(str+c+k)] == 0) && (c>0 && DBGsequence[c].bw[*(str+c-1)] == 0)){
+                        edgeMissingKmers.push_back(c);
+                        //                        std::cout<<"edge error1"<<std::endl;
+                    }
+                }else{
+
+                    if ((c>0 && DBGsequence[c].fw[3-*(str+c-1)] == 0) && (c<kcount-1 && DBGsequence[c].bw[3-*(str+c+k)] == 0)){
+                        edgeMissingKmers.push_back(c);
+                        //                        std::cout<<"edge error2"<<std::endl;
+                    }
+                }
+            }
+            ++kmers;
 
         }
     }
@@ -638,65 +663,20 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     
     delete[] str;
     
+    totMissingKmers += missingKmers.size();
+    totKcount += kmers;
+    totEdgeMissingKmers += edgeMissingKmers.size();
+    
     return true;
     
 }
 
 bool DBG::validateSegment(uint32_t s) {
     
-    std::vector<uint64_t> missingKmers;
-    std::vector<uint64_t> edgeMissingKmers;
-    
-    std::vector<InSegment*> *segments = genome->getInSegments();
-    std::vector<DBGbase*> *dbgbases = genome->getInSegmentsDBG();
-    
-    InSegment *segment = (*segments)[s];
-    DBGbase* DBGsequence = (*dbgbases)[s];
-    
-    uint64_t len = segment->getSegmentLen();
-    
-    if (len<k)
-        return true;
-    
-    uint64_t kcount = len-k+1, kmers = 0;
-    
-    unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
-    uint8_t* str = new uint8_t[len];
-    
-    for (uint64_t i = 0; i<len; ++i)
-        str[i] = ctoi[*(first+i)];
-    
-    for (uint64_t c = 0; c<kcount; ++c){
-        
-        if (DBGsequence[c].cov == 0) // merqury QV
-            missingKmers.push_back(c);
-        else if (DBGsequence[c].cov < userInput.covCutOff) // merqury QV with cutoff
-            missingKmers.push_back(c);
-        else { // kreeq QV
 
-            if (DBGsequence[c].isFw){
-
-                if ((c<kcount-1 && DBGsequence[c].fw[*(str+c+k)] == 0) && (c>0 && DBGsequence[c].bw[*(str+c-1)] == 0)){
-                    edgeMissingKmers.push_back(c);
-                    //                        std::cout<<"edge error1"<<std::endl;
-                }
-            }else{
-
-                if ((c>0 && DBGsequence[c].fw[3-*(str+c-1)] == 0) && (c<kcount-1 && DBGsequence[c].bw[3-*(str+c+k)] == 0)){
-                    edgeMissingKmers.push_back(c);
-                    //                        std::cout<<"edge error2"<<std::endl;
-                }
-            }
-        }
-        ++kmers;
-        
-    }
-    
-    delete[] str;
-    
-    totMissingKmers += missingKmers.size();
-    totKcount += kmers;
-    totEdgeMissingKmers += edgeMissingKmers.size();
+    // internal
+    uint32_t a = s;
+    s = a;
     
     return true;
     

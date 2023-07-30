@@ -67,7 +67,7 @@ int main(int, char **argv) {
     }
     
     file_args = {
-        {{"-d testFiles/test1.kreeq testFiles/test2.kreeq"}, {"-o testFiles/test3.kreeq"}}
+        {{"-d testFiles/test1.kreeq testFiles/test2.kreeq"}, {""}}
     //  {{set of test file paths}, {list of command line args to run with}}
     };
     

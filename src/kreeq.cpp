@@ -855,7 +855,8 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
 void DBG::report() { // generates the output from the program
     
     const static phmap::flat_hash_map<std::string,int> string_to_case{ // different outputs available
-        {"kreeq",1}
+        {"kreeq",1},
+        {"bed",2}
     };
     
     std::string ext = "stdout";
@@ -872,9 +873,7 @@ void DBG::report() { // generates the output from the program
         default:
         case 1: { // .kreeq
             
-            make_dir(userInput.outFile.c_str());
-            
-            std::ofstream ofs(userInput.outFile + "/.index");
+            std::ofstream ofs(userInput.outFile + "/.index"); // adding index
             
             ostream = std::make_unique<std::ostream>(ofs.rdbuf());
             
@@ -886,6 +885,24 @@ void DBG::report() { // generates the output from the program
             
         }
             
+        case 2: { // .bed
+            
+            printTable();
+            
+            break;
+            
+        }
+            
     }
+    
+}
+
+void DBG::printTable() {
+    
+    std::ofstream ofs(userInput.outFile);
+    
+    ofs<<+k<<"\n"<<mapCount<<std::endl;
+    
+    ofs.close();
     
 }

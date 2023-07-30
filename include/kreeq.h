@@ -104,8 +104,6 @@ public:
     
     void load();
     
-    void report();
-    
     bool updateMap(std::string prefix, uint16_t m);
     
     void kunion();
@@ -113,6 +111,10 @@ public:
     bool mergeMaps(uint16_t m);
     
     bool unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2);
+    
+    void report();
+    
+    void printTable();
     
 };
 

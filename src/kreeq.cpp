@@ -464,10 +464,11 @@ void DBG::DBGstats() {
     uint64_t missing = pow(4,k)-totKmersDistinct;
     
     std::cout<<"DBG Summary statistics:\n"
-             <<"Total: "<<totKmers<<"\n"
-             <<"Unique: "<<totKmersUnique<<"\n"
-             <<"Distinct: "<<totKmersDistinct<<"\n"
-             <<"Missing: "<<missing<<"\n";
+             <<"Total kmers: "<<totKmers<<"\n"
+             <<"Unique kmers: "<<totKmersUnique<<"\n"
+             <<"Distinct kmers: "<<totKmersDistinct<<"\n"
+             <<"Missing kmers: "<<missing<<"\n"
+             <<"Total edges: "<<totEdgeCount<<"\n";
     
 }
 

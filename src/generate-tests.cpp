@@ -37,9 +37,7 @@ int main(int, char **argv) {
     const std::set<std::string> exclude {};
 
     std::map<std::set<std::string>, std::vector<std::string>> file_args = {
-        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq"}},
-        {{"random1.fasta"}, {"-d testFiles/test1.kreeq"}},
-        {{"random1.fasta"}, {"-d testFiles/test2.kreeq"}}
+        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}}
     //  {{set of test file paths}, {list of command line args to run with}}
     };
 

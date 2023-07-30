@@ -103,17 +103,17 @@ void genTest(std::string exePath, const std::string &file, const std::string &ar
     ++i;
 };
 
-void genTestUnion(std::string exePath, const std::string &file, const std::string &args, const std::string mode){
-    std::string tstFile = "validateFiles/"+file+"."+std::to_string(i)+".tst";
+void genTestUnion(std::string exePath, const std::string &input, const std::string &args, const std::string mode){
+    std::string tstFile = "validateFiles/testUnion."+std::to_string(i)+".tst";
     std::cout << "generating: " << tstFile << std::endl;
     std::ofstream ostream;
     ostream.open(tstFile);
-    ostream << mode + " " << file << " " << args << "\nembedded" << std::endl;
+    ostream << mode + " " << input << " " << args << "\nembedded" << std::endl;
     ostream.close();
 #ifdef _WIN32
-    std::string cmd = "\"\""+exePath+"\" " + mode + " " + file + " " + args + " >> " + tstFile + "\"";
+    std::string cmd = "\"\""+exePath+"\" " + mode + " " + input + " " + args + " >> " + tstFile + "\"";
 #else
-    std::string cmd = "\""+exePath+"\" " + mode + " " + file + " "+ args + " >> " + tstFile;
+    std::string cmd = "\""+exePath+"\" " + mode + " " + input + " "+ args + " >> " + tstFile;
 #endif
     int exit = system(cmd.c_str());
     if (exit == EXIT_SUCCESS) {

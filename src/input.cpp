@@ -168,6 +168,8 @@ void Input::read(uint8_t mode) {
             
             knav.report(); // output
             
+            knav.cleanup(); // delete tmp files
+            
             break;
         }
         

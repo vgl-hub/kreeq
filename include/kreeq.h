@@ -3,13 +3,6 @@
 
 #include <future>
 
-struct kmer {
-    
-    uint64_t hash = 0;
-    bool fw[4] = {0}, bw[4] = {0};
-    
-};
-
 struct edgeBit {
     
     uint8_t edges = 0;
@@ -24,20 +17,13 @@ struct edgeBit {
     
 };
 
-struct kmer2 {
-    
-    uint64_t hash = 0;
-    edgeBit edges;
-    
-};
-
 struct DBGkmer {
     
     uint8_t fw[4] = {0}, bw[4] = {0}, cov = 0;
     
 };
 
-class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
+class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     
     std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0}, buffers{0};
     std::atomic<bool> readingDone{false};
@@ -46,10 +32,10 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, kmer> {
     std::mutex readMtx, hashMtx;
     std::chrono::high_resolution_clock::time_point past;
     
-    UserInputKreeq& userInput;
+    UserInputKreeq &userInput;
+    InSequencesDBG *genome;
     
     std::queue<std::string*> readBatches;
-    std::vector<Buf<uint8_t>*> buffersVec;
 
 public:
     
@@ -102,11 +88,13 @@ public:
     
     void DBGstats();
     
-    void validateSequences(InSequences &inSequences);
+    void loadGenome(InSequencesDBG *genome);
     
-    bool validateSegments(std::array<uint16_t, 2> mapRange, std::vector<InSegment*> *segments);
+    void validateSequences();
     
-    bool validateSegment(InSegment *segment, std::array<uint16_t, 2> mapRange);
+    bool evaluateSegment(uint32_t i, std::array<uint16_t, 2> mapRange);
+    
+    bool validateSegment(uint32_t i);
     
     bool dumpMap(std::string prefix, uint16_t m);
     

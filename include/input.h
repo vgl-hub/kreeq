@@ -1,6 +1,27 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+struct DBGbase {
+    
+    uint8_t fw[4] = {0}, bw[4] = {0}, cov = 0;
+    bool isFw;
+    
+};
+
+class InSequencesDBG : public InSequences {
+    
+    std::vector<DBGbase*> dbgbases;
+    
+public:
+    
+    ~InSequencesDBG();
+    
+    void generateValidationVector();
+    
+    std::vector<DBGbase*>* getInSegmentsDBG();
+    
+};
+
 struct UserInputKreeq : UserInput {
 
     uint8_t kmerLen = 21, covCutOff = 0;
@@ -22,9 +43,9 @@ public:
     
     void loadInput(UserInputKreeq userInput);
     
-    void loadSequences(InSequences& inSequences);
+    void loadGenome(InSequencesDBG& inSequences);
     
-    void read(uint8_t mode, InSequences& inSequences);
+    void read(uint8_t mode);
     
 };
 

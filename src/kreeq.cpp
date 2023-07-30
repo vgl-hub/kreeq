@@ -306,13 +306,17 @@ bool DBG::processBuffers(uint16_t m) {
     while (!memoryOk()){}
     
     uint64_t pos = 0, hash;
-//    int64_t initial_size = 0, final_size = 0;
     Buf<uint8_t> *buf;
     edgeBit edges;
         
     phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
     
-    std::ifstream bufFile(userInput.prefix + "/.buf." + std::to_string(m) + ".bin", std::ios::in | std::ios::binary);
+    std::string fl = userInput.prefix + "/.buf." + std::to_string(m) + ".bin";
+    uint64_t flSize = fileSize(fl);
+    
+    std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
+    
+    map.reserve(flSize / 17); // 8 + 8 + 1
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         
@@ -321,8 +325,6 @@ bool DBG::processBuffers(uint16_t m) {
         buf = new Buf<uint8_t>(pos);
         buf->pos = pos;
         buf->size = pos;
-        
-        map.reserve(pos * 8);
         
         bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(uint8_t) * buf->pos);
         alloc += buf->size * sizeof(uint8_t);
@@ -465,11 +467,20 @@ void DBG::DBGstats() {
     
 }
 
-void DBG::validateSequences(InSequences &inSequences) {
+void DBG::loadGenome(InSequencesDBG *genome) {
+    
+    this->genome = genome;
+}
+
+void DBG::validateSequences() {
+    
+    std::vector<std::function<bool()>> jobs;
     
     lg.verbose("Validating sequence");
     
-    std::vector<InSegment*> *segments = inSequences.getInSegments();
+    genome->generateValidationVector();
+    
+    std::vector<InSegment*> *segments = genome->getInSegments();
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
@@ -488,8 +499,6 @@ void DBG::validateSequences(InSequences &inSequences) {
             
         }
         
-        std::vector<std::function<bool()>> jobs;
-        
         for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
             jobs.push_back([this, m] { return loadMap(userInput.prefix, m); });
             
@@ -499,8 +508,8 @@ void DBG::validateSequences(InSequences &inSequences) {
         
         jobs.clear();
         
-        for (InSegment* segment : *segments)
-            jobs.push_back([this, segment, mapRange] { return validateSegment(segment, mapRange); });
+        for (uint32_t s = 0; s < segments->size(); ++s)
+            jobs.push_back([this, s, mapRange] { return evaluateSegment(s, mapRange); });
         
         threadPool.queueJobs(jobs);
         
@@ -518,6 +527,15 @@ void DBG::validateSequences(InSequences &inSequences) {
         mapRange[0] = mapRange[1] + 1;
         
     }
+    
+    jobs.clear();
+    
+    for (uint32_t s = 0; s < segments->size(); ++s)
+        jobs.push_back([this, s] { return validateSegment(s); });
+    
+    threadPool.queueJobs(jobs);
+    
+    jobWait(threadPool);
     
     for (auto it = logs.begin(); it != logs.end(); it++) {
      
@@ -554,20 +572,23 @@ void DBG::validateSequences(InSequences &inSequences) {
     
 }
 
-bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) {
+bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     
-    std::vector<uint64_t> missingKmers;
-    std::vector<uint64_t> edgeMissingKmers;
+    std::vector<InSegment*> *segments = genome->getInSegments();
+    std::vector<DBGbase*> *dbgbases = genome->getInSegmentsDBG();
+    
+    InSegment *segment = (*segments)[s];
+    DBGbase *DBGsequence = (*dbgbases)[s];
     
     uint64_t len = segment->getSegmentLen();
     
     if (len<k)
         return true;
     
-    uint64_t kcount = len-k+1, kmers = 0;
+    uint64_t kcount = len-k+1;
     
     unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
-    uint8_t* str = new uint8_t[len];    
+    uint8_t* str = new uint8_t[len];
     
     for (uint64_t i = 0; i<len; ++i)
         str[i] = ctoi[*(first+i)];
@@ -594,29 +615,15 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
             map = maps[i];
             
             auto it = map->find(key);
-            const DBGkmer *dbgkmer = (it == map->end() ? NULL : &it->second);
-            
-            if (it == map->end()) // merqury QV
-                missingKmers.push_back(c);
-            else if (it->second.cov < userInput.covCutOff) // merqury QV with cutoff
-                missingKmers.push_back(c);
-            else if (dbgkmer != NULL) { // kreeq QV
-                
-                if (isFw){
-                    
-                    if ((c<kcount-1 && dbgkmer->fw[*(str+c+k)] == 0) && (c>0 && dbgkmer->bw[*(str+c-1)] == 0)){
-                        edgeMissingKmers.push_back(c);
-//                        std::cout<<"edge error1"<<std::endl;
-                    }
-                }else{
-                    
-                    if ((c>0 && dbgkmer->fw[3-*(str+c-1)] == 0) && (c<kcount-1 && dbgkmer->bw[3-*(str+c+k)] == 0)){
-                        edgeMissingKmers.push_back(c);
-//                        std::cout<<"edge error2"<<std::endl;
-                    }
-                }
+
+            if (it != map->end()) {
+                DBGkmer khmer = it->second;
+                memcpy(DBGsequence[c].fw, khmer.fw, 32);
+                memcpy(DBGsequence[c].bw, khmer.bw, 32);
+                DBGsequence[c].cov = khmer.cov;
+                DBGsequence[c].isFw = isFw;
             }
-            ++kmers;
+
         }
     }
     
@@ -624,7 +631,63 @@ bool DBG::validateSegment(InSegment* segment, std::array<uint16_t, 2> mapRange) 
     //double kreeqError = errorRate(totMissingKmers + edgeMissingKmers.size(), kcount, k), kreeqQV = -10*log10(kreeqError);
     
     delete[] str;
+    
+    return true;
+    
+}
 
+bool DBG::validateSegment(uint32_t s) {
+    
+    std::vector<uint64_t> missingKmers;
+    std::vector<uint64_t> edgeMissingKmers;
+    
+    std::vector<InSegment*> *segments = genome->getInSegments();
+    std::vector<DBGbase*> *dbgbases = genome->getInSegmentsDBG();
+    
+    InSegment *segment = (*segments)[s];
+    DBGbase* DBGsequence = (*dbgbases)[s];
+    
+    uint64_t len = segment->getSegmentLen();
+    
+    if (len<k)
+        return true;
+    
+    uint64_t kcount = len-k+1, kmers = 0;
+    
+    unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
+    uint8_t* str = new uint8_t[len];
+    
+    for (uint64_t i = 0; i<len; ++i)
+        str[i] = ctoi[*(first+i)];
+    
+    for (uint64_t c = 0; c<kcount; ++c){
+        
+        if (DBGsequence[c].cov == 0) // merqury QV
+            missingKmers.push_back(c);
+        else if (DBGsequence[c].cov < userInput.covCutOff) // merqury QV with cutoff
+            missingKmers.push_back(c);
+        else { // kreeq QV
+
+            if (DBGsequence[c].isFw){
+
+                if ((c<kcount-1 && DBGsequence[c].fw[*(str+c+k)] == 0) && (c>0 && DBGsequence[c].bw[*(str+c-1)] == 0)){
+                    edgeMissingKmers.push_back(c);
+                    //                        std::cout<<"edge error1"<<std::endl;
+                }
+            }else{
+
+                if ((c>0 && DBGsequence[c].fw[3-*(str+c-1)] == 0) && (c<kcount-1 && DBGsequence[c].bw[3-*(str+c+k)] == 0)){
+                    edgeMissingKmers.push_back(c);
+                    //                        std::cout<<"edge error2"<<std::endl;
+                }
+            }
+        }
+        ++kmers;
+        
+    }
+    
+    delete[] str;
+    
     totMissingKmers += missingKmers.size();
     totKcount += kmers;
     totEdgeMissingKmers += edgeMissingKmers.size();

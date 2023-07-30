@@ -30,13 +30,38 @@
 #include "kmer.h"
 #include "kreeq.h"
 
+InSequencesDBG::~InSequencesDBG() {
+    
+    for (DBGbase *p : dbgbases)
+        delete p;
+    
+}
+
+void InSequencesDBG::generateValidationVector() {
+
+    for (InSegment* segment : inSegments) {
+        
+        DBGbase *dbgbase = new DBGbase[segment->getSegmentLen()];
+        
+        dbgbases.push_back(dbgbase);
+        
+    }
+    
+}
+
+std::vector<DBGbase*>* InSequencesDBG::getInSegmentsDBG() {
+    
+    return &dbgbases;
+    
+}
+
 void Input::loadInput(UserInputKreeq userInput) {
     
     this->userInput = userInput;
     
 }
 
-void Input::read(uint8_t mode, InSequences& inSequences) {
+void Input::read(uint8_t mode) {
     
     if (userInput.outFile != "")
         userInput.prefix = userInput.outFile;
@@ -79,8 +104,20 @@ void Input::read(uint8_t mode, InSequences& inSequences) {
             
             knav.summary();
             
-            if (!userInput.inSequence.empty())
-                knav.validateSequences(inSequences); // validate the input sequence
+            if (!userInput.inSequence.empty()) {
+                
+                InSequencesDBG inSequences; // initialize sequence collection object
+                
+                if (!userInput.inSequence.empty()) {
+                    lg.verbose("Loading input sequences");
+                    loadGenome(inSequences); // read input genome
+                    lg.verbose("Sequences loaded");
+                }
+                
+                knav.loadGenome(&inSequences);
+                knav.validateSequences(); // validate the input sequence
+                
+            }
             
             knav.report(); // output
             
@@ -143,7 +180,7 @@ void Input::read(uint8_t mode, InSequences& inSequences) {
     
 }
 
-void Input::loadSequences(InSequences& inSequences) {
+void Input::loadGenome(InSequencesDBG& inSequences) {
     
     if (userInput.inSequence.empty()) {return;}
     

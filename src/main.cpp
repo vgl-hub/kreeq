@@ -369,18 +369,9 @@ int main(int argc, char **argv) {
     threadPool.init(maxThreads); // initialize threadpool
     
     in.loadInput(userInput); // load user input
+    lg.verbose("User input loaded");
     
-    lg.verbose("Loaded user input");
-    
-    InSequences inSequences; // initialize sequence collection object
-    
-    if (!userInput.inSequence.empty()) {
-        lg.verbose("Loading input sequences");
-        in.loadSequences(inSequences); // read input genome
-        lg.verbose("Sequences loaded");
-    }
-    
-    in.read(mode, inSequences); // read input reads and validate
+    in.read(mode); // read input reads and validate
 
     threadPool.join(); // join threads
     

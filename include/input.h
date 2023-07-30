@@ -4,7 +4,7 @@
 struct DBGbase {
     
     uint8_t fw[4] = {0}, bw[4] = {0}, cov = 0;
-    bool isFw;
+    bool isFw = false;
     
 };
 

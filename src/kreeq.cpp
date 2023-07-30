@@ -317,17 +317,19 @@ bool DBG::processBuffers(uint16_t m) {
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
     
     map.reserve(flSize / 17); // 8 + 8 + 1
+    alloc += mapSize(*maps[m]);
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
         buf = new Buf<uint8_t>(pos);
+        alloc += buf->size * sizeof(uint8_t);
+        
         buf->pos = pos;
         buf->size = pos;
         
         bufFile.read(reinterpret_cast<char *>(buf->seq), sizeof(uint8_t) * buf->pos);
-        alloc += buf->size * sizeof(uint8_t);
         
         for (uint64_t c = 0; c<pos; c+=9) {
             
@@ -356,7 +358,6 @@ bool DBG::processBuffers(uint16_t m) {
     
     bufFile.close();
     
-    alloc += mapSize(*maps[m]);
     remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
     
     dumpMap(userInput.prefix, m);

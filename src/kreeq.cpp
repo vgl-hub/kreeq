@@ -618,8 +618,8 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
 
             if (it != map->end()) {
                 DBGkmer khmer = it->second;
-                memcpy(DBGsequence[c].fw, khmer.fw, sizeof(khmer.fw) * 4);
-                memcpy(DBGsequence[c].bw, khmer.bw, sizeof(khmer.bw) * 4);
+                memcpy(DBGsequence[c].fw, khmer.fw, sizeof(khmer.fw));
+                memcpy(DBGsequence[c].bw, khmer.bw, sizeof(khmer.bw));
                 DBGsequence[c].cov = khmer.cov;
                 DBGsequence[c].isFw = isFw;
             }

@@ -520,6 +520,8 @@ void DBG::validateSequences() {
         threadPool.queueJobs(jobs);
         
         jobWait(threadPool);
+        
+        jobs.clear();
             
         for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m) {
             
@@ -677,7 +679,6 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
 
 bool DBG::validateSegment(uint32_t s) {
     
-
     // internal
     uint32_t a = s;
     s = a;

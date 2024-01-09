@@ -972,7 +972,7 @@ void DBG::printTable() {
                                 ofs<<":";
                         }
                         
-                        ofs<<std::endl;
+                        ofs<<"\n";
                         
                         kmerCov.erase(kmerCov.begin());
                         edgeCovFw.erase(edgeCovFw.begin());

@@ -11,7 +11,7 @@
 #include <fstream>
 #include <sstream>
 
-#include <parallel_hashmap/phmap.h>
+#include <parallel-hashmap/phmap.h>
 
 #include "bed.h"
 #include "struct.h"
@@ -228,7 +228,7 @@ void Input::loadGenome(InSequencesDBG& inSequences) {
                         
                         sequence->seqPos = seqPos; // remember the order
                         
-                        inSequences.appendSequence(sequence);
+                        inSequences.appendSequence(sequence, -1);
                         
                         seqPos++;
                         
@@ -269,7 +269,7 @@ void Input::loadGenome(InSequencesDBG& inSequences) {
                         
                         sequence->seqPos = seqPos; // remember the order
                     
-                        inSequences.appendSequence(sequence);
+                        inSequences.appendSequence(sequence, -1);
                         
                         seqPos++;
                         

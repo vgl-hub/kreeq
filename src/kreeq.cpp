@@ -319,7 +319,7 @@ bool DBG::processBuffers(uint16_t m) {
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
 
 //    map.reserve(flSize / 17); // 8 + 8 + 1
-    int64_t local_alloc = 0;
+//    int64_t local_alloc = 0;
     
     while(bufFile && !(bufFile.peek() == EOF)) {
                 
@@ -329,7 +329,7 @@ bool DBG::processBuffers(uint16_t m) {
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
         buf = new Buf<uint8_t>(pos);
-        local_alloc += buf->size * sizeof(uint8_t);
+//        local_alloc += buf->size * sizeof(uint8_t);
         alloc += buf->size * sizeof(uint8_t);
         
         buf->pos = pos;
@@ -358,13 +358,13 @@ bool DBG::processBuffers(uint16_t m) {
         
         delete[] buf->seq;
         freed += buf->size * sizeof(uint8_t);
-        local_alloc -= buf->size * sizeof(uint8_t);
+//        local_alloc -= buf->size * sizeof(uint8_t);
         delete buf;
         
-        local_alloc += mapSize(*maps[m]) - map_size;
+//        local_alloc += mapSize(*maps[m]) - map_size;
         alloc += mapSize(*maps[m]) - map_size;
         
-        if ((convert_memory(local_alloc, 3) > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
+        if (!memoryOk() || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             updateMap(userInput.prefix, m); // if it does, dump map
             local_alloc = 0;
         }

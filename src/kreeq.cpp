@@ -756,9 +756,10 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         nextMap.phmap_load(ar_in);
     
         unionSum(nextMap, *maps[m]); // merges the current map and the existing map
-        alloc += mapSize(*maps[m]);
     
     }
+    
+    alloc += mapSize(*maps[m]);
 
     dumpMap(userInput.prefix, m);
     return true;

@@ -317,12 +317,13 @@ bool DBG::processBuffers(uint16_t m) {
 //    uint64_t flSize = fileSize(fl);
     
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
-    
-    phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
+
 //    map.reserve(flSize / 17); // 8 + 8 + 1
     int64_t local_alloc = 0;
     
     while(bufFile && !(bufFile.peek() == EOF)) {
+        
+        phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
@@ -365,7 +366,6 @@ bool DBG::processBuffers(uint16_t m) {
         if ((convert_memory(local_alloc, 3) > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             std::cout<<local_alloc<<" "<<maxMem / threadPool.totalThreads()<<" "<<(!bufFile)<<(bufFile.peek() == EOF)<<std::endl;
             updateMap(userInput.prefix, m); // if it does, dump map
-            map = *maps[m]; // reassign pointer to map after update
             local_alloc = 0;
         }
         

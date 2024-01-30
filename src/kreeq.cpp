@@ -362,7 +362,7 @@ bool DBG::processBuffers(uint16_t m) {
         local_alloc += mapSize(*maps[m]);
         alloc += local_alloc;
         
-        if ((convert_memory(local_alloc, 3) > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than is share of memory or we are done
+        if ((convert_memory(local_alloc, 3) > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             std::cout<<local_alloc<<" "<<maxMem / threadPool.totalThreads()<<" "<<(!bufFile)<<(bufFile.peek() == EOF)<<std::endl;
             updateMap(userInput.prefix, m); // if it does, dump map
             local_alloc = 0;
@@ -775,11 +775,12 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         nextMap.phmap_load(ar_in);
     
+        uint64_t map_size = mapSize(*maps[m]);
         unionSum(nextMap, *maps[m]); // merges the current map and the existing map
+        freed += map_size;
+        alloc += mapSize(*maps[m]);
     
     }
-    
-    alloc += mapSize(*maps[m]);
 
     dumpMap(userInput.prefix, m);
     return true;

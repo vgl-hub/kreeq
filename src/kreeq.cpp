@@ -365,7 +365,7 @@ bool DBG::processBuffers(uint16_t m) {
         if ((convert_memory(local_alloc, 3) > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             std::cout<<local_alloc<<" "<<maxMem / threadPool.totalThreads()<<" "<<(!bufFile)<<(bufFile.peek() == EOF)<<std::endl;
             updateMap(userInput.prefix, m); // if it does, dump map
-            phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // reassign pointer to map after update
+            map = *maps[m]; // reassign pointer to map after update
             local_alloc = 0;
         }
         

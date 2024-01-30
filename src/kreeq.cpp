@@ -120,7 +120,7 @@ void DBG::initHashing(){
     futures.push_back(task.get_future());
     threads.push_back(std::thread(std::move(task)));
     
-    int16_t threadN = std::thread::hardware_concurrency() - 2; // the master thread and the writing thread will continue to run so -2
+    int16_t threadN = threadPool.totalThreads() - 1; // substract the writing thread
     
     if (threadN == 0)
         threadN = 1;
@@ -361,9 +361,8 @@ bool DBG::processBuffers(uint16_t m) {
         local_alloc -= buf->size * sizeof(uint8_t);
         delete buf;
         
-        int16_t threadN = std::thread::hardware_concurrency() - 1;
-        if (local_alloc > (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem) / threadN) {
-            updateMap(userInput.prefix, m);
+        if ((local_alloc > (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem) / threadPool.totalThreads()) || (bufFile.peek() == EOF)) { // check that thread is not using more than is share of memory or we are done
+            updateMap(userInput.prefix, m); // if it does, dump map
             local_alloc = 0;
         }
         

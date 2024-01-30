@@ -94,6 +94,8 @@ bool DBG::memoryOk(int64_t delta) {
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
+    while (!memoryOk()){}
+    
     {
         std::lock_guard<std::mutex> lck(readMtx);
         readBatches.push(readBatch);
@@ -137,6 +139,8 @@ bool DBG::hashSequences() {
     uint64_t len;
     
     while (true) {
+        
+        while (!memoryOk()){}
             
         {
             
@@ -158,7 +162,7 @@ bool DBG::hashSequences() {
         
         if (len<k) {
             delete readBatch;
-            return true;
+            continue;
         }
         
         Buf<uint8_t> *buffers = new Buf<uint8_t>[mapCount];

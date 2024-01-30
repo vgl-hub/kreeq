@@ -321,13 +321,15 @@ bool DBG::processBuffers(uint16_t m) {
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
     
     map.reserve(flSize / 17); // 8 + 8 + 1
-    alloc += mapSize(*maps[m]);
+    int64_t local_alloc = mapSize(*maps[m]);
+    alloc += local_alloc;
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
         buf = new Buf<uint8_t>(pos);
+        local_alloc += buf->size * sizeof(uint8_t);
         alloc += buf->size * sizeof(uint8_t);
         
         buf->pos = pos;
@@ -356,15 +358,20 @@ bool DBG::processBuffers(uint16_t m) {
         
         delete[] buf->seq;
         freed += buf->size * sizeof(uint8_t);
+        local_alloc -= buf->size * sizeof(uint8_t);
         delete buf;
+        
+        int16_t threadN = std::thread::hardware_concurrency() - 1;
+        if (local_alloc > (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem) / threadN) {
+            updateMap(userInput.prefix, m);
+            local_alloc = 0;
+        }
         
     }
     
     bufFile.close();
     
     remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
-    
-    dumpMap(userInput.prefix, m);
     
     return true;
     

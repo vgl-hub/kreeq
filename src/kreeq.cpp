@@ -360,7 +360,7 @@ bool DBG::processBuffers(uint16_t m) {
         delete buf;
         
         local_alloc += mapSize(*maps[m]);
-        alloc += local_alloc;
+        alloc += mapSize(*maps[m]);
         
         if ((convert_memory(local_alloc, 3) > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             std::cout<<local_alloc<<" "<<maxMem / threadPool.totalThreads()<<" "<<(!bufFile)<<(bufFile.peek() == EOF)<<std::endl;

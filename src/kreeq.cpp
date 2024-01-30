@@ -82,13 +82,13 @@ void DBG::joinThreads() {
 
 bool DBG::memoryOk() {
     
-    return get_mem_inuse(3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem);
+    return get_mem_inuse(3) < maxMem;
     
 }
 
 bool DBG::memoryOk(int64_t delta) {
     
-    return get_mem_inuse(3) + convert_memory(delta, 3) < (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem);
+    return get_mem_inuse(3) + convert_memory(delta, 3) < maxMem;
     
 }
 
@@ -360,7 +360,7 @@ bool DBG::processBuffers(uint16_t m) {
         local_alloc -= buf->size * sizeof(uint8_t);
         delete buf;
         
-        if ((local_alloc > (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem) / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than is share of memory or we are done
+        if ((local_alloc > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than is share of memory or we are done
             updateMap(userInput.prefix, m); // if it does, dump map
             local_alloc = 0;
         }
@@ -649,32 +649,49 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
             else if (DBGsequence[c].cov < userInput.covCutOff) // merqury QV with cutoff
                 missingKmers.push_back(c);
             else { // kreeq QV
-
+                bool noEdgeLeft = false, noEdgeRight = false;
                 if (DBGsequence[c].isFw){
 
-                    if (c<kcount-1 && khmer.fw[*(str+c+k)] != 0)
-                        DBGsequence[c].fw = khmer.fw[*(str+c+k)];
-                        
-                    if (c>0 && khmer.bw[*(str+c-1)] != 0)
-                        DBGsequence[c].bw = khmer.bw[*(str+c-1)];
-                        //                        std::cout<<"edge error1"<<std::endl;
+                    if (c<kcount-1) {
+                        if (khmer.fw[*(str+c+k)] != 0)
+                            DBGsequence[c].fw = khmer.fw[*(str+c+k)];
+                        else
+                            noEdgeRight = true;
+                    }
+                    if (c>0) {
+                        if (khmer.bw[*(str+c-1)] != 0)
+                            DBGsequence[c].bw = khmer.bw[*(str+c-1)];
+                        else
+                            noEdgeLeft = true;
+                        // std::cout<<"edge error1"<<std::endl;
+                    }
+                    
                 }else{
-
-                    if (c>0 && khmer.fw[3-*(str+c-1)] != 0)
-                        DBGsequence[c].fw = khmer.fw[3-*(str+c-1)];
-                        
-                    if (c<kcount-1 && khmer.bw[3-*(str+c+k)] != 0)
-                        DBGsequence[c].bw = khmer.bw[3-*(str+c+k)];
-                        //                        std::cout<<"edge error2"<<std::endl;
+                    
+                    if (c>0) {
+                        if (khmer.fw[3-*(str+c-1)] != 0)
+                            DBGsequence[c].fw = khmer.fw[3-*(str+c-1)];
+                        else
+                            noEdgeLeft = true;
+                    }
+                    
+                    if (c<kcount-1) {
+                        if (khmer.bw[3-*(str+c+k)] != 0)
+                            DBGsequence[c].bw = khmer.bw[3-*(str+c+k)];
+                        else
+                            noEdgeRight = true;
+                        // std::cout<<"edge error2"<<std::endl;
+                    }
+                }
+                if (noEdgeLeft && noEdgeRight) {
+                    edgeMissingKmers.push_back(c);
+//                    std::cout<<"edge error"<<std::endl;
                 }
             }
             ++kmers;
 
         }
     }
-    
-    //double merquryError = errorRate(totMissingKmers, kcount, k), merquryQV = -10*log10(merquryError);
-    //double kreeqError = errorRate(totMissingKmers + edgeMissingKmers.size(), kcount, k), kreeqQV = -10*log10(kreeqError);
     
     delete[] str;
     

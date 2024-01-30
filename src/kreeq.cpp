@@ -320,8 +320,8 @@ bool DBG::processBuffers(uint16_t m) {
     
     phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
 //    map.reserve(flSize / 17); // 8 + 8 + 1
-//    int64_t local_alloc = mapSize(*maps[m]);
-//    alloc += local_alloc;
+    int64_t local_alloc = 0;
+//    alloc += mapSize(*maps[m]);
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         

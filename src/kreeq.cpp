@@ -366,7 +366,7 @@ bool DBG::processBuffers(uint16_t m) {
         
         if (!memoryOk() || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             updateMap(userInput.prefix, m); // if it does, dump map
-            local_alloc = 0;
+//            local_alloc = 0;
         }
         
     }

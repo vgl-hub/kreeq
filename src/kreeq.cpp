@@ -365,7 +365,6 @@ bool DBG::processBuffers(uint16_t m) {
         alloc += mapSize(*maps[m]) - map_size;
         
         if ((convert_memory(local_alloc, 3) > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
-            std::cout<<convert_memory(local_alloc, 3)<<" "<<maxMem / threadPool.totalThreads()<<" "<<(!bufFile)<<(bufFile.peek() == EOF)<<std::endl;
             updateMap(userInput.prefix, m); // if it does, dump map
             local_alloc = 0;
         }

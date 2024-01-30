@@ -312,15 +312,14 @@ bool DBG::processBuffers(uint16_t m) {
     uint64_t pos = 0, hash;
     Buf<uint8_t> *buf;
     edgeBit edges;
-        
-    phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
     
     std::string fl = userInput.prefix + "/.buf." + std::to_string(m) + ".bin";
-    uint64_t flSize = fileSize(fl);
+//    uint64_t flSize = fileSize(fl);
     
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
     
-    map.reserve(flSize / 17); // 8 + 8 + 1
+    phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
+//    map.reserve(flSize / 17); // 8 + 8 + 1
     int64_t local_alloc = mapSize(*maps[m]);
     alloc += local_alloc;
     
@@ -361,7 +360,7 @@ bool DBG::processBuffers(uint16_t m) {
         local_alloc -= buf->size * sizeof(uint8_t);
         delete buf;
         
-        if ((local_alloc > (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem) / threadPool.totalThreads()) || (bufFile.peek() == EOF)) { // check that thread is not using more than is share of memory or we are done
+        if ((local_alloc > (userInput.maxMem == 0 ? get_mem_total(3) * 0.4 : userInput.maxMem) / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than is share of memory or we are done
             updateMap(userInput.prefix, m); // if it does, dump map
             local_alloc = 0;
         }
@@ -748,34 +747,19 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
 
 bool DBG::updateMap(std::string prefix, uint16_t m) {
     
-    uint64_t map_size = mapSize(*maps[m]);
-    
     prefix.append("/.map." + std::to_string(m) + ".bin");
-    
+
     if (fileExists(prefix)) {
-    
-        phmap::flat_hash_map<uint64_t, DBGkmer> *dumpMap = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+        
+        phmap::flat_hash_map<uint64_t, DBGkmer> nextMap;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
-        dumpMap->phmap_load(ar_in);
+        nextMap.phmap_load(ar_in);
     
-        unionSum(*maps[m], *dumpMap); // merges the current map and the existing map
-    
-        phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
-        dumpMap->phmap_dump(ar_out);
-    
-        delete dumpMap;
-    
-    }else{
-    
-        phmap::BinaryOutputArchive ar_out(prefix.c_str()); // dumps the data
-        maps[m]->phmap_dump(ar_out);
+        unionSum(nextMap, *maps[m]); // merges the current map and the existing map
     
     }
-    
-    freed += map_size;
-    delete maps[m];
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-    
+
+    dumpMap(userInput.prefix, m);
     return true;
     
 }

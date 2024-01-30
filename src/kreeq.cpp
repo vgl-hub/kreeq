@@ -361,7 +361,7 @@ bool DBG::processBuffers(uint16_t m) {
         local_alloc -= buf->size * sizeof(uint8_t);
         delete buf;
         
-        local_alloc += mapSize(*maps[m]);
+        local_alloc += mapSize(*maps[m]) - map_size;
         alloc += mapSize(*maps[m]) - map_size;
         
         if ((convert_memory(local_alloc, 3) > maxMem / threadPool.totalThreads()) || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done

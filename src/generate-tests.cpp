@@ -34,16 +34,19 @@ int main(int, char **argv) {
     //  {{set of test file extensions}, {list of command line args to run with}}
     };
     
-    const std::set<std::string> exclude {};
+    const std::set<std::string> excludeExt {};
+    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq"};
 
     std::map<std::set<std::string>, std::vector<std::string>> file_args = {
-        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}}
+        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},
+        {{"random4.fasta"}, {"-r testFiles/random4.fastq -k3"}}
     //  {{set of test file paths}, {list of command line args to run with}}
     };
 
     for(const std::string &file : list_dir("testFiles")) {
         std::string ext = getFileExt(file);
-        if(exclude.count(ext)) continue;
+        if(excludeExt.count(ext)) continue;
+        if(excludeFile.count(file)) continue;
         for(auto pair : ext_args) {
             if(!pair.first.count(ext)) continue;
             for(auto args : pair.second) {

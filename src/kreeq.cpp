@@ -766,7 +766,6 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         freed += fileSize(prefix);
         alloc += mapSize(*nextMap);
     
-        uint64_t map_size = mapSize(*maps[m]);
         unionSum(*maps[m], *nextMap); // merges the current map and the existing map
         delete maps[m];
         maps[m] = nextMap;

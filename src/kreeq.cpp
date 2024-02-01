@@ -80,16 +80,6 @@ void DBG::joinThreads() {
     
 }
 
-bool DBG::allocMemory(int64_t amount) {
-    
-    while (get_mem_inuse(3) + convert_memory(amount, 3) > maxMem){}
-    
-    alloc += amount;
-    
-    return true;
-    
-}
-
 bool DBG::memoryOk() {
     
     return get_mem_inuse(3) < maxMem;
@@ -104,10 +94,11 @@ bool DBG::memoryOk(int64_t delta) {
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
+    allocMemory(readBatch->size() * sizeof(char));
+    
     {
         std::lock_guard<std::mutex> lck(readMtx);
         readBatches.push(readBatch);
-        allocMemory(readBatch->size() * sizeof(char));
     }
     
     return true;

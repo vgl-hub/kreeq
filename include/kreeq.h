@@ -65,8 +65,6 @@ public:
     
     void joinThreads();
     
-    bool allocMemory(int64_t amount);
-    
     bool memoryOk();
     
     bool memoryOk(int64_t delta);

@@ -314,9 +314,9 @@ bool DBG::processBuffers(uint16_t m) {
     while(bufFile && !(bufFile.peek() == EOF)) {
                 
         phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
-        uint64_t map_size = mapSize(map);
         allocMemory(flSize / 17); // 8 + 8 + 1
         map.reserve(flSize / 17);
+        uint64_t map_size = mapSize(map);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         

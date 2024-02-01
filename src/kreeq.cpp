@@ -80,6 +80,16 @@ void DBG::joinThreads() {
     
 }
 
+bool DBG::allocMemory(int64_t amount) {
+    
+    while (get_mem_inuse(3) + convert_memory(amount, 3) > maxMem){}
+    
+    alloc += amount;
+    
+    return true;
+    
+}
+
 bool DBG::memoryOk() {
     
     return get_mem_inuse(3) < maxMem;
@@ -94,12 +104,10 @@ bool DBG::memoryOk(int64_t delta) {
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
-    while (!memoryOk()){}
-    
     {
         std::lock_guard<std::mutex> lck(readMtx);
         readBatches.push(readBatch);
-        alloc += readBatch->size() * sizeof(char);
+        allocMemory(readBatch->size() * sizeof(char));
     }
     
     return true;
@@ -139,8 +147,6 @@ bool DBG::hashSequences() {
     uint64_t len;
     
     while (true) {
-        
-        while (!memoryOk()){}
             
         {
             
@@ -156,15 +162,17 @@ bool DBG::hashSequences() {
             readBatches.pop();
             len = readBatch->size();
             
-            alloc += len * sizeof(uint8_t); // this is for the string we allocate next
-            
         }
+        
+        allocMemory(len * sizeof(uint8_t)); // this is for the string we allocate next
         
         if (len<k) {
             delete readBatch;
             continue;
         }
         
+        for (uint16_t b = 0; b<mapCount; ++b)
+            allocMemory(pow(2,8) * sizeof(uint8_t));
         Buf<uint8_t> *buffers = new Buf<uint8_t>[mapCount];
         unsigned char *first = (unsigned char*) readBatch->c_str();
         uint8_t *str = new uint8_t[len];
@@ -222,9 +230,6 @@ bool DBG::hashSequences() {
         //    logs.push_back(threadLog);
         
         std::lock_guard<std::mutex> lck(hashMtx);
-        for (uint16_t b = 0; b<mapCount; ++b)
-            alloc += buffers[b].size * sizeof(uint8_t);
-
         freed += len * sizeof(char) * 2;
         buffersVec.push_back(buffers);
         
@@ -314,12 +319,8 @@ bool DBG::processBuffers(uint16_t m) {
     edgeBit edges;
     
     std::string fl = userInput.prefix + "/.buf." + std::to_string(m) + ".bin";
-//    uint64_t flSize = fileSize(fl);
-    
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
-
 //    map.reserve(flSize / 17); // 8 + 8 + 1
-//    int64_t local_alloc = 0;
     
     while(bufFile && !(bufFile.peek() == EOF)) {
                 
@@ -328,9 +329,8 @@ bool DBG::processBuffers(uint16_t m) {
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
+        allocMemory(pos * sizeof(uint8_t));
         buf = new Buf<uint8_t>(pos);
-//        local_alloc += buf->size * sizeof(uint8_t);
-        alloc += buf->size * sizeof(uint8_t);
         
         buf->pos = pos;
         buf->size = pos;
@@ -358,15 +358,11 @@ bool DBG::processBuffers(uint16_t m) {
         
         delete[] buf->seq;
         freed += buf->size * sizeof(uint8_t);
-//        local_alloc -= buf->size * sizeof(uint8_t);
         delete buf;
-        
-//        local_alloc += mapSize(*maps[m]) - map_size;
-        alloc += mapSize(*maps[m]) - map_size;
+        allocMemory(mapSize(*maps[m]) - map_size);
         
         if (!memoryOk() || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             updateMap(userInput.prefix, m); // if it does, dump map
-//            local_alloc = 0;
         }
         
     }
@@ -760,7 +756,7 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     maps[m]->phmap_load(ar_in);
     
-    alloc += mapSize(*maps[m]);
+    allocMemory(mapSize(*maps[m]));
     
     return true;
 
@@ -779,7 +775,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         uint64_t map_size = mapSize(*maps[m]);
         unionSum(nextMap, *maps[m]); // merges the current map and the existing map
         freed += map_size;
-        alloc += mapSize(*maps[m]);
+        allocMemory(mapSize(*maps[m]));
     
     }
 

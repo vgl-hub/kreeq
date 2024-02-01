@@ -314,8 +314,7 @@ bool DBG::processBuffers(uint16_t m) {
     while(bufFile && !(bufFile.peek() == EOF)) {
                 
         phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
-        allocMemory(flSize / 17); // 8 + 8 + 1
-        map.reserve(flSize / 17);
+//        map.reserve(flSize / 17); // 8 + 8 + 1
         uint64_t map_size = mapSize(map);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
@@ -347,10 +346,10 @@ bool DBG::processBuffers(uint16_t m) {
             
         }
         
+        alloc += mapSize(*maps[m]) - map_size;
         delete[] buf->seq;
         freed += buf->size * sizeof(uint8_t);
         delete buf;
-        alloc += mapSize(*maps[m]) - map_size;
         
         if (!memoryOk() || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             updateMap(userInput.prefix, m); // if it does, dump map

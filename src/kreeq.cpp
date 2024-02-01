@@ -303,20 +303,20 @@ bool DBG::buffersToMaps() {
 
 bool DBG::processBuffers(uint16_t m) {
     
-    while (!memoryOk()){}
-    
     uint64_t pos = 0, hash;
     Buf<uint8_t> *buf;
     edgeBit edges;
     
     std::string fl = userInput.prefix + "/.buf." + std::to_string(m) + ".bin";
+    uint64_t flSize = fileSize(fl);
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
-//    map.reserve(flSize / 17); // 8 + 8 + 1
     
     while(bufFile && !(bufFile.peek() == EOF)) {
                 
         phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
         uint64_t map_size = mapSize(map);
+        allocMemory(flSize / 17); // 8 + 8 + 1
+        map.reserve(flSize / 17);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
@@ -350,7 +350,7 @@ bool DBG::processBuffers(uint16_t m) {
         delete[] buf->seq;
         freed += buf->size * sizeof(uint8_t);
         delete buf;
-        allocMemory(mapSize(*maps[m]) - map_size);
+        alloc += mapSize(*maps[m]) - map_size;
         
         if (!memoryOk() || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             updateMap(userInput.prefix, m); // if it does, dump map

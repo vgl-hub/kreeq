@@ -750,7 +750,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         
         phmap::flat_hash_map<uint64_t, DBGkmer> *nextMap = new phmap::flat_hash_map<uint64_t, DBGkmer>;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
-        allocMemory(fileSize(prefix));
+        alloc += fileSize(prefix);
         nextMap->phmap_load(ar_in);
     
         uint64_t map_size1 = fileSize(prefix);

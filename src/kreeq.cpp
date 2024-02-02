@@ -363,8 +363,9 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     phmap::BinaryOutputArchive ar_out(prefix.c_str());
     maps[m]->phmap_dump(ar_out);
     
+    uint64_t map_size = mapSize(*maps[m]);
     delete maps[m];
-    freed += mapSize(*maps[m]);
+    freed += map_size;
     
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     alloc += mapSize(*maps[m]);

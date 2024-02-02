@@ -303,7 +303,6 @@ bool DBG::processBuffers(uint16_t m) {
     edgeBit edges;
     
     std::string fl = userInput.prefix + "/.buf." + std::to_string(m) + ".bin";
-    uint64_t flSize = fileSize(fl);
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
 //    map.reserve(flSize / 17); // 8 + 8 + 1
     
@@ -344,7 +343,7 @@ bool DBG::processBuffers(uint16_t m) {
         delete[] buf->seq;
         freed += buf->size * sizeof(uint8_t);
         delete buf;
-        allocMemory(mapSize(*maps[m]) - map_size);
+        alloc += mapSize(*maps[m]) - map_size;
         if (!memoryOk() || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
             updateMap(userInput.prefix, m); // if it does, dump map
         }

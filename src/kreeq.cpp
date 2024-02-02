@@ -290,7 +290,7 @@ bool DBG::buffersToMaps() {
     
     for(uint16_t b = 0; b<mapCount; ++b) {
         std::string fl = userInput.prefix + "/.buf." + std::to_string(b) + ".bin";
-        allocMemory(fileSize(fl) / 17);
+        allocMemory(fileSize(fl));
         threadPool.queueJob([this, b] { return processBuffers(b); });
     }
     
@@ -349,7 +349,7 @@ bool DBG::processBuffers(uint16_t m) {
         
     }
     
-    alloc += mapSize(*maps[m]) - flSize / 17;
+    alloc += mapSize(*maps[m]) - flSize;
     
     dumpMap(userInput.prefix, m); // if it does, dump map
     

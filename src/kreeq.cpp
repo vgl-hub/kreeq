@@ -94,8 +94,6 @@ bool DBG::memoryOk(int64_t delta) {
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
-    allocMemory(readBatch->size() * sizeof(char));
-    
     {
         std::lock_guard<std::mutex> lck(readMtx);
         readBatches.push(readBatch);
@@ -160,8 +158,6 @@ bool DBG::hashSequences() {
             continue;
         }
         
-        for (uint16_t b = 0; b<mapCount; ++b)
-            allocMemory(pow(2,8) * sizeof(uint8_t));
         Buf<uint8_t> *buffers = new Buf<uint8_t>[mapCount];
         unsigned char *first = (unsigned char*) readBatch->c_str();
         allocMemory(len * sizeof(uint8_t));

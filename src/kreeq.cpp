@@ -343,12 +343,13 @@ bool DBG::processBuffers(uint16_t m) {
             
         }
         
-        alloc += mapSize(*maps[m]) - flSize / 17;
         delete[] buf->seq;
         freed += buf->size * sizeof(uint8_t);
         delete buf;
         
     }
+    
+    alloc += mapSize(*maps[m]) - flSize / 17;
     
     dumpMap(userInput.prefix, m); // if it does, dump map
     

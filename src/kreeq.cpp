@@ -155,8 +155,6 @@ bool DBG::hashSequences() {
             
         }
         
-        allocMemory(len * sizeof(uint8_t)); // this is for the string we allocate next
-        
         if (len<k) {
             delete readBatch;
             continue;
@@ -166,6 +164,7 @@ bool DBG::hashSequences() {
             allocMemory(pow(2,8) * sizeof(uint8_t));
         Buf<uint8_t> *buffers = new Buf<uint8_t>[mapCount];
         unsigned char *first = (unsigned char*) readBatch->c_str();
+        allocMemory(len * sizeof(uint8_t));
         uint8_t *str = new uint8_t[len];
         uint8_t e = 0;
         uint64_t key, pos = 0, kcount = len-k+1;

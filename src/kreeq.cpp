@@ -287,11 +287,12 @@ bool DBG::dumpBuffers() {
 
 bool DBG::buffersToMaps() {
     
-    for(uint16_t b = 0; b<mapCount; ++b) {
-        std::string fl = userInput.prefix + "/.buf." + std::to_string(b) + ".bin";
-        allocMemory(fileSize(fl));
-        threadPool.queueJob([this, b] { return processBuffers(b); });
-    }
+    std::vector<std::function<bool()>> jobs;
+    
+    for(uint16_t b = 0; b<mapCount; ++b)
+        jobs.push_back([this, b] { return processBuffers(b); });
+        
+    threadPool.queueJobs(jobs);
     
     jobWait(threadPool);
     
@@ -308,10 +309,12 @@ bool DBG::processBuffers(uint16_t m) {
     std::string fl = userInput.prefix + "/.buf." + std::to_string(m) + ".bin";
     uint64_t flSize = fileSize(fl);
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
-    phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
 //    map.reserve(flSize / 17); // 8 + 8 + 1
     
     while(bufFile && !(bufFile.peek() == EOF)) {
+        
+        phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
+        uint64_t map_size = mapSize(map);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
@@ -345,15 +348,14 @@ bool DBG::processBuffers(uint16_t m) {
         delete[] buf->seq;
         freed += buf->size * sizeof(uint8_t);
         delete buf;
+        allocMemory(mapSize(*maps[m]) - map_size);
+        if (!memoryOk() || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more than its share of memory or we are done
+            updateMap(userInput.prefix, m); // if it does, dump map
+        }
         
     }
     
-    alloc += mapSize(*maps[m]) - flSize;
-    
-    dumpMap(userInput.prefix, m); // if it does, dump map
-    
     bufFile.close();
-    
     remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
     
     return true;
@@ -372,6 +374,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     freed += map_size;
     
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    alloc += mapSize(*maps[m]);
     
     return true;
     

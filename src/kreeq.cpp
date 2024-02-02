@@ -342,12 +342,10 @@ bool DBG::processBuffers(uint16_t m) {
         freed += buf->size * sizeof(uint8_t);
         delete buf;
         alloc += mapSize(*maps[m]) - map_size;
-        if (!memoryOk() || !bufFile || bufFile.peek() == EOF) { // check that thread is not using more memory or we are done
-            updateMap(userInput.prefix, m); // if it does, dump map
-        }
         
     }
     
+    dumpMap(userInput.prefix, m); // if it does, dump map
     bufFile.close();
     remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
     

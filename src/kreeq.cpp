@@ -313,7 +313,7 @@ bool DBG::processBuffers(uint16_t m) {
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
         
-        allocMemory(pos * sizeof(uint8_t));
+        alloc += pos * sizeof(uint8_t);
         buf = new Buf<uint8_t>(pos);
         
         buf->pos = pos;
@@ -432,8 +432,8 @@ bool DBG::summary(uint16_t m) {
     
     map_size = mapSize(*maps[m]);
     delete maps[m];
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     freed += map_size;
+    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
  
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
@@ -518,8 +518,8 @@ void DBG::validateSequences() {
             
             uint64_t map_size = mapSize(*maps[m]);
             delete maps[m];
-            maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
             freed += map_size;
+            maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
             
         }
         

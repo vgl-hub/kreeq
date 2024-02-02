@@ -25,7 +25,7 @@ public:
 struct UserInputKreeq : UserInput {
 
     uint8_t kmerLen = 21, covCutOff = 0;
-    int64_t maxMem = 0;
+    double maxMem = 0;
     std::string prefix = ".", outFile = "";
     std::vector<std::string> inDBG;
 

@@ -38,7 +38,6 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     std::queue<std::string*> readBatches;
     
     uint64_t totEdgeCount = 0;
-    int64_t maxMem = 0;
 
 public:
     
@@ -54,8 +53,6 @@ public:
         
         if (userInput.inDBG.size() == 0) // start parallel hashing
             initHashing();
-        
-        maxMem = (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem); // set memory limit
         
     };
     

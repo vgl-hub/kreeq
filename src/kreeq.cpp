@@ -290,7 +290,7 @@ bool DBG::buffersToMaps() {
     
     for(uint16_t b = 0; b<mapCount; ++b) {
         std::string fl = userInput.prefix + "/.buf." + std::to_string(b) + ".bin";
-        allocMemory(fileSize(fl)*2);
+        allocMemory(fileSize(fl));
         threadPool.queueJob([this, b] { return processBuffers(b); });
     }
     
@@ -310,7 +310,7 @@ bool DBG::processBuffers(uint16_t m) {
     uint64_t flSize = fileSize(fl);
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
     phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
-    map.reserve(flSize / 17); // 8 + 8 + 1
+//    map.reserve(flSize / 17); // 8 + 8 + 1
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         
@@ -349,7 +349,7 @@ bool DBG::processBuffers(uint16_t m) {
         
     }
     
-    alloc += mapSize(*maps[m]) - flSize*2;
+    alloc += mapSize(*maps[m]) - flSize;
     
     dumpMap(userInput.prefix, m); // if it does, dump map
     

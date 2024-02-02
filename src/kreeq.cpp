@@ -106,8 +106,6 @@ bool DBG::traverseInReads(std::string* readBatch) { // specialized for string ob
 void DBG::consolidate() {
     
     status();
-    
-    while (!memoryOk()){status();}
 
 }
 
@@ -155,12 +153,13 @@ bool DBG::hashSequences() {
         
         if (len<k) {
             delete readBatch;
+            freed += len * sizeof(char);
             continue;
         }
         
         Buf<uint8_t> *buffers = new Buf<uint8_t>[mapCount];
-        unsigned char *first = (unsigned char*) readBatch->c_str();
-        allocMemory(len * sizeof(uint8_t));
+        allocMemory(len * sizeof(uint8_t) * 2);
+        const unsigned char *first = (unsigned char*) readBatch->c_str();
         uint8_t *str = new uint8_t[len];
         uint8_t e = 0;
         uint64_t key, pos = 0, kcount = len-k+1;
@@ -216,7 +215,7 @@ bool DBG::hashSequences() {
         //    logs.push_back(threadLog);
         
         std::lock_guard<std::mutex> lck(hashMtx);
-        freed += len * sizeof(char) * 2;
+        freed += len * sizeof(char) * 3;
         buffersVec.push_back(buffers);
         
     }

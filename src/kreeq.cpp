@@ -364,7 +364,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     maps[m]->phmap_dump(ar_out);
     
     delete maps[m];
-    freed += fileSize(prefix);
+    freed += mapSize(*maps[m]);
     
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
     alloc += mapSize(*maps[m]);
@@ -749,10 +749,10 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         
         phmap::flat_hash_map<uint64_t, DBGkmer> *nextMap = new phmap::flat_hash_map<uint64_t, DBGkmer>;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
-        alloc += fileSize(prefix);
         nextMap->phmap_load(ar_in);
-    
-        uint64_t map_size1 = fileSize(prefix);
+        uint64_t map_size1 = mapSize(*nextMap);
+        alloc += map_size1;
+        
         uint64_t map_size2 = mapSize(*maps[m]);
         unionSum(*maps[m], *nextMap); // merges the current map and the existing map
         alloc += mapSize(*nextMap) - map_size1;

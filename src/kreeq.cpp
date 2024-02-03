@@ -430,7 +430,8 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     phmap::BinaryInputArchive ar_in(firstFile.c_str());
     maps[m]->phmap_load(ar_in);
-    alloc += mapSize(*maps[m]);
+    uint64_t alloc_map_size = mapSize(*maps[m]);
+    alloc += alloc_map_size;
     
     remove(firstFile.c_str());
     
@@ -449,10 +450,13 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
         unionSum(nextMap, *maps[m]); // unionSum operation between the existing map and the next map
         
         alloc += mapSize(*maps[m]) - map_size2;
+        alloc_map_size = mapSize(*maps[m]) - map_size2;
         remove(nextFile.c_str());
         freed += map_size1;
         
     }
+    
+    alloc += mapSize(*maps[m]) - alloc_map_size; // adjust to effective size
     
     dumpMap(userInput.prefix, m);
     

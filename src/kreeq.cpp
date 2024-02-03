@@ -12,6 +12,7 @@
 #include <array>
 #include <atomic>
 #include <future>
+#include <cstdio>
 
 #include "parallel-hashmap/phmap.h"
 #include "parallel-hashmap/phmap_dump.h"
@@ -407,8 +408,6 @@ void DBG::consolidateTmpMaps(){ // concurrent merging of the maps that store the
     
     jobWait(threadPool);
     
-    DBGstats();
-    
 }
 
 bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same hashes
@@ -418,8 +417,7 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     if (!fileExists(prefix + "/.map." + std::to_string(m) + ".1.tmp.bin")) {
         
-        
-        
+        std::rename(firstFile, prefix + "/.map." + std::to_string(m) + ".bin");
         return true;
         
     }
@@ -431,16 +429,14 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) +  ".tmp.bin")) { // for additional map loads the map and merges it
         
-        prefix = userInput.prefix; // loads the next map
-        prefix.append("/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin");
-        
+        std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin"; // loads the next map
         phmap::flat_hash_map<uint64_t, DBGkmer> nextMap;
-        phmap::BinaryInputArchive ar_in(prefix.c_str());
+        phmap::BinaryInputArchive ar_in(nextFile.c_str());
         nextMap.phmap_load(ar_in);
         
         unionSum(nextMap, *maps[m]); // unionSum operation between the existing map and the next map
         
-        remove(prefix.c_str());
+        remove(nextFile.c_str());
         
     }
     

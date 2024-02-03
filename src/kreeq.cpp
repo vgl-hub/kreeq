@@ -134,6 +134,8 @@ bool DBG::hashSequences() {
     uint64_t len;
     
     while (true) {
+        
+        while (freeMemory) {}
             
         {
             

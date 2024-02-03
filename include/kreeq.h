@@ -47,6 +47,9 @@ public:
         for(uint16_t m = 0; m<mapCount; ++m) {// remove tmp buffers and maps if any
             threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
             threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str()); });
+            uint8_t fileNum = 0;
+            while (fileExists(userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) +  ".tmp.bin"))
+                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin").c_str()); });
             remove((userInput.prefix + "/.index").c_str());
         }
             

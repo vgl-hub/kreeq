@@ -425,6 +425,8 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     phmap::BinaryInputArchive ar_in(firstFile.c_str());
     maps[m]->phmap_load(ar_in);
     
+    remove(firstFile.c_str());
+    
     uint8_t fileNum = 0;
     
     while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) +  ".tmp.bin")) { // for additional map loads the map and merges it

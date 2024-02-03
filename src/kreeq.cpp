@@ -94,6 +94,8 @@ bool DBG::memoryOk(int64_t delta) {
 
 bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
     
+    while(freeMemory) {status();}
+    
     {
         std::lock_guard<std::mutex> lck(readMtx);
         readBatches.push(readBatch);

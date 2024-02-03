@@ -288,9 +288,15 @@ bool DBG::dumpBuffers() {
 bool DBG::buffersToMaps() {
     
     std::vector<std::function<bool()>> jobs;
+    std::vector<uint64_t> fileSizes;
     
-    for(uint16_t b = 0; b<mapCount; ++b)
-        jobs.push_back([this, b] { return processBuffers(b); });
+    for (uint16_t m = 0; m<mapCount; ++m) // compute size of buf files
+        fileSizes.push_back(fileSize(userInput.prefix + "/.buf." + std::to_string(m) + ".bin"));
+    
+    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
+    
+    for(uint32_t i : idx)
+        jobs.push_back([this, i] { return processBuffers(i); });
         
     threadPool.queueJobs(jobs);
     
@@ -424,6 +430,7 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     phmap::BinaryInputArchive ar_in(firstFile.c_str());
     maps[m]->phmap_load(ar_in);
+    alloc += mapSize(*maps[m]);
     
     remove(firstFile.c_str());
     
@@ -435,10 +442,15 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
         phmap::flat_hash_map<uint64_t, DBGkmer> nextMap;
         phmap::BinaryInputArchive ar_in(nextFile.c_str());
         nextMap.phmap_load(ar_in);
+        uint64_t map_size1 = mapSize(nextMap);
+        alloc += map_size1;
         
+        uint64_t map_size2 = mapSize(*maps[m]);
         unionSum(nextMap, *maps[m]); // unionSum operation between the existing map and the next map
         
+        alloc += mapSize(*maps[m]) - map_size2;
         remove(nextFile.c_str());
+        freed += map_size1;
         
     }
     

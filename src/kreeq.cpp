@@ -417,7 +417,7 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     if (!fileExists(prefix + "/.map." + std::to_string(m) + ".1.tmp.bin")) {
         
-        std::rename(firstFile, prefix + "/.map." + std::to_string(m) + ".bin");
+        std::rename(firstFile.c_str(), (prefix + "/.map." + std::to_string(m) + ".bin").c_str());
         return true;
         
     }

@@ -345,7 +345,7 @@ bool DBG::processBuffers(uint16_t m) {
         delete buf;
         alloc += mapSize(*maps[m]) - map_size;
         
-        if (freeMemory) {
+        if (freeMemory || !bufFile || bufFile.peek() == EOF) {
             
             dumpTmpMap(userInput.prefix, m); // if it does, dump map
             

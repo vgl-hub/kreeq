@@ -373,7 +373,7 @@ bool DBG::dumpTmpMap(std::string prefix, uint16_t m) {
     while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin"))
         ++fileNum;
         
-    prefix.append("/.map." + std::to_string(m) + "." + std::to_string(fileNum + 1) +  ".tmp.bin");
+    prefix.append("/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin");
     
     phmap::BinaryOutputArchive ar_out(prefix.c_str());
     maps[m]->phmap_dump(ar_out);

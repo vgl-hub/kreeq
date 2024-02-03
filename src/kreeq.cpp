@@ -443,11 +443,6 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     }
     
     dumpMap(userInput.prefix, m);
-    uint64_t map_size = mapSize(*maps[m]);
-    delete maps[m];
-    freed += map_size;
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
-    alloc += mapSize(*maps[m]);
     
     return true;
 

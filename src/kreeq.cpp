@@ -398,6 +398,8 @@ bool DBG::dumpTmpMap(std::string prefix, uint16_t m) {
 
 void DBG::consolidateTmpMaps(){ // concurrent merging of the maps that store the same hashes
     
+    lg.verbose("Consolidating temporary maps");
+    
     std::vector<std::function<bool()>> jobs;
     
     std::vector<uint64_t> fileSizes;
@@ -490,7 +492,7 @@ void DBG::finalize() {
         
         joinThreads();
                 
-        lg.verbose("Loading buffers in maps");
+        lg.verbose("Converting buffers to maps");
         
         buffersToMaps();
         
@@ -538,9 +540,8 @@ bool DBG::summary(uint16_t m) {
         
     }
     
-    map_size = mapSize(*maps[m]);
     delete maps[m];
-    freed += map_size;
+    freed += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
  
     std::lock_guard<std::mutex> lck(mtx);

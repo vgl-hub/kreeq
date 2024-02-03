@@ -99,6 +99,8 @@ public:
     
     bool validateSegment(uint32_t i);
     
+    bool dumpTmpMap(std::string prefix, uint16_t m);
+    
     bool dumpMap(std::string prefix, uint16_t m);
     
     bool loadMap(std::string prefix, uint16_t m);

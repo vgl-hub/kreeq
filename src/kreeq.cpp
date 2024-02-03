@@ -291,6 +291,8 @@ bool DBG::buffersToMaps() {
     
     jobWait(threadPool);
     
+    exit(EXIT_SUCCESS);
+    
     return true;
 
 }
@@ -343,11 +345,41 @@ bool DBG::processBuffers(uint16_t m) {
         delete buf;
         alloc += mapSize(*maps[m]) - map_size;
         
+        if (freeMemory) {
+            
+            dumpTmpMap(userInput.prefix, m); // if it does, dump map
+            
+            while (freeMemory) {}
+
+        }
+        
     }
-    
-    dumpMap(userInput.prefix, m); // if it does, dump map
+
     bufFile.close();
     remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
+    
+    return true;
+    
+}
+
+bool DBG::dumpTmpMap(std::string prefix, uint16_t m) {
+    
+    uint8_t fileNum = 0;
+    
+    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin"))
+        ++fileNum;
+        
+    prefix.append("/.map." + std::to_string(m) + "." + std::to_string(fileNum + 1) +  ".tmp.bin");
+    
+    phmap::BinaryOutputArchive ar_out(prefix.c_str());
+    maps[m]->phmap_dump(ar_out);
+    
+    uint64_t map_size = mapSize(*maps[m]);
+    delete maps[m];
+    freed += map_size;
+    
+    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    alloc += mapSize(*maps[m]);
     
     return true;
     

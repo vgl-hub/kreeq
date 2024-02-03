@@ -101,6 +101,10 @@ public:
     
     bool dumpTmpMap(std::string prefix, uint16_t m);
     
+    void consolidateTmpMaps();
+    
+    bool mergeTmpMaps(uint16_t m);
+    
     bool dumpMap(std::string prefix, uint16_t m);
     
     bool loadMap(std::string prefix, uint16_t m);

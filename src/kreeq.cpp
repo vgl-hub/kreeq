@@ -295,7 +295,7 @@ bool DBG::buffersToMaps() {
     
     jobWait(threadPool);
     
-    exit(EXIT_SUCCESS);
+    consolidateTmpMaps();
     
     return true;
 
@@ -387,6 +387,72 @@ bool DBG::dumpTmpMap(std::string prefix, uint16_t m) {
     
     return true;
     
+}
+
+void DBG::consolidateTmpMaps(){ // concurrent merging of the maps that store the same hashes
+    
+    std::vector<std::function<bool()>> jobs;
+    
+    std::vector<uint64_t> fileSizes;
+    
+    for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
+        fileSizes.push_back(fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin"));
+    
+    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
+    
+    for(uint32_t i : idx)
+        jobs.push_back([this, i] { return mergeTmpMaps(i); });
+    
+    threadPool.queueJobs(jobs);
+    
+    jobWait(threadPool);
+    
+    DBGstats();
+    
+}
+
+bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same hashes
+    
+    std::string prefix = userInput.prefix; // loads the first map
+    std::string firstFile = prefix + "/.map." + std::to_string(m) + ".0.tmp.bin";
+    
+    if (!fileExists(prefix + "/.map." + std::to_string(m) + ".1.tmp.bin")) {
+        
+        
+        
+        return true;
+        
+    }
+    
+    phmap::BinaryInputArchive ar_in(firstFile.c_str());
+    maps[m]->phmap_load(ar_in);
+    
+    uint8_t fileNum = 0;
+    
+    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) +  ".tmp.bin")) { // for additional map loads the map and merges it
+        
+        prefix = userInput.prefix; // loads the next map
+        prefix.append("/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin");
+        
+        phmap::flat_hash_map<uint64_t, DBGkmer> nextMap;
+        phmap::BinaryInputArchive ar_in(prefix.c_str());
+        nextMap.phmap_load(ar_in);
+        
+        unionSum(nextMap, *maps[m]); // unionSum operation between the existing map and the next map
+        
+        remove(prefix.c_str());
+        
+    }
+    
+    dumpMap(userInput.prefix, m);
+    uint64_t map_size = mapSize(*maps[m]);
+    delete maps[m];
+    freed += map_size;
+    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    alloc += mapSize(*maps[m]);
+    
+    return true;
+
 }
 
 bool DBG::dumpMap(std::string prefix, uint16_t m) {
@@ -807,7 +873,7 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
     std::vector<uint64_t> fileSizes;
     
-    for (uint16_t m = 0; m<mapCount; ++m) // compute size of buffer files
+    for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
         fileSizes.push_back(fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin"));
     
     std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest

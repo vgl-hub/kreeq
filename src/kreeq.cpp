@@ -540,8 +540,9 @@ bool DBG::summary(uint16_t m) {
         
     }
     
+    map_size = mapSize(*maps[m]);
     delete maps[m];
-    freed += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
+    freed += map_size;
     maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
  
     std::lock_guard<std::mutex> lck(mtx);
@@ -844,8 +845,9 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     
     prefix.append("/.map." + std::to_string(m) + ".bin");
     phmap::BinaryInputArchive ar_in(prefix.c_str());
-    allocMemory(fileSize(prefix));
+//    allocMemory(fileSize(prefix));
     maps[m]->phmap_load(ar_in);
+    alloc += mapSize(*maps[m]);
     
     return true;
 

@@ -126,6 +126,8 @@ public:
     
     void printTable();
     
+    void printTableCompressed();
+    
 };
 
 #endif /* KREEQ_H */

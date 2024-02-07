@@ -86,6 +86,7 @@ int main(int argc, char **argv) {
             {"tmp-prefix", required_argument, 0, 't'},
             {"max-memory", required_argument, 0, 'm'},
             {"threads", required_argument, 0, 'j'},
+            {"table-compressed", no_argument, &userInput.tableCompressed, 1},
             
             {"verbose", no_argument, &verbose_flag, 1},
             {"cmd", no_argument, &cmd_flag, 1},

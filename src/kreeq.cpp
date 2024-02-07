@@ -1001,7 +1001,7 @@ void DBG::report() { // generates the output from the program
             
         case 2: { // .bed
             
-            printTable();
+            userInput.tableCompressed ? printTableCompressed() : printTable();
             
             break;
             
@@ -1097,7 +1097,88 @@ void DBG::printTable() {
                     
                 }
                 
-                kmerCov.clear();
+            }else if (component->type == GAP){
+                
+                auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
+                
+                gapLen += inGap->getDist(component->start - component->end);
+                
+                absPos += gapLen;
+                
+            }else{} // need to handle edges, cigars etc
+            
+        }
+        
+//        for (uint64_t p = 0; p<kcount; ++p) {
+//
+//            for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
+//
+//                str[p+c] = ctoi[*(first+p+c)]; // convert the next base
+//                if (str[p+c] > 3) { // if non-canonical base is found
+//                    p = p+c; // move position
+//                    e = 0; // reset base counter
+//                    break;
+//                }
+//
+//                e = k-1;
+//
+//            }
+//
+//        }
+        
+    }
+    
+    ofs.close();
+    
+}
+
+void DBG::printTableCompressed() {
+    
+    std::ofstream ofs(userInput.outFile);
+    
+    genome->sortPathsByOriginal();
+    
+    std::vector<InPath> inPaths = genome->getInPaths();
+    std::vector<InSegment*> *inSegments = genome->getInSegments();
+    std::vector<InGap> *inGaps = genome->getInGaps();
+    std::vector<DBGbase*> *dbgbases = genome->getInSegmentsDBG();
+    
+    for (InPath& path : inPaths) {
+        
+        unsigned int cUId = 0, gapLen = 0, sIdx = 0;
+        
+        std::vector<PathComponent> pathComponents = path.getComponents();
+        
+        uint64_t absPos = 0;
+        
+        for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
+            
+            cUId = component->id;
+            
+            if (component->type == SEGMENT) {
+                
+                auto inSegment = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
+                
+                if (inSegment != inSegments->end()) {sIdx = std::distance(inSegments->begin(), inSegment);} // gives us the segment index
+                
+                DBGbase *dbgbase = (*dbgbases)[sIdx];
+                
+                if (component->orientation == '+') {
+                    
+                    for (uint64_t i = 0; i < (*inSegment)->getSegmentLen(); ++i) {
+                        
+                        ofs<<path.getHeader()
+                           <<"\t"<<absPos<<"\t"<<std::to_string(dbgbase[i].cov)<<","<<std::to_string(dbgbase[i].isFw ? dbgbase[i].fw : dbgbase[i].bw)<<","<<std::to_string(dbgbase[i].isFw ? dbgbase[i].bw : dbgbase[i].fw)<<"\n";
+                        
+                        ++absPos;
+                        
+                    }
+                    
+                }else{
+                    
+                    // GFA not handled yet
+                    
+                }
                 
             }else if (component->type == GAP){
                 

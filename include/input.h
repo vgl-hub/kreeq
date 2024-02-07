@@ -28,6 +28,7 @@ struct UserInputKreeq : UserInput {
     double maxMem = 0;
     std::string prefix = ".", outFile = "";
     std::vector<std::string> inDBG;
+    int tableCompressed = 0;
 
 };
 

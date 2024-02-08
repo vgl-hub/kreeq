@@ -970,7 +970,9 @@ void DBG::report() { // generates the output from the program
     
     const static phmap::flat_hash_map<std::string,int> string_to_case{ // different outputs available
         {"kreeq",1},
-        {"bed",2}
+        {"bed",2},
+        {"csv",2},
+        {"kwig",3}
     };
     
     std::string ext = "stdout";
@@ -999,9 +1001,17 @@ void DBG::report() { // generates the output from the program
             
         }
             
-        case 2: { // .bed
+        case 2: { // .bed .csv
             
-            userInput.tableCompressed ? printTableCompressed() : printTable();
+            printTable(ext);
+            
+            break;
+            
+        }
+            
+        case 3: { // .kwig
+            
+            printTableCompressed();
             
             break;
             
@@ -1011,7 +1021,14 @@ void DBG::report() { // generates the output from the program
     
 }
 
-void DBG::printTable() {
+void DBG::printTable(std::string ext) {
+    
+    char colSep, entrySep;
+    
+    if (ext == "bed")
+        colSep = '\t', entrySep = ':';
+    if (ext == "csv")
+        colSep = ',', entrySep = ' ';
     
     std::ofstream ofs(userInput.outFile);
     
@@ -1051,34 +1068,34 @@ void DBG::printTable() {
                     for (uint64_t i = 0; i < (*inSegment)->getSegmentLen(); ++i) {
                         
                         ofs<<path.getHeader()
-                           <<"\t"<<absPos<<"\t";
+                           <<colSep<<absPos<<colSep;
                         
                         kmerCov.push_back(dbgbase[i].cov);
                         
                         for(uint8_t c = 0; c<k; ++c){
                             ofs<<std::to_string(kmerCov[c]);
                             if (c < k - 1)
-                                ofs<<":";
+                                ofs<<entrySep;
                         }
                         
-                        ofs<<",";
+                        ofs<<colSep;
                         
                         edgeCovFw.push_back(dbgbase[i].isFw ? dbgbase[i].fw : dbgbase[i].bw);
                         
                         for(uint8_t c = 0; c<k; ++c){
                             ofs<<std::to_string(edgeCovFw[c]);
                             if (c < k - 1)
-                                ofs<<":";
+                                ofs<<entrySep;
                         }
                         
-                        ofs<<",";
+                        ofs<<colSep;
                         
                         edgeCovBw.push_back(dbgbase[i].isFw ? dbgbase[i].bw : dbgbase[i].fw);
                         
                         for(uint8_t c = 0; c<k; ++c){
                             ofs<<std::to_string(edgeCovBw[c]);
                             if (c < k - 1)
-                                ofs<<":";
+                                ofs<<entrySep;
                         }
                         
                         ofs<<"\n";

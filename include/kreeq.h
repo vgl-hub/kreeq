@@ -124,7 +124,7 @@ public:
     
     void report();
     
-    void printTable();
+    void printTable(std::string ext);
     
     void printTableCompressed();
     

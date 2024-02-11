@@ -32,7 +32,8 @@ int main(int argc, char *argv[])
         uint64_t absPos = 0;
         
         ifs.read(reinterpret_cast<char *>(&k), sizeof(uint8_t));
-        std::cout<<std::to_string(k)<<"\n";
+        if (argv[2] == NULL)
+            std::cout<<std::to_string(k)<<"\n";
 
         while(ifs && !(ifs.peek() == EOF)) {
             

@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
                     
             } else if (argv[2] == std::string("--expand")){
                 
-                std::regex chrom("chrom\\=(\\w+)");
+                std::regex chrom("chrom\\=(\\.*) ");
                 std::regex_search(header, match, chrom);
                 header = match[1];
                 

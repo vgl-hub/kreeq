@@ -10,6 +10,7 @@
 #include <fstream>
 #include <vector>
 #include <regex>
+#include <array>
 
 int main(int argc, char *argv[])
 {

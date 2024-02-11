@@ -1032,7 +1032,7 @@ void DBG::report() { // generates the output from the program
 
 void DBG::printTable(std::string ext) {
     
-    char colSep = '', entrySep = '';
+    char colSep = ',', entrySep = ',';
     
     if (ext == "bed")
         colSep = '\t', entrySep = ':';

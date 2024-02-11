@@ -34,8 +34,16 @@ Similarly, kreeq databases can be generated separately for multiple inputs and c
 kreeq validate -r testFiles/random1.fastq -o random1.kreeq
 kreeq validate -r testFiles/random2.fastq -o random2.kreeq
 
-time kreeq union -d random1.kreeq random2.kreeq -o union.kreeq
-time kreeq validate -f testFiles/random1.fasta -d union.kreeq
+kreeq union -d random1.kreeq random2.kreeq -o union.kreeq
+kreeq validate -f testFiles/random1.fasta -d union.kreeq
+```
+
+The output of kreeq can be tabled as .bed, .csv or as highly compressed .kwig or .bkwig (binary kwig), the latter can then be reinflated with the utility kreeq-decompress:
+```
+kreeq validate -f testFiles/random1.fasta -r testFiles/random1.fastq -o test.kwig
+kreeq validate -f testFiles/random1.fasta -r testFiles/random1.fastq -o test.bkwig
+kreeq-decompress test.bkwig --expand | python mycoolscript.py
+
 ```
 
 ## How to cite

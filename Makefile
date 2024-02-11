@@ -7,6 +7,7 @@ CXXFLAGS = -g -std=gnu++14 -O3 $(INCLUDE_DIR) $(WARNINGS)
 TARGET = kreeq
 TEST_TARGET = validate
 GENERATE_TARGET = generate-tests
+DECOMPRESSOR_TARGET = decompressor
 BUILD = build/bin
 SOURCE = src
 INCLUDE = include
@@ -28,7 +29,7 @@ debug: CXXFLAGS += -DDEBUG
 debug: CCFLAGS += -DDEBUG
 debug: head
 
-all: head validate regenerate
+all: head validate regenerate compressor
 
 $(OBJS): %: $(BINDIR)/%
 	@
@@ -44,6 +45,9 @@ validate: | $(BUILD)
 	
 regenerate: | $(BUILD)
 	$(CXX) $(CXXFLAGS) -o $(BUILD)/$(TARGET)-$(GENERATE_TARGET) $(SOURCE)/$(GENERATE_TARGET).cpp $(LIBS)
+	
+decompressor: | $(BUILD)
+	$(CXX) $(CXXFLAGS) -o $(BUILD)/$(TARGET)-$(DECOMPRESSOR_TARGET) $(SOURCE)/$(DECOMPRESSOR_TARGET).cpp $(LIBS)
 	
 $(BUILD):
 	-mkdir -p $@

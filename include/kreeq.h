@@ -128,6 +128,8 @@ public:
     
     void printTableCompressed();
     
+    void printTableCompressedBinary();
+    
 };
 
 #endif /* KREEQ_H */

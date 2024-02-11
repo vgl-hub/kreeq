@@ -29,7 +29,7 @@ debug: CXXFLAGS += -DDEBUG
 debug: CCFLAGS += -DDEBUG
 debug: head
 
-all: head validate regenerate compressor
+all: head validate regenerate decompressor
 
 $(OBJS): %: $(BINDIR)/%
 	@

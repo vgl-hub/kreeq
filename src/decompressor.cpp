@@ -64,16 +64,15 @@ int main(int argc, char *argv[])
                     
             } else if (argv[2] == std::string("--expand")){
                 
-                std::regex chrom("chrom\\=(\\.*) ");
+                std::regex chrom("chrom\\=(.*) ");
                 std::regex_search(header, match, chrom);
                 header = match[1];
+                std::vector<uint8_t> kmerCov(k-1,0);
+                std::vector<uint8_t> edgeCovFw(k-1,0);
+                std::vector<uint8_t> edgeCovBw(k-1,0);
                 
                 for (uint64_t i = 0; i < len; ++i) {
                     ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
-                    
-                    std::vector<uint8_t> kmerCov(k-1,0);
-                    std::vector<uint8_t> edgeCovFw(k-1,0);
-                    std::vector<uint8_t> edgeCovBw(k-1,0);
                     
                     std::cout<<header<<colSep<<absPos<<colSep;
                     

@@ -410,8 +410,6 @@ void DBG::consolidateTmpMaps(){ // concurrent merging of the maps that store the
     for(uint32_t i : idx)
         mergeTmpMaps(i);
     
-    jobWait(threadPool);
-    
 }
 
 bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same hashes
@@ -984,6 +982,8 @@ bool DBG::unionSum(parallelMap* map1, parallelMap* map2) {
         jobs.push_back([this, map1, map2, subMapIndex] { return mergeSubMaps(map1, map2, subMapIndex); });
     
     threadPool.queueJobs(jobs);
+    
+    jobWait(threadPool);
     
     return true;
     

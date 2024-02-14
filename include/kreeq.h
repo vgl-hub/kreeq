@@ -23,6 +23,14 @@ struct DBGkmer {
     
 };
 
+using parallelMap = phmap::parallel_flat_hash_map<uint64_t, DBGkmer,
+                                          std::hash<uint64_t>,
+                                          std::equal_to<uint64_t>,
+                                          std::allocator<std::pair<const uint64_t, DBGkmer>>,
+                                          8,
+                                          phmap::NullMutex>;
+
+
 class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     
     std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0}, buffers{0};
@@ -120,9 +128,9 @@ public:
     
     bool mergeMaps(uint16_t m);
     
-    bool mergeSubMaps(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map2, uint8_t subMapIndex);
+    bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex);
     
-    bool unionSum(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map2);
+    bool unionSum(parallelMap* map1, parallelMap* map2);
     
     void report();
     

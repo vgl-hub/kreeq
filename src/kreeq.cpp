@@ -30,7 +30,7 @@
 #include "kmer.h"
 #include "kreeq.h"
 
-uint64_t mapSize(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>& m) {
+uint64_t mapSize(parallelMap& m) {
     
     return (m.size() * (sizeof(DBGkmer) + sizeof(void*)) + // data list
      m.bucket_count() * (sizeof(void*) + sizeof(uint64_t))) // bucket index
@@ -320,7 +320,7 @@ bool DBG::processBuffers(uint16_t m) {
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         
-        phmap::parallel_flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
+        parallelMap& map = *maps[m]; // the map associated to this buffer
         uint64_t map_size = mapSize(map);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
@@ -389,7 +389,7 @@ bool DBG::dumpTmpMap(std::string prefix, uint16_t m) {
     delete maps[m];
     freed += map_size;
     
-    maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
+    maps[m] = new parallelMap;
     alloc += mapSize(*maps[m]);
     
     return true;
@@ -435,7 +435,7 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) +  ".tmp.bin")) { // for additional map loads the map and merges it
         
         std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin"; // loads the next map
-        phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* nextMap = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
+        parallelMap* nextMap = new parallelMap;
         phmap::BinaryInputArchive ar_in(nextFile.c_str());
         nextMap->phmap_load(ar_in);
         uint64_t map_size1 = mapSize(*nextMap);
@@ -468,7 +468,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     delete maps[m];
     freed += map_size;
     
-    maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
+    maps[m] = new parallelMap;
     alloc += mapSize(*maps[m]);
     
     return true;
@@ -534,7 +534,7 @@ bool DBG::summary(uint16_t m) {
     map_size = mapSize(*maps[m]);
     delete maps[m];
     freed += map_size;
-    maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
+    maps[m] = new parallelMap;
  
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
@@ -620,7 +620,7 @@ void DBG::validateSequences() {
             uint64_t map_size = mapSize(*maps[m]);
             delete maps[m];
             freed += map_size;
-            maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
+            maps[m] = new parallelMap;
             
         }
         
@@ -698,7 +698,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     
     uint64_t key, i;
     
-    phmap::parallel_flat_hash_map<uint64_t, DBGkmer> *map;
+    parallelMap *map;
     
     // kreeq QV
     bool isFw = false;
@@ -850,7 +850,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
 
     if (fileExists(prefix)) {
         
-        phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* nextMap = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
+        parallelMap* nextMap = new parallelMap;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         nextMap->phmap_load(ar_in);
         uint64_t map_size1 = mapSize(*nextMap);
@@ -905,7 +905,7 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
         std::string prefix = userInput.inDBG[i]; // loads the next map
         prefix.append("/.map." + std::to_string(m) + ".bin");
         
-        phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* nextMap = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
+        parallelMap* nextMap = new parallelMap;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         nextMap->phmap_load(ar_in);
         
@@ -917,7 +917,7 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
     dumpMap(userInput.prefix, m);
     uint64_t map_size = mapSize(*maps[m]);
     delete maps[m];
-    maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
+    maps[m] = new parallelMap;
     freed += map_size;
     
     summary(m);
@@ -926,7 +926,7 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
 
 }
 
-bool DBG::mergeSubMaps(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map2, uint8_t subMapIndex) {
+bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex) {
     
     auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
     auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
@@ -969,7 +969,7 @@ bool DBG::mergeSubMaps(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, p
 }
 
 
-bool DBG::unionSum(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map2) {
+bool DBG::unionSum(parallelMap* map1, parallelMap* map2) {
     
     std::vector<std::function<bool()>> jobs;
     

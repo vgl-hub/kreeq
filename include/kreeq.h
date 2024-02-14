@@ -120,7 +120,9 @@ public:
     
     bool mergeMaps(uint16_t m);
     
-    bool unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2);
+    bool mergeSubMaps(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map2, uint8_t subMapIndex);
+    
+    bool unionSum(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map2);
     
     void report();
     

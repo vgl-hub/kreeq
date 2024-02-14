@@ -30,7 +30,7 @@
 #include "kmer.h"
 #include "kreeq.h"
 
-uint64_t mapSize(phmap::flat_hash_map<uint64_t, DBGkmer>& m) {
+uint64_t mapSize(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>& m) {
     
     return (m.size() * (sizeof(DBGkmer) + sizeof(void*)) + // data list
      m.bucket_count() * (sizeof(void*) + sizeof(uint64_t))) // bucket index
@@ -320,7 +320,7 @@ bool DBG::processBuffers(uint16_t m) {
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         
-        phmap::flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
+        phmap::parallel_flat_hash_map<uint64_t, DBGkmer>& map = *maps[m]; // the map associated to this buffer
         uint64_t map_size = mapSize(map);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
@@ -389,7 +389,7 @@ bool DBG::dumpTmpMap(std::string prefix, uint16_t m) {
     delete maps[m];
     freed += map_size;
     
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
     alloc += mapSize(*maps[m]);
     
     return true;
@@ -400,8 +400,6 @@ void DBG::consolidateTmpMaps(){ // concurrent merging of the maps that store the
     
     lg.verbose("Consolidating temporary maps");
     
-    std::vector<std::function<bool()>> jobs;
-    
     std::vector<uint64_t> fileSizes;
     
     for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
@@ -410,11 +408,7 @@ void DBG::consolidateTmpMaps(){ // concurrent merging of the maps that store the
     std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
     
     for(uint32_t i : idx)
-        jobs.push_back([this, i] { return mergeTmpMaps(i); });
-    
-    threadPool.queueJobs(jobs);
-    
-    jobWait(threadPool);
+        mergeTmpMaps(i);
     
 }
 
@@ -442,18 +436,19 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) +  ".tmp.bin")) { // for additional map loads the map and merges it
         
         std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin"; // loads the next map
-        phmap::flat_hash_map<uint64_t, DBGkmer> nextMap;
+        phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* nextMap = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
         phmap::BinaryInputArchive ar_in(nextFile.c_str());
-        nextMap.phmap_load(ar_in);
-        uint64_t map_size1 = mapSize(nextMap);
+        nextMap->phmap_load(ar_in);
+        uint64_t map_size1 = mapSize(*nextMap);
         alloc += map_size1;
         
         uint64_t map_size2 = mapSize(*maps[m]);
-        unionSum(nextMap, *maps[m]); // unionSum operation between the existing map and the next map
+        unionSum(nextMap, maps[m]); // unionSum operation between the existing map and the next map
         
         alloc += mapSize(*maps[m]) - map_size2;
         alloc_map_size = mapSize(*maps[m]) - map_size2;
         remove(nextFile.c_str());
+        delete nextMap;
         freed += map_size1;
         
     }
@@ -477,7 +472,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     delete maps[m];
     freed += map_size;
     
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
     alloc += mapSize(*maps[m]);
     
     return true;
@@ -523,7 +518,7 @@ void DBG::finalize() {
 bool DBG::summary(uint16_t m) {
     
     uint64_t kmersUnique = 0, kmersDistinct = 0, map_size = 0, edgeCount = 0;
-    phmap::flat_hash_map<uint64_t, uint64_t> hist;
+    phmap::parallel_flat_hash_map<uint64_t, uint64_t> hist;
     
     loadMap(userInput.prefix, m);
     
@@ -543,7 +538,7 @@ bool DBG::summary(uint16_t m) {
     map_size = mapSize(*maps[m]);
     delete maps[m];
     freed += map_size;
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
  
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
@@ -629,7 +624,7 @@ void DBG::validateSequences() {
             uint64_t map_size = mapSize(*maps[m]);
             delete maps[m];
             freed += map_size;
-            maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+            maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
             
         }
         
@@ -707,7 +702,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     
     uint64_t key, i;
     
-    phmap::flat_hash_map<uint64_t, DBGkmer> *map;
+    phmap::parallel_flat_hash_map<uint64_t, DBGkmer> *map;
     
     // kreeq QV
     bool isFw = false;
@@ -859,14 +854,14 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
 
     if (fileExists(prefix)) {
         
-        phmap::flat_hash_map<uint64_t, DBGkmer> *nextMap = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+        phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* nextMap = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         nextMap->phmap_load(ar_in);
         uint64_t map_size1 = mapSize(*nextMap);
         alloc += map_size1;
         
         uint64_t map_size2 = mapSize(*maps[m]);
-        unionSum(*maps[m], *nextMap); // merges the current map and the existing map
+        unionSum(maps[m], nextMap); // merges the current map and the existing map
         alloc += mapSize(*nextMap) - map_size1;
         delete maps[m];
         freed += map_size2;
@@ -891,9 +886,7 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
     
     for(uint32_t i : idx)
-        jobs.push_back([this, i] { return mergeMaps(i); });
-    
-    threadPool.queueJobs(jobs);
+        mergeMaps(i);
     
     jobWait(threadPool);
     
@@ -916,18 +909,19 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
         std::string prefix = userInput.inDBG[i]; // loads the next map
         prefix.append("/.map." + std::to_string(m) + ".bin");
         
-        phmap::flat_hash_map<uint64_t, DBGkmer> nextMap;
+        phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* nextMap = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
-        nextMap.phmap_load(ar_in);
+        nextMap->phmap_load(ar_in);
         
-        unionSum(nextMap, *maps[m]); // unionSum operation between the existing map and the next map
+        unionSum(nextMap, maps[m]); // unionSum operation between the existing map and the next map
+        delete nextMap;
         
     }
     
     dumpMap(userInput.prefix, m);
     uint64_t map_size = mapSize(*maps[m]);
     delete maps[m];
-    maps[m] = new phmap::flat_hash_map<uint64_t, DBGkmer>;
+    maps[m] = new phmap::parallel_flat_hash_map<uint64_t, DBGkmer>;
     freed += map_size;
     
     summary(m);
@@ -936,29 +930,41 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
 
 }
 
-bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_hash_map<uint64_t, DBGkmer>& map2) {
+bool DBG::mergeSubMaps(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map2, uint8_t subMapIndex) {
     
-    for (auto pair : map1) { // for each element in map1, find it in map2 and increase its value
+    auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
+    auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
+    auto& inner2 = map2->get_inner(subMapIndex);
+    auto& submap2 = inner2.set_;
+    
+    for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
         
-        DBGkmer &dbgkmerMap = map2[pair.first]; // insert or find this kmer in the hash table
+        auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
+        if (got == submap2.end()){
+            submap2.insert(pair);
+        }else{
+
+            DBGkmer& dbgkmerMap = got->second;
         
-        for (uint64_t w = 0; w<4; ++w) { // update weights
+            for (uint64_t w = 0; w<4; ++w) { // update weights
+                
+                if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap.fw[w] += pair.second.fw[w];
+                else
+                    dbgkmerMap.fw[w] = 255;
+                if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap.bw[w] += pair.second.bw[w];
+                else
+                    dbgkmerMap.bw[w] = 255;
+                
+            }
             
-            if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
-                dbgkmerMap.fw[w] += pair.second.fw[w];
+            if (255 - dbgkmerMap.cov >= pair.second.cov)
+                dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
             else
-                dbgkmerMap.fw[w] = 255;
-            if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
-                dbgkmerMap.bw[w] += pair.second.bw[w];
-            else
-                dbgkmerMap.bw[w] = 255;
+                dbgkmerMap.cov = 255;
             
-        }
-        
-        if (255 - dbgkmerMap.cov >= pair.second.cov)
-            dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
-        else
-            dbgkmerMap.cov = 255;
+        };
         
     }
     
@@ -966,9 +972,30 @@ bool DBG::unionSum(phmap::flat_hash_map<uint64_t, DBGkmer>& map1, phmap::flat_ha
     
 }
 
+
+bool DBG::unionSum(phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map1, phmap::parallel_flat_hash_map<uint64_t, DBGkmer>* map2) {
+    
+    std::vector<std::function<bool()>> jobs;
+    
+    if (map1->subcnt() != map2->subcnt()) {
+        fprintf(stderr, "Maps don't have the same numbers of submaps (%zu != %zu). Terminating.\n", map1->subcnt(), map2->subcnt());
+        exit(EXIT_FAILURE);
+    }
+    
+    for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
+        jobs.push_back([this, map1, map2, subMapIndex] { return mergeSubMaps(map1, map2, subMapIndex); });
+    
+    threadPool.queueJobs(jobs);
+    
+    jobWait(threadPool);
+    
+    return true;
+    
+}
+
 void DBG::report() { // generates the output from the program
     
-    const static phmap::flat_hash_map<std::string,int> string_to_case{ // different outputs available
+    const static phmap::parallel_flat_hash_map<std::string,int> string_to_case{ // different outputs available
         {"kreeq",1},
         {"bed",2},
         {"csv",2},

@@ -142,6 +142,10 @@ public:
     
     void printTableCompressedBinary();
     
+    std::array<uint16_t, 2> loadMapRange(std::array<uint16_t, 2> mapRange);
+    
+    void deleteMapRange(std::array<uint16_t, 2> mapRange);
+    
 };
 
 #endif /* KREEQ_H */

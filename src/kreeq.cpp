@@ -555,6 +555,39 @@ void DBG::loadGenome(InSequencesDBG *genome) {
     this->genome = genome;
 }
 
+std::array<uint16_t, 2> DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
+    
+    std::vector<std::function<bool()>> jobs;
+    uint64_t max = 0;
+    
+    mapRange[0] = mapRange[1];
+    
+    for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
+        
+        max += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
+        if(!memoryOk(max))
+            break;
+        mapRange[1] = m;
+        
+    }
+    
+    for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
+        jobs.push_back([this, m] { return loadMap(userInput.prefix, m); });
+        
+    threadPool.queueJobs(jobs);
+    jobWait(threadPool);
+    
+    return mapRange;
+    
+}
+
+void DBG::deleteMapRange(std::array<uint16_t, 2> mapRange) {
+    
+    for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
+        deleteMap(m);
+    
+}
+
 void DBG::validateSequences() {
     
     std::vector<std::function<bool()>> jobs;
@@ -567,29 +600,9 @@ void DBG::validateSequences() {
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
-    while (mapRange[1] < mapCount-1) {
+    while (mapRange[1] + 1 < mapCount) {
         
-        uint64_t max = 0;
-        
-        for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
-            
-            max += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
-
-            if(!memoryOk(max))
-                break;
-            
-            mapRange[1] = m;
-            
-        }
-        
-        for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
-            jobs.push_back([this, m] { return loadMap(userInput.prefix, m); });
-            
-        threadPool.queueJobs(jobs);
-        
-        jobWait(threadPool);
-        
-        jobs.clear();
+        mapRange = loadMapRange(mapRange);
         
         for (uint32_t s = 0; s < segments->size(); ++s)
             jobs.push_back([this, s, mapRange] { return evaluateSegment(s, mapRange); });
@@ -600,10 +613,7 @@ void DBG::validateSequences() {
         
         jobs.clear();
             
-        for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
-            deleteMap(m);
-        
-        mapRange[0] = mapRange[1] + 1;
+        deleteMapRange(mapRange);
         
     }
     
@@ -692,7 +702,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
         
 //        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
         
-        if (i >= mapRange[0] && i <= mapRange[1]) {
+        if (i >= mapRange[0] && i < mapRange[1]) {
             
             map = maps[i];
             

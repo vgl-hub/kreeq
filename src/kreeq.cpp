@@ -385,12 +385,7 @@ bool DBG::dumpTmpMap(std::string prefix, uint16_t m) {
     phmap::BinaryOutputArchive ar_out(prefix.c_str());
     maps[m]->phmap_dump(ar_out);
     
-    uint64_t map_size = mapSize(*maps[m]);
-    delete maps[m];
-    freed += map_size;
-    
-    maps[m] = new parallelMap;
-    alloc += mapSize(*maps[m]);
+    deleteMap(m);
     
     return true;
     
@@ -432,9 +427,9 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     uint8_t fileNum = 0;
     
-    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) +  ".tmp.bin")) { // for additional map loads the map and merges it
+    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) + ".tmp.bin")) { // for additional map loads the map and merges it
         
-        std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin"; // loads the next map
+        std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) + ".tmp.bin"; // loads the next map
         parallelMap* nextMap = new parallelMap;
         phmap::BinaryInputArchive ar_in(nextFile.c_str());
         nextMap->phmap_load(ar_in);
@@ -464,12 +459,7 @@ bool DBG::dumpMap(std::string prefix, uint16_t m) {
     phmap::BinaryOutputArchive ar_out(prefix.c_str());
     maps[m]->phmap_dump(ar_out);
     
-    uint64_t map_size = mapSize(*maps[m]);
-    delete maps[m];
-    freed += map_size;
-    
-    maps[m] = new parallelMap;
-    alloc += mapSize(*maps[m]);
+    deleteMap(m);
     
     return true;
     
@@ -513,7 +503,7 @@ void DBG::finalize() {
 
 bool DBG::summary(uint16_t m) {
     
-    uint64_t kmersUnique = 0, kmersDistinct = 0, map_size = 0, edgeCount = 0;
+    uint64_t kmersUnique = 0, kmersDistinct = 0, edgeCount = 0;
     phmap::parallel_flat_hash_map<uint64_t, uint64_t> hist;
     
     loadMap(userInput.prefix, m);
@@ -531,10 +521,7 @@ bool DBG::summary(uint16_t m) {
         
     }
     
-    map_size = mapSize(*maps[m]);
-    delete maps[m];
-    freed += map_size;
-    maps[m] = new parallelMap;
+    deleteMap(m);
  
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
@@ -615,14 +602,8 @@ void DBG::validateSequences() {
         
         jobs.clear();
             
-        for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m) {
-            
-            uint64_t map_size = mapSize(*maps[m]);
-            delete maps[m];
-            freed += map_size;
-            maps[m] = new parallelMap;
-            
-        }
+        for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
+            deleteMap(m);
         
         mapRange[0] = mapRange[1] + 1;
         
@@ -844,6 +825,19 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
 
 }
 
+bool DBG::deleteMap(uint16_t m) {
+    
+    uint64_t map_size = mapSize(*maps[m]);
+    delete maps[m];
+    freed += map_size;
+    
+    maps[m] = new parallelMap;
+    alloc += mapSize(*maps[m]);
+    
+    return true;
+    
+}
+
 bool DBG::updateMap(std::string prefix, uint16_t m) {
     
     prefix.append("/.map." + std::to_string(m) + ".bin");
@@ -915,10 +909,7 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
     }
     
     dumpMap(userInput.prefix, m);
-    uint64_t map_size = mapSize(*maps[m]);
-    delete maps[m];
-    maps[m] = new parallelMap;
-    freed += map_size;
+    deleteMap(m);
     
     summary(m);
     

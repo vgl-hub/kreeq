@@ -120,6 +120,8 @@ public:
     
     bool loadMap(std::string prefix, uint16_t m);
     
+    bool deleteMap(uint16_t m);
+    
     void load();
     
     bool updateMap(std::string prefix, uint16_t m);

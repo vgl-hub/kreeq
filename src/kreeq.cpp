@@ -32,9 +32,7 @@
 
 uint64_t mapSize(parallelMap& m) {
     
-    return (m.size() * (sizeof(DBGkmer) + sizeof(void*)) + // data list
-     m.bucket_count() * (sizeof(void*) + sizeof(uint64_t))) // bucket index
-    * 1.3; // estimated allocation overheads
+   return m.capacity() * (sizeof(parallelMap::value_type) + 1) + sizeof(parallelMap);
     
 }
 

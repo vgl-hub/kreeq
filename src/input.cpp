@@ -115,7 +115,6 @@ void Input::read(uint8_t mode) {
                 }
                 
                 knav.loadGenome(&genome);
-                knav.validateSequences(); // validate the input sequence
                 
             }
             

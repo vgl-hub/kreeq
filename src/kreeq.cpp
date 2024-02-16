@@ -25,6 +25,7 @@
 #include "gfa-lines.h"
 #include "gfa.h"
 #include "stream-obj.h"
+#include "output.h"
 
 #include "input.h"
 #include "kmer.h"
@@ -596,15 +597,15 @@ void DBG::deleteMapRange(std::array<uint16_t, 2> mapRange) {
 
 void DBG::validateSequences() {
     
-    std::vector<std::function<bool()>> jobs;
+    if (userInput.inSequence.empty())
+        return;
     
     lg.verbose("Validating sequence");
     
-    genome->generateValidationVector();
-    
+    std::vector<std::function<bool()>> jobs;
     std::vector<InSegment*> *segments = genome->getInSegments();
-    
     std::array<uint16_t, 2> mapRange = {0,0};
+    genome->generateValidationVector();
     
     while (mapRange[1] < mapCount) {
         
@@ -622,22 +623,6 @@ void DBG::validateSequences() {
         jobs.clear();
             
         deleteMapRange(mapRange);
-        
-    }
-    
-    jobs.clear();
-    
-    for (uint32_t s = 0; s < segments->size(); ++s)
-        jobs.push_back([this, s] { return validateSegment(s); });
-    
-    threadPool.queueJobs(jobs);
-    
-    jobWait(threadPool);
-    
-    for (auto it = logs.begin(); it != logs.end(); it++) {
-     
-        it->print();
-        logs.erase(it--);
         
     }
     
@@ -778,16 +763,6 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     totMissingKmers += missingKmers.size();
     totKcount += kmers;
     totEdgeMissingKmers += edgeMissingKmers.size();
-    
-    return true;
-    
-}
-
-bool DBG::validateSegment(uint32_t s) {
-    
-    // internal
-    uint32_t a = s;
-    s = a;
     
     return true;
     
@@ -1003,7 +978,8 @@ void DBG::report() { // generates the output from the program
         {"bed",2},
         {"csv",2},
         {"kwig",3},
-        {"bkwig",4}
+        {"bkwig",4},
+        {"gfa",5}
     };
     
     std::string ext = "stdout";
@@ -1014,6 +990,17 @@ void DBG::report() { // generates the output from the program
     lg.verbose("Writing ouput: " + userInput.outFile);
     
     std::unique_ptr<std::ostream> ostream; // smart pointer to handle any kind of output stream
+    
+    switch (string_to_case.count(ext) ? string_to_case.at(ext) : 0) {
+        default:
+        case 2:
+        case 3:
+        case 4: { // .bed .csv .kwig .bkwig
+            validateSequences(); // validate the input sequence
+            break;
+        }
+            
+    }
     
     switch (string_to_case.count(ext) ? string_to_case.at(ext) : 0) {
         
@@ -1051,6 +1038,14 @@ void DBG::report() { // generates the output from the program
         case 4: { // .bkwig
             
             printTableCompressedBinary();
+            
+            break;
+            
+        }
+            
+        case 5: { // .gfa
+            
+            printGFA();
             
             break;
             
@@ -1250,23 +1245,6 @@ void DBG::printTableCompressed() {
             
         }
         
-//        for (uint64_t p = 0; p<kcount; ++p) {
-//
-//            for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
-//
-//                str[p+c] = ctoi[*(first+p+c)]; // convert the next base
-//                if (str[p+c] > 3) { // if non-canonical base is found
-//                    p = p+c; // move position
-//                    e = 0; // reset base counter
-//                    break;
-//                }
-//
-//                e = k-1;
-//
-//            }
-//
-//        }
-        
     }
     
     ofs.close();
@@ -1341,22 +1319,7 @@ void DBG::printTableCompressedBinary() {
             
         }
         
-//        for (uint64_t p = 0; p<kcount; ++p) {
-//
-//            for (uint8_t c = e; c<k; ++c) { // generate k bases if e=0 or the next if e=k-1
-//
-//                str[p+c] = ctoi[*(first+p+c)]; // convert the next base
-//                if (str[p+c] > 3) { // if non-canonical base is found
-//                    p = p+c; // move position
-//                    e = 0; // reset base counter
-//                    break;
-//                }
-//
-//                e = k-1;
-//
-//            }
-//
-//        }
+        
         
     }
     
@@ -1364,3 +1327,187 @@ void DBG::printTableCompressedBinary() {
     
 }
 
+void DBG::printGFA() {
+    
+    lg.verbose("Generating GFA");
+
+    std::vector<std::function<bool()>> jobs;
+    std::vector<InSegment*> *segments = genome->getInSegments();
+    std::array<uint16_t, 2> mapRange = {0,0};
+    parallelMap* genomeDBG = new parallelMap;
+    
+    while (mapRange[1] < mapCount) {
+        
+        mapRange = computeMapRange(mapRange);
+        
+        loadMapRange(mapRange);
+        
+        for (uint32_t s = 0; s < segments->size(); ++s)
+            segmentToDBG(s, mapRange, genomeDBG);
+        
+//        threadPool.queueJobs(jobs);
+//        jobWait(threadPool);
+//        jobs.clear();
+//            
+        deleteMapRange(mapRange);
+        
+    }
+    
+    genome->sortPathsByOriginal();
+    std::vector<InPath> inPaths = genome->getInPaths();
+    
+    for (InPath path : inPaths)
+        jobs.push_back([this, path, genomeDBG] { return DBGtoGFA(path, genomeDBG); });
+    
+    threadPool.queueJobs(jobs);
+    jobWait(threadPool);
+    
+    Report report;
+    report.outFile(*genome, userInput.outFile, userInput, 0);
+    
+    delete genomeDBG;
+    
+}
+
+bool DBG::segmentToDBG(uint32_t s, std::array<uint16_t, 2> mapRange, parallelMap *genomeDBG) {
+    
+    std::vector<InSegment*> *segments = genome->getInSegments();
+    InSegment *segment = (*segments)[s];
+    uint64_t len = segment->getSegmentLen();
+    
+    if (len<k)
+        return true;
+    
+    uint64_t kcount = len-k+1;
+    
+    unsigned char* first = (unsigned char*)segment->getInSequencePtr()->c_str();
+    uint8_t* str = new uint8_t[len];
+    
+    for (uint64_t i = 0; i<len; ++i)
+        str[i] = ctoi[*(first+i)];
+    
+    uint64_t key, i;
+    
+    parallelMap *map;
+    
+    // kreeq QV
+    bool isFw = false;
+    
+//    std::cout<<segment->getSeqHeader()<<std::endl;
+    
+    for (uint64_t c = 0; c<kcount; ++c){
+        
+        key = hash(str+c, &isFw);
+        
+        i = key % mapCount;
+        
+//        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
+        
+        if (i >= mapRange[0] && i < mapRange[1]) {
+            
+            map = maps[i];
+            auto got = map->find(key);
+            
+            if(got != genomeDBG->end())
+                genomeDBG->insert(*got);
+
+        }
+    }
+    
+    delete[] str;
+    
+    return true;
+    
+}
+
+
+bool DBG::DBGtoGFA(InPath path, parallelMap *genomeDBG) {
+    
+    std::vector<PathComponent> pathComponents = path.getComponents();
+    std::vector<InSegment*> *inSegments = genome->getInSegments();
+    std::vector<InGap> *inGaps = genome->getInGaps();
+    unsigned int cUId = 0, gapLen = 0;
+    uint64_t absPos = 0;
+    
+    for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
+        
+        cUId = component->id;
+        
+        if (component->type == SEGMENT) {
+            
+            auto inSegment = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
+            
+            if (component->orientation == '+') {
+                
+                uint64_t len = (*inSegment)->getSegmentLen();
+                
+                if (len<k)
+                    return true;
+                
+                uint64_t kcount = len-k+1;
+                
+                unsigned char* first = (unsigned char*)(*inSegment)->getInSequencePtr()->c_str();
+                uint8_t* str = new uint8_t[len];
+                
+                for (uint64_t i = 0; i<len; ++i)
+                    str[i] = ctoi[*(first+i)];
+                
+                uint64_t key;
+                bool isFw = false;
+                
+                for (uint64_t c = 0; c<kcount; ++c){
+                    
+                    key = hash(str+c, &isFw);
+                    auto it = genomeDBG->find(key);
+                    
+                    if (it != genomeDBG->end()) {
+                        
+                        DBGkmer &dbgkmer = it->second;
+                        
+                        if (isFw) {
+                            if (dbgkmer.fw[*(str+c+k)] != 0) {
+                                std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect1"<<std::endl;
+                            }else{
+                                std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror2"<<std::endl;
+                            }
+                        }else{
+                            if (dbgkmer.bw[3-*(str+c+k)] != 0) {
+                                std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect3"<<std::endl;
+                            }else{
+                                std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror4"<<std::endl;
+                            }
+                        }
+                        
+                    }else{
+                        
+                        std::cout<<absPos<<"\t"<<*(str+c+k)<<"\terror5"<<std::endl;
+                        
+                    }
+                    
+                    ++absPos;
+                    
+                }
+                
+                delete[] str;
+                
+            }else{
+                
+                // GFA not handled yet
+                
+            }
+            
+        }else if (component->type == GAP){
+            
+            auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
+            
+            gapLen += inGap->getDist(component->start - component->end);
+            
+            absPos += gapLen;
+            
+        }else{} // need to handle edges, cigars etc
+        
+    }
+    
+    return true;
+    
+}

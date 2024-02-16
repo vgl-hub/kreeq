@@ -108,8 +108,6 @@ public:
     
     bool evaluateSegment(uint32_t i, std::array<uint16_t, 2> mapRange);
     
-    bool validateSegment(uint32_t i);
-    
     bool dumpTmpMap(std::string prefix, uint16_t m);
     
     void consolidateTmpMaps();
@@ -141,6 +139,12 @@ public:
     void printTableCompressed();
     
     void printTableCompressedBinary();
+    
+    void printGFA();
+    
+    bool segmentToDBG(uint32_t i, std::array<uint16_t, 2> mapRange, parallelMap *genomeDBG);
+    
+    bool DBGtoGFA(InPath path, parallelMap *genomeDBG);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

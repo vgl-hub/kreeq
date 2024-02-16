@@ -41,8 +41,8 @@ void InSequencesDBG::generateValidationVector() {
 
     for (InSegment* segment : inSegments) {
         
+        alloc += segment->getSegmentLen() * sizeof(DBGbase);
         DBGbase *dbgbase = new DBGbase[segment->getSegmentLen()];
-        
         dbgbases.push_back(dbgbase);
         
     }

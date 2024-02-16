@@ -480,20 +480,24 @@ void DBG::finalize() {
     lg.verbose("Computing summary statistics");
     
     std::vector<std::function<bool()>> jobs;
+    std::array<uint16_t, 2> mapRange = {0,0};
     
-    std::vector<uint64_t> fileSizes;
-    
-    for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
-        fileSizes.push_back(fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin"));
-    
-    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
-    
-    for (uint32_t i : idx)
-        jobs.push_back([this, i] { return summary(i); });
+    while (mapRange[1] + 1 < mapCount) {
         
-    threadPool.queueJobs(jobs);
-    
-    jobWait(threadPool);
+        mapRange = loadMapRange(mapRange);
+        
+        for (uint32_t i = mapRange[0]; i < mapRange[1]; ++i)
+            jobs.push_back([this, i] { return summary(i); });
+        
+        threadPool.queueJobs(jobs);
+        
+        jobWait(threadPool);
+        
+        jobs.clear();
+        
+        deleteMapRange(mapRange);
+        
+    }
     
     DBGstats();
 
@@ -702,7 +706,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
         
 //        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
         
-        if (i >= mapRange[0] && i < mapRange[1]) {
+        if (i >= mapRange[0] && i <= mapRange[1]) {
             
             map = maps[i];
             

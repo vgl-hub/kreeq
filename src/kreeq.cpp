@@ -486,7 +486,7 @@ void DBG::finalize() {
         
         mapRange = loadMapRange(mapRange);
         
-        for (uint32_t i = mapRange[0]; i < mapRange[1]; ++i)
+        for (uint32_t i = mapRange[0]; i <= mapRange[1]; ++i)
             jobs.push_back([this, i] { return summary(i); });
         
         threadPool.queueJobs(jobs);

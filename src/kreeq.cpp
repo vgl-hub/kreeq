@@ -495,8 +495,6 @@ void DBG::finalize() {
         
         jobs.clear();
         
-        deleteMapRange(mapRange);
-        
     }
     
     DBGstats();

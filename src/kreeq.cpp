@@ -495,6 +495,8 @@ void DBG::finalize() {
         
         jobs.clear();
         
+        deleteMapRange(mapRange);
+        
     }
     
     DBGstats();
@@ -505,8 +507,6 @@ bool DBG::summary(uint16_t m) {
     
     uint64_t kmersUnique = 0, kmersDistinct = 0, edgeCount = 0;
     phmap::parallel_flat_hash_map<uint64_t, uint64_t> hist;
-    
-    loadMap(userInput.prefix, m);
     
     for (auto pair : *maps[m]) {
         
@@ -520,8 +520,6 @@ bool DBG::summary(uint16_t m) {
         ++hist[pair.second.cov];
         
     }
-    
-    deleteMap(m);
  
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;

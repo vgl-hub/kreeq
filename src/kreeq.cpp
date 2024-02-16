@@ -482,11 +482,11 @@ void DBG::finalize() {
     std::vector<std::function<bool()>> jobs;
     std::array<uint16_t, 2> mapRange = {0,0};
     
-    while (mapRange[1] + 1 < mapCount) {
+    while (mapRange[1] < mapCount) {
         
         mapRange = computeMapRange(mapRange);
         
-        for (uint32_t i = mapRange[0]; i <= mapRange[1]; ++i)
+        for (uint32_t i = mapRange[0]; i < mapRange[1]; ++i)
             jobs.push_back([this, i] { return summary(i); });
         
         threadPool.queueJobs(jobs);
@@ -560,7 +560,6 @@ void DBG::loadGenome(InSequencesDBG *genome) {
 std::array<uint16_t, 2> DBG::computeMapRange(std::array<uint16_t, 2> mapRange) {
     
     uint64_t max = 0;
-    
     mapRange[0] = mapRange[1];
     
     for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
@@ -568,7 +567,7 @@ std::array<uint16_t, 2> DBG::computeMapRange(std::array<uint16_t, 2> mapRange) {
         max += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
         if(!memoryOk(max))
             break;
-        mapRange[1] = m;
+        mapRange[1] = m + 1;
         
     }
     
@@ -590,7 +589,7 @@ void DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
 
 void DBG::deleteMapRange(std::array<uint16_t, 2> mapRange) {
     
-    for(uint16_t m = mapRange[0]; m<=mapRange[1]; ++m)
+    for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
         deleteMap(m);
     
 }
@@ -607,7 +606,7 @@ void DBG::validateSequences() {
     
     std::array<uint16_t, 2> mapRange = {0,0};
     
-    while (mapRange[1] + 1 < mapCount) {
+    while (mapRange[1] < mapCount) {
         
         mapRange = computeMapRange(mapRange);
         
@@ -711,7 +710,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
         
 //        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
         
-        if (i >= mapRange[0] && i <= mapRange[1]) {
+        if (i >= mapRange[0] && i < mapRange[1]) {
             
             map = maps[i];
             

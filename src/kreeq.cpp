@@ -484,7 +484,7 @@ void DBG::finalize() {
     
     while (mapRange[1] + 1 < mapCount) {
         
-        mapRange = loadMapRange(mapRange);
+        mapRange = computeMapRange(mapRange);
         
         for (uint32_t i = mapRange[0]; i <= mapRange[1]; ++i)
             jobs.push_back([this, i] { return summary(i); });
@@ -494,8 +494,6 @@ void DBG::finalize() {
         jobWait(threadPool);
         
         jobs.clear();
-        
-        deleteMapRange(mapRange);
         
     }
     
@@ -507,6 +505,8 @@ bool DBG::summary(uint16_t m) {
     
     uint64_t kmersUnique = 0, kmersDistinct = 0, edgeCount = 0;
     phmap::parallel_flat_hash_map<uint64_t, uint64_t> hist;
+    
+    loadMap(userInput.prefix, m);
     
     for (auto pair : *maps[m]) {
         
@@ -521,6 +521,8 @@ bool DBG::summary(uint16_t m) {
         
     }
  
+    deleteMap(m);
+    
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
     totKmersDistinct += kmersDistinct;
@@ -555,9 +557,8 @@ void DBG::loadGenome(InSequencesDBG *genome) {
     this->genome = genome;
 }
 
-std::array<uint16_t, 2> DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
+std::array<uint16_t, 2> DBG::computeMapRange(std::array<uint16_t, 2> mapRange) {
     
-    std::vector<std::function<bool()>> jobs;
     uint64_t max = 0;
     
     mapRange[0] = mapRange[1];
@@ -571,13 +572,19 @@ std::array<uint16_t, 2> DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
         
     }
     
+    return mapRange;
+    
+}
+
+void DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
+    
+    std::vector<std::function<bool()>> jobs;
+    
     for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
         jobs.push_back([this, m] { return loadMap(userInput.prefix, m); });
-        
+    
     threadPool.queueJobs(jobs);
     jobWait(threadPool);
-    
-    return mapRange;
     
 }
 
@@ -602,7 +609,9 @@ void DBG::validateSequences() {
     
     while (mapRange[1] + 1 < mapCount) {
         
-        mapRange = loadMapRange(mapRange);
+        mapRange = computeMapRange(mapRange);
+        
+        loadMapRange(mapRange);
         
         for (uint32_t s = 0; s < segments->size(); ++s)
             jobs.push_back([this, s, mapRange] { return evaluateSegment(s, mapRange); });

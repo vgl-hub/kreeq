@@ -1426,7 +1426,7 @@ bool DBG::DBGtoGFA(InPath path, parallelMap *genomeDBG) {
     std::vector<PathComponent> pathComponents = path.getComponents();
     std::vector<InSegment*> *inSegments = genome->getInSegments();
     std::vector<InGap> *inGaps = genome->getInGaps();
-    unsigned int cUId = 0, gapLen = 0;
+    uint32_t cUId = 0, gapLen = 0;
     uint64_t absPos = 0;
     
     for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
@@ -1435,18 +1435,24 @@ bool DBG::DBGtoGFA(InPath path, parallelMap *genomeDBG) {
         
         if (component->type == SEGMENT) {
             
-            auto inSegment = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
+            uint32_t segmentCounter = 0, edgeCounter = 0;
+            uint64_t cleaved = 0;
+            
+            auto it = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
+            
+            InSegment *inSegment = *it;
+            std::string sheader = inSegment->getSeqHeader();
             
             if (component->orientation == '+') {
                 
-                uint64_t len = (*inSegment)->getSegmentLen();
+                uint64_t len = inSegment->getSegmentLen();
                 
                 if (len<k)
                     return true;
                 
                 uint64_t kcount = len-k+1;
                 
-                unsigned char* first = (unsigned char*)(*inSegment)->getInSequencePtr()->c_str();
+                unsigned char* first = (unsigned char*)inSegment->getInSequencePtr()->c_str();
                 uint8_t* str = new uint8_t[len];
                 
                 for (uint64_t i = 0; i<len; ++i)
@@ -1454,6 +1460,7 @@ bool DBG::DBGtoGFA(InPath path, parallelMap *genomeDBG) {
                 
                 uint64_t key;
                 bool isFw = false;
+                uint8_t dist = 0;
                 
                 for (uint64_t c = 0; c<kcount; ++c){
                     
@@ -1465,22 +1472,51 @@ bool DBG::DBGtoGFA(InPath path, parallelMap *genomeDBG) {
                         DBGkmer &dbgkmer = it->second;
                         
                         if (isFw) {
-                            if (dbgkmer.fw[*(str+c+k)] != 0) {
+                            if (c == kcount-1 || dbgkmer.fw[*(str+c+k)] != 0) {
                                 std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect1"<<std::endl;
+                                dist = k;
                             }else{
                                 std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror2"<<std::endl;
+                                std::string newSegment1 = sheader + "." + std::to_string(segmentCounter++);
+                                std::string newSegment2 = sheader + "." + std::to_string(segmentCounter);
+                                std::string newEdge = sheader + "." + std::to_string(edgeCounter++);
+                                std::pair<InSegment*,InSegment*> segments = genome->cleaveSegment(cUId, c+dist-cleaved, newSegment1, newSegment2, newEdge);
+                                cleaved += c+dist-cleaved;
+                                c = cleaved - 1;
+                                inSegment = segments.second;
+                                cUId = inSegment->getuId();
+                                dist = 1;
                             }
                         }else{
-                            if (dbgkmer.bw[3-*(str+c+k)] != 0) {
+                            if (c == kcount-1 || dbgkmer.bw[3-*(str+c+k)] != 0) {
                                 std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect3"<<std::endl;
+                                dist = k;
                             }else{
                                 std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror4"<<std::endl;
+                                std::string newSegment1 = sheader + "." + std::to_string(segmentCounter++);
+                                std::string newSegment2 = sheader + "." + std::to_string(segmentCounter);
+                                std::string newEdge = sheader + "." + std::to_string(edgeCounter++);
+                                std::pair<InSegment*,InSegment*> segments = genome->cleaveSegment(cUId, c+dist-cleaved, newSegment1, newSegment2, newEdge);
+                                cleaved += c+dist-cleaved;
+                                c = cleaved - 1;
+                                inSegment = segments.second;
+                                cUId = inSegment->getuId();
+                                dist = 1;
                             }
                         }
                         
                     }else{
                         
                         std::cout<<absPos<<"\t"<<*(str+c+k)<<"\terror5"<<std::endl;
+                        std::string newSegment1 = sheader + "." + std::to_string(segmentCounter++);
+                        std::string newSegment2 = sheader + "." + std::to_string(segmentCounter);
+                        std::string newEdge = sheader + "." + std::to_string(edgeCounter++);
+                        std::pair<InSegment*,InSegment*> segments = genome->cleaveSegment(cUId, c+dist-cleaved, newSegment1, newSegment2, newEdge);
+                        cleaved += c+dist-cleaved;
+                        c = cleaved - 1;
+                        inSegment = segments.second;
+                        cUId = inSegment->getuId();
+                        dist = 1;
                         
                     }
                     

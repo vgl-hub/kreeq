@@ -142,9 +142,7 @@ public:
     
     void printGFA();
     
-    bool segmentToDBG(uint32_t i, std::array<uint16_t, 2> mapRange, parallelMap *genomeDBG);
-    
-    bool DBGtoGFA(InPath path, parallelMap *genomeDBG);
+    bool DBGtoGFA(std::array<uint16_t, 2> mapRange);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

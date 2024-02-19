@@ -1348,13 +1348,96 @@ void DBG::printGFA() {
 //        threadPool.queueJobs(jobs);
 //        jobWait(threadPool);
 //        jobs.clear();
-          
+        
         deleteMapRange(mapRange);
         
     }
-    
+
     Report report;
     report.outFile(*genome, userInput.outFile, userInput, 0);
+    
+}
+
+std::pair<DBGkmer*,bool> DBG::findDBGkmer(uint8_t *origin) {
+    
+    uint64_t key, i;
+    bool isFw = false;
+    key = hash(origin, &isFw);
+    i = key % mapCount;
+    parallelMap *map = maps[i];
+    auto got = map->find(key);
+    if (got != map->end())
+        return std::make_pair(&(got->second), isFw);
+    else
+        return std::make_pair(nullptr,false);
+    
+}
+
+std::vector<std::string> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, std::string currentPath) {
+    
+    std::vector<std::string> paths;
+    
+    if (depth != 0) {
+        
+        auto it = findDBGkmer(origin);
+        DBGkmer *dbgOrigin = it.first;
+        bool isFw = it.second;
+        
+        if (dbgOrigin == nullptr) {
+            fprintf(stderr, "Could not find origin kmer.\n");
+            exit(EXIT_FAILURE);
+        }
+        
+        for (uint8_t i = 0; i < 4 ; ++i){
+            
+            if(isFw) {
+                
+                if (dbgOrigin->fw[i] != 0) {
+                    
+                    uint8_t nextKmer[k];
+                    memcpy(nextKmer, origin+1, k-1);
+                    nextKmer[k-1] = i;
+                    
+                    std::cout<<std::to_string(i)<<"\t"<<std::to_string(*origin)<<"\t"<<std::to_string(*target)<<"\t"<<currentPath<<std::endl;
+                    
+                    std::vector<std::string> newPaths = findPaths(nextKmer, target, depth-1, currentPath+=itoc[i]);
+                    paths.insert(paths.end(), newPaths.begin(), newPaths.end());
+                    
+                    if (i == *target) {
+                        
+                        std::cout<<"found SNV\t"<<std::endl;
+                        currentPath.pop_back();
+                        paths.push_back(currentPath);
+                    }
+                    
+                }
+            }else{
+                
+                if (dbgOrigin->bw[i] != 0) {
+                    
+                    uint8_t nextKmer[k];
+                    memcpy(nextKmer, origin+1, k-1);
+                    nextKmer[k-1] = 3-i;
+                    
+                    std::cout<<std::to_string(3-i)<<"\t"<<std::to_string(*origin)<<"\t"<<std::to_string(*target)<<"\t"<<currentPath<<std::endl;
+                    
+                    std::vector<std::string> newPaths = findPaths(nextKmer, target, depth-1, currentPath+=itoc[i]);
+                    paths.insert(paths.end(), newPaths.begin(), newPaths.end());
+                        
+                    if (3-i == *target) {
+                            
+                        std::cout<<"found SNV\t"<<std::endl;
+                        currentPath.pop_back();
+                        paths.push_back(currentPath);
+                    }
+                    
+                }
+                
+            }
+            
+        }
+    }
+    return paths;
     
 }
 
@@ -1386,7 +1469,7 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                 auto it = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
                 
                 InSegment *inSegment = *it;
-                std::string sheader = inSegment->getSeqHeader();
+                std::string sHeader = inSegment->getSeqHeader();
                 parallelMap *map;
                 uint64_t key, i;
                 bool isFw = false, correct = false;
@@ -1409,6 +1492,8 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                     
                     for (uint64_t c = 0; c<kcount; ++c){
                         
+                        std::vector<std::string> paths;
+                        std::pair<InSegment*,InSegment*> segments;
                         key = hash(str+c, &isFw);
                         i = key % mapCount;
                         
@@ -1417,55 +1502,82 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                             map = maps[i];
                             auto got = map->find(key);
                             
-                            if(got != genomeDBG->end())
+                            // check for DBG consistency
+                            if (got != map->end()) {
                                 genomeDBG->insert(*got);
-                            
-                            auto it = genomeDBG->find(key);
-                            
-                            if (it != genomeDBG->end()) {
-                                
-                                DBGkmer &dbgkmer = it->second;
-                                
+                                DBGkmer &dbgkmer = got->second;
                                 if (isFw) {
                                     if (c == kcount-1 || dbgkmer.fw[*(str+c+k)] != 0) {
                                         correct = true;
-                                    }else{
-                                        correct = false;
+                                    }else{ // find alternative paths
+                                        paths = findPaths(str+c, str+c+k+1, 2, std::string());
+                                        std::cout<<"found path\t"<<paths.size()<<std::endl;
+                                        if (paths.size() != 0)
+                                            correct = false;
+                                        
                                     }
                                 }else{
                                     if (c == kcount-1 || dbgkmer.bw[3-*(str+c+k)] != 0) {
                                         correct = true;
-                                    }else{
-                                        correct = false;
+                                    }else{ // find alternative paths
+                                        paths = findPaths(str+c, str+c+k+1, 2, std::string());
+                                        std::cout<<"found path\t"<<paths.size()<<std::endl;
+                                        if (paths.size() != 0)
+                                            correct = false;
                                     }
                                 }
-                                
                             }else{
+                                std::cout<<"this is the end"<<std::endl;
                                 correct = false;
                             }
+                        
+                            if (correct) {
+                                
+                                std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect"<<std::endl;
+                                dist = k;
+                                
+                            }else{
+                                
+                                // create edge at error
+                                std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror"<<std::endl;
+                                std::string newSegment1 = sHeader + "." + std::to_string(segmentCounter++);
+                                std::string newSegment2 = sHeader + "." + std::to_string(segmentCounter);
+                                std::string newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);
+                                std::cout<<newSegment1<<"\t"<<newSegment2<<std::endl;
+                                segments = genome->cleaveSegment(cUId, c+dist-cleaved, newSegment1, newSegment2, newEdge);
+                                cleaved += c+dist-cleaved;
+                                c = cleaved - 1;
+                                inSegment = segments.second;
+                                cUId = inSegment->getuId();
+                                absPos += dist;
+                                dist = 1;
+                                
+                            }
+                            
+                            for (std::string path : paths) {
+                                
+                                if (path.size() > 0) {
+                                    
+                                    uint32_t sUId = genome->uId.get();
+                                    std::string* inSequence = new std::string(path);
+                                    Sequence* sequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter) + ".alt", "Candidate sequence", inSequence, NULL};
+                                    std::cout<<sequence->header<<std::endl;
+                                    genome->traverseInSegment(sequence, std::vector<Tag>());
+                                    
+                                    InEdge edge;
+                                    edge.newEdge(genome->uId.next(), segments.first->getuId(), sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
+                                    genome->appendEdge(edge);
+                                    
+                                    edge.newEdge(genome->uId.next(), sUId, segments.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
+                                    genome->appendEdge(edge);
+                                    
+                                }
+                                
+                            }
+                            
+                            paths.clear();
                             
                             ++absPos;
-                            
-                        }
-                        
-                        if (correct) {
-                            
-                            std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect3"<<std::endl;
-                            dist = k;
-                            
-                        }else{
-                            
-                            std::cout<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror2"<<std::endl;
-                            std::string newSegment1 = sheader + "." + std::to_string(segmentCounter++);
-                            std::string newSegment2 = sheader + "." + std::to_string(segmentCounter);
-                            std::string newEdge = sheader + "." + std::to_string(edgeCounter++);
-                            std::pair<InSegment*,InSegment*> segments = genome->cleaveSegment(cUId, c+dist-cleaved, newSegment1, newSegment2, newEdge);
-                            cleaved += c+dist-cleaved;
-                            c = cleaved - 1;
-                            inSegment = segments.second;
-                            cUId = inSegment->getuId();
-                            absPos += dist;
-                            dist = 1;
                             
                         }
                         

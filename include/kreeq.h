@@ -142,6 +142,10 @@ public:
     
     void printGFA();
     
+    std::pair<DBGkmer*,bool> findDBGkmer(uint8_t *origin);
+    
+    std::vector<std::string> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, std::string currentPath) ;
+    
     bool DBGtoGFA(std::array<uint16_t, 2> mapRange);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);

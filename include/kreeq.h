@@ -3,6 +3,18 @@
 
 #include <future>
 
+enum ErrorType {SNV, INS, DEL};
+struct DBGpath {
+    
+    ErrorType type;
+    std::string sequence;
+    double score = 0;
+    
+    DBGpath() {}
+    DBGpath(ErrorType type, std::string sequence) : type(type), sequence(sequence) {}
+    
+};
+
 struct edgeBit {
     
     uint8_t edges = 0;
@@ -144,7 +156,7 @@ public:
     
     std::pair<DBGkmer*,bool> findDBGkmer(uint8_t *origin);
     
-    std::vector<std::string> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, std::string currentPath) ;
+    std::vector<DBGpath> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath) ;
     
     bool DBGtoGFA(std::array<uint16_t, 2> mapRange);
     

@@ -1375,12 +1375,12 @@ std::pair<DBGkmer*,bool> DBG::findDBGkmer(uint8_t *origin) {
 
 std::vector<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath) {
     
-    int8_t breadth = 0;
+    uint8_t breadth = 0;
     std::vector<DBGpath> DBGpaths;
     
-    for (int8_t a = -breadth; a <= breadth; ++a) { // to expand the search before and after the current base
+    for (uint8_t a = 0; a <= breadth; ++a) { // to expand the search before and after the current pos
         
-        target += a;
+        origin -= a;
         
         if (depth != 0) {
             
@@ -1473,7 +1473,7 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                 std::string sHeader = inSegment->getSeqHeader();
                 parallelMap *map;
                 uint64_t key, i;
-                bool isFw = false, correct = false;
+                bool isFw = false;
                 uint8_t dist = 0;
                 
                 if (component->orientation == '+') {
@@ -1491,7 +1491,11 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                     for (uint64_t i = 0; i<len; ++i)
                         str[i] = ctoi[*(first+i)];
                     
+                    std::vector<uint8_t> altPath;
+                    
                     for (uint64_t c = 0; c<kcount; ++c){
+                        
+                        altPath.push_back(*(str+c));
                         
                         std::vector<DBGpath> DBGpaths;
                         key = hash(str+c, &isFw);
@@ -1506,150 +1510,155 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                             if (got != map->end()) {
                                 genomeDBG->insert(*got);
                                 DBGkmer &dbgkmer = got->second;
-                                if (c == kcount-1 || (isFw && dbgkmer.fw[*(str+c+k)] != 0) || (!isFw && dbgkmer.bw[3-*(str+c+k)] != 0)) {
-                                    correct = true;
-                                }else{ // find alternative paths
-                                    
+                                if (c != kcount-1 && ((isFw && dbgkmer.fw[*(str+c+k)] == 0) || (!isFw && dbgkmer.bw[3-*(str+c+k)] == 0))) // find alternative paths
                                     DBGpaths = findPaths(str+c, str+c+k, 3, DBGpath());
-                                    std::cout<<"found paths\t"<<DBGpaths.size()<<std::endl;
-                                    if (DBGpaths.size() != 0)
-                                        correct = false;
-                                    
-                                }
                             }else{
+                                
+//                                if (altPath.size() > 0) {
+//                                    
+//                                    altPath.push_back(*(str+c+1));
+//                                    altPath.push_back(*(str+c+2));
+//                                    altPath.push_back(*(str+c+3));
+//                                    
+//                                    for (uint8_t n : altPath)
+//                                        std::cout<<itoc[n];
+//                                    std::cout<<std::endl;
+//                                
+//                                    int n = altPath.size();
+//                                    uint8_t arr[n];
+//                                    for (int i = 0; i < n; i++) {
+//                                        arr[i] = altPath[i];
+//                                    }
+////                                    
+//                                    DBGpaths = findPaths(&(arr[0]), str+c+k, 3, DBGpath());
+////                                    std::cout<<"found paths\t"<<DBGpaths.size()<<std::endl;
+////                                    if (DBGpaths.size() != 0)
+////                                        correct = false;
+//                                    
+//                                }
+                                
                                 std::cout<<"this is the end"<<std::endl;
-                                correct = false;
                             }
                         
-                            if (correct) {
+                            if (DBGpaths.size() == 0) {
                                 
                                 std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect"<<std::endl;
                                 dist = k;
                                 
                             }else{
                                 
-                                if (DBGpaths.size() != 0) {
+                                for (uint8_t i = 1; i < k; ++i)
+                                    altPath.push_back(*(str+c+i));
+                                    
+                                // create edge at error
+                                std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror"<<std::endl;
+                                std::string newSegment1 = sHeader + "." + std::to_string(segmentCounter++);
+                                std::string newSegment2 = sHeader + "." + std::to_string(segmentCounter);
+                                std::string newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);
+                                std::cout<<newSegment1<<"\t"<<newSegment2<<std::endl;
+                                std::pair<InSegment*,InSegment*> segments = genome->cleaveSegment(cUId, c+dist-cleaved, newSegment1, newSegment2, newEdge);
+                                
+                                cleaved += c+dist-cleaved;
+                                c = cleaved - 1;
+                                inSegment = segments.second;
+                                cUId = inSegment->getuId();
+                                absPos += dist;
+                                dist = 1;
+                                
+                                std::pair<InSegment*,InSegment*> segments2;
+                                
+                                for (DBGpath dbgpath : DBGpaths) {
+                                    
+                                    if (dbgpath.type != DEL) {
                                         
-                                    // create edge at error
-                                    std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror"<<std::endl;
-                                    std::string newSegment1 = sHeader + "." + std::to_string(segmentCounter++);
-                                    std::string newSegment2 = sHeader + "." + std::to_string(segmentCounter);
-                                    std::string newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);
-                                    std::cout<<newSegment1<<"\t"<<newSegment2<<std::endl;
-                                    std::pair<InSegment*,InSegment*> segments = genome->cleaveSegment(cUId, c+dist-cleaved, newSegment1, newSegment2, newEdge);
-                                    
-                                    cleaved += c+dist-cleaved;
-                                    c = cleaved - 1;
-                                    inSegment = segments.second;
-                                    cUId = inSegment->getuId();
-                                    absPos += dist;
-                                    dist = 1;
-                                    
-                                    std::pair<InSegment*,InSegment*> segments2;
-                                    
-                                    for (DBGpath dbgpath : DBGpaths) {
+                                        std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror"<<std::endl;
+                                        newSegment1 = sHeader + "." + std::to_string(segmentCounter++);
+                                        newSegment2 = sHeader + "." + std::to_string(segmentCounter);
+                                        newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);
+                                        std::cout<<newSegment1<<"\t"<<newSegment2<<std::endl;
+                                        segments2 = genome->cleaveSegment(cUId, c+dist-cleaved+1, newSegment1, newSegment2, newEdge);
                                         
-                                        if (dbgpath.type != DEL) {
-                                            
-                                            std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror"<<std::endl;
-                                            newSegment1 = sHeader + "." + std::to_string(segmentCounter++);
-                                            newSegment2 = sHeader + "." + std::to_string(segmentCounter);
-                                            newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);
-                                            std::cout<<newSegment1<<"\t"<<newSegment2<<std::endl;
-                                            segments2 = genome->cleaveSegment(cUId, c+dist-cleaved+1, newSegment1, newSegment2, newEdge);
-                                            
-                                            cleaved += c+dist-cleaved+1;
-                                            c = cleaved;
-                                            inSegment = segments2.second;
-                                            cUId = inSegment->getuId();
-                                            absPos += dist;
-                                            dist = 1;
-                                            
-                                            break;
-                                            
-                                        }
+                                        cleaved += c+dist-cleaved+1;
+                                        c = cleaved;
+                                        inSegment = segments2.second;
+                                        cUId = inSegment->getuId();
+                                        absPos += dist;
+                                        dist = 1;
+                                        
+                                        break;
+                                        
                                     }
-                                    
-                                    uint8_t altCounter = 0;
-                                    
-                                    for (DBGpath dbgpath : DBGpaths) {
-                                        
-                                        uint32_t sUId;
-                                        
-                                        if (dbgpath.type == SNV || dbgpath.type == DEL) {
-                                            
-                                            sUId = genome->uId.get();
-                                            std::string* inSequence = new std::string(dbgpath.sequence);
-                                            Sequence* sequence = new Sequence{sHeader + "." + std::to_string(segmentCounter) + ".alt" + std::to_string(++altCounter), "Candidate sequence", inSequence, NULL};
-                                            std::cout<<sequence->header<<std::endl;
-                                            genome->traverseInSegment(sequence, std::vector<Tag>());
-                                            
-                                        }
-                                        
-                                        if (dbgpath.type == SNV) {
-                                            
-                                            InEdge edge;
-                                            edge.newEdge(genome->uId.next(), segments.first->getuId(), sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
-                                            genome->appendEdge(edge);
-                                            
-                                            edge.newEdge(genome->uId.next(), sUId, segments2.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
-                                            genome->appendEdge(edge);
-                                            
-                                        }else if (dbgpath.type == INS) {
-                                            
-                                            InEdge edge;
-                                            edge.newEdge(genome->uId.next(), segments.first->getuId(), segments2.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
-                                            genome->appendEdge(edge);
-                                            
-                                        }else if (dbgpath.type == DEL) {
-                                            
-                                            std::cout<<"hey there"<<std::endl;
-                                            
-                                            InEdge edge;
-                                            edge.newEdge(genome->uId.next(), segments.first->getuId(), sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
-                                            genome->appendEdge(edge);
-                                            
-                                            edge.newEdge(genome->uId.next(), sUId, segments.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
-                                            genome->appendEdge(edge);
-                                            
-                                        }
-
-                                    }
-                                    
                                 }
                                 
+                                uint8_t altCounter = 0;
+                                
+                                for (DBGpath dbgpath : DBGpaths) {
+                                    
+                                    uint32_t sUId;
+                                    
+                                    if (dbgpath.type == SNV || dbgpath.type == DEL) {
+                                        
+                                        sUId = genome->uId.get();
+                                        std::string* inSequence = new std::string(dbgpath.sequence);
+                                        Sequence* sequence = new Sequence{sHeader + "." + std::to_string(segmentCounter) + ".alt" + std::to_string(++altCounter), "Candidate sequence", inSequence, NULL};
+                                        std::cout<<sequence->header<<std::endl;
+                                        genome->traverseInSegment(sequence, std::vector<Tag>());
+                                        
+                                        for(char a : *inSequence) {
+                                            altPath.push_back(ctoi[(unsigned char)a]);
+                                        }
+                                        
+                                    }
+                                    
+                                    if (dbgpath.type == SNV) {
+                                        
+                                        InEdge edge;
+                                        edge.newEdge(genome->uId.next(), segments.first->getuId(), sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
+                                        genome->appendEdge(edge);
+                                        
+                                        edge.newEdge(genome->uId.next(), sUId, segments2.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
+                                        genome->appendEdge(edge);
+                                        
+                                        altPath.push_back(*(str+c));
+                                        
+                                    }else if (dbgpath.type == INS) {
+                                        
+                                        InEdge edge;
+                                        edge.newEdge(genome->uId.next(), segments.first->getuId(), segments2.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
+                                        genome->appendEdge(edge);
+                                        
+                                        altPath.push_back(*(str+c));
+                                        
+                                    }else if (dbgpath.type == DEL) {
+                                        
+                                        InEdge edge;
+                                        edge.newEdge(genome->uId.next(), segments.first->getuId(), sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
+                                        genome->appendEdge(edge);
+                                        
+                                        edge.newEdge(genome->uId.next(), sUId, segments.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
+                                        genome->appendEdge(edge);
+                                        
+                                    }
+                                }
                             }
-                            
                             ++absPos;
-                            
                         }
-                        
                     }
-                    
                     delete[] str;
                     
-                }else{
-                    
-                    // GFA not handled yet
-                    
-                }
-                
+                    for (uint8_t n : altPath)
+                        std::cout<<itoc[n];
+                    std::cout<<std::endl;
+                }else{} // GFA not handled yet
             }else if (component->type == GAP){
                 
                 auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
-                
                 gapLen += inGap->getDist(component->start - component->end);
-                
                 absPos += gapLen;
                 
             }else{} // need to handle edges, cigars etc
-            
         }
-        
     }
-    
     delete genomeDBG;
-    
     return true;
-    
 }

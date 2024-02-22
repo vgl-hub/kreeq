@@ -26,6 +26,7 @@
 #include "gfa.h"
 #include "stream-obj.h"
 #include "output.h"
+#include "node-graph.h"
 
 #include "input.h"
 #include "kmer.h"
@@ -1474,7 +1475,6 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                 parallelMap *map;
                 uint64_t key, i;
                 bool isFw = false;
-                uint8_t dist = 0;
                 
                 if (component->orientation == '+') {
                     
@@ -1491,11 +1491,9 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                     for (uint64_t i = 0; i<len; ++i)
                         str[i] = ctoi[*(first+i)];
                     
-                    std::vector<uint8_t> altPath;
+                    std::vector<std::string> altPaths;
                     
                     for (uint64_t c = 0; c<kcount; ++c){
-                        
-                        altPath.push_back(*(str+c));
                         
                         std::vector<DBGpath> DBGpaths;
                         key = hash(str+c, &isFw);
@@ -1513,42 +1511,16 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                 if (c != kcount-1 && ((isFw && dbgkmer.fw[*(str+c+k)] == 0) || (!isFw && dbgkmer.bw[3-*(str+c+k)] == 0))) // find alternative paths
                                     DBGpaths = findPaths(str+c, str+c+k, 3, DBGpath());
                             }else{
-                                
-//                                if (altPath.size() > 0) {
-//                                    
-//                                    altPath.push_back(*(str+c+1));
-//                                    altPath.push_back(*(str+c+2));
-//                                    altPath.push_back(*(str+c+3));
-//                                    
-//                                    for (uint8_t n : altPath)
-//                                        std::cout<<itoc[n];
-//                                    std::cout<<std::endl;
-//                                
-//                                    int n = altPath.size();
-//                                    uint8_t arr[n];
-//                                    for (int i = 0; i < n; i++) {
-//                                        arr[i] = altPath[i];
-//                                    }
-////                                    
-//                                    DBGpaths = findPaths(&(arr[0]), str+c+k, 3, DBGpath());
-////                                    std::cout<<"found paths\t"<<DBGpaths.size()<<std::endl;
-////                                    if (DBGpaths.size() != 0)
-////                                        correct = false;
-//                                    
-//                                }
-                                
                                 std::cout<<"this is the end"<<std::endl;
                             }
                         
                             if (DBGpaths.size() == 0) {
                                 
                                 std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect"<<std::endl;
-                                dist = k;
                                 
                             }else{
                                 
-                                for (uint8_t i = 1; i < k; ++i)
-                                    altPath.push_back(*(str+c+i));
+                                altPaths = stringToGraph("ATCGTAGTAATCGACTAGTACGCTAGC", 5, 4);
                                     
                                 // create edge at error
                                 std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror"<<std::endl;
@@ -1556,14 +1528,12 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                 std::string newSegment2 = sHeader + "." + std::to_string(segmentCounter);
                                 std::string newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);
                                 std::cout<<newSegment1<<"\t"<<newSegment2<<std::endl;
-                                std::pair<InSegment*,InSegment*> segments = genome->cleaveSegment(cUId, c+dist-cleaved, newSegment1, newSegment2, newEdge);
+                                std::pair<InSegment*,InSegment*> segments = genome->cleaveSegment(cUId, c-cleaved+k, newSegment1, newSegment2, newEdge);
                                 
-                                cleaved += c+dist-cleaved;
-                                c = cleaved - 1;
+                                cleaved += segments.first->getSegmentLen();
+                                std::cout<<+cleaved<<std::endl;
                                 inSegment = segments.second;
                                 cUId = inSegment->getuId();
-                                absPos += dist;
-                                dist = 1;
                                 
                                 std::pair<InSegment*,InSegment*> segments2;
                                 
@@ -1576,20 +1546,17 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                         newSegment2 = sHeader + "." + std::to_string(segmentCounter);
                                         newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);
                                         std::cout<<newSegment1<<"\t"<<newSegment2<<std::endl;
-                                        segments2 = genome->cleaveSegment(cUId, c+dist-cleaved+1, newSegment1, newSegment2, newEdge);
+                                        segments2 = genome->cleaveSegment(cUId, c-cleaved+k+1, newSegment1, newSegment2, newEdge);
                                         
-                                        cleaved += c+dist-cleaved+1;
-                                        c = cleaved;
+                                        cleaved += segments2.first->getSegmentLen();
                                         inSegment = segments2.second;
                                         cUId = inSegment->getuId();
-                                        absPos += dist;
-                                        dist = 1;
-                                        
                                         break;
                                         
-                                    }
+                                    }else{--cleaved;}
                                 }
                                 
+                                c = cleaved;
                                 uint8_t altCounter = 0;
                                 
                                 for (DBGpath dbgpath : DBGpaths) {
@@ -1604,10 +1571,6 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                         std::cout<<sequence->header<<std::endl;
                                         genome->traverseInSegment(sequence, std::vector<Tag>());
                                         
-                                        for(char a : *inSequence) {
-                                            altPath.push_back(ctoi[(unsigned char)a]);
-                                        }
-                                        
                                     }
                                     
                                     if (dbgpath.type == SNV) {
@@ -1619,15 +1582,11 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                         edge.newEdge(genome->uId.next(), sUId, segments2.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
                                         genome->appendEdge(edge);
                                         
-                                        altPath.push_back(*(str+c));
-                                        
                                     }else if (dbgpath.type == INS) {
                                         
                                         InEdge edge;
                                         edge.newEdge(genome->uId.next(), segments.first->getuId(), segments2.second->getuId(), '+', '+', "0M", sHeader + ".edge." + std::to_string(edgeCounter++));
                                         genome->appendEdge(edge);
-                                        
-                                        altPath.push_back(*(str+c));
                                         
                                     }else if (dbgpath.type == DEL) {
                                         
@@ -1646,9 +1605,8 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                     }
                     delete[] str;
                     
-                    for (uint8_t n : altPath)
-                        std::cout<<itoc[n];
-                    std::cout<<std::endl;
+                    for (std::string altPath : altPaths)
+                        std::cout<<altPath<<std::endl;
                 }else{} // GFA not handled yet
             }else if (component->type == GAP){
                 

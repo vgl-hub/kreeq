@@ -156,7 +156,9 @@ public:
     
     std::pair<DBGkmer*,bool> findDBGkmer(uint8_t *origin);
     
-    std::vector<DBGpath> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath) ;
+    std::vector<DBGpath> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath);
+    
+    void printAltPaths(std::vector<std::vector<uint8_t>> altPaths);
     
     bool DBGtoGFA(std::array<uint16_t, 2> mapRange);
     

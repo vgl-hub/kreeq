@@ -1509,7 +1509,7 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                     std::vector<std::vector<uint8_t>> altPaths;
                     StringGraph stringGraph(str, k);
                     
-                    for (uint64_t c = 0; c<kcount; ++c){
+                    while(stringGraph.currentPos() < kcount){
                         
                         std::vector<DBGpath> DBGpaths;
                         stringGraph.appendNext();
@@ -1531,29 +1531,29 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                 if (got != map->end()) {
                                     genomeDBG->insert(*got);
                                     DBGkmer &dbgkmer = got->second;
-                                    if (c < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
+                                    if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
                                     
                                         std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
                                         DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                                         std::cout<<"putative errors: "<<DBGpaths.size()<<std::endl;
                                         
-//                                        if (DBGpaths.size() == 0) { // backtrack
-//                                            
-//                                            for (uint8_t b = 0; b < 5; ++b) {
-//                                                
-//                                                std::cout<<"backtracking"<<std::endl;
-//                                                stringGraph.backtrack(str, k, 1);
-//                                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-//                                                altPath = altPaths[0];
-//                                                printAltPaths(altPaths);
-//                                                std::cout<<std::to_string(altPath[0])<<"\t"<<std::to_string(altPath[k])<<std::endl;
-//                                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
-//                                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-//                                                if (DBGpaths.size() > 0)
-//                                                    break;
-//                                            }
-//                                            
-//                                        }
+                                        if (DBGpaths.size() == 0) { // backtrack
+                                            
+                                            for (uint8_t b = 0; b < 5; ++b) {
+                                                
+                                                std::cout<<"backtracking"<<std::endl;
+                                                stringGraph.backtrack(str, k, 1);
+                                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
+                                                altPath = altPaths[0];
+                                                printAltPaths(altPaths);
+                                                std::cout<<std::to_string(altPath[0])<<"\t"<<std::to_string(altPath[k])<<std::endl;
+                                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
+                                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+                                                if (DBGpaths.size() > 0)
+                                                    break;
+                                            }
+                                            
+                                        }
                                         
                                     }
                                 }
@@ -1562,12 +1562,12 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                     
                         if (DBGpaths.size() == 0) {
                             
-                            std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\tcorrect"<<std::endl;
+                            std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(stringGraph.peek())<<"\tcorrect"<<std::endl;
                             
                         }else{
                             
                             // create edge at error in GFA
-                            std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror"<<std::endl;
+                            std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(stringGraph.peek())<<"\terror"<<std::endl;
                             std::string newSegment1 = sHeader + "." + std::to_string(segmentCounter++);
                             std::string newSegment2 = sHeader + "." + std::to_string(segmentCounter);
                             std::string newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);
@@ -1593,7 +1593,7 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                     
                                     std::cout<<"helo"<<std::endl;
                                     
-                                    std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(*(str+c+k))<<"\terror"<<std::endl;
+                                    std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(stringGraph.peek())<<"\terror"<<std::endl;
                                     newSegment1 = sHeader + "." + std::to_string(segmentCounter++);
                                     newSegment2 = sHeader + "." + std::to_string(segmentCounter);
                                     newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);

@@ -26,7 +26,6 @@
 #include "gfa.h"
 #include "stream-obj.h"
 #include "output.h"
-#include "node-graph.h"
 
 #include "input.h"
 #include "kmer.h"
@@ -341,28 +340,38 @@ void DBG::printTableCompressedBinary() {
 void DBG::printGFA() {
     
     lg.verbose("Generating GFA");
-
-//    std::vector<std::function<bool()>> jobs;
-    std::array<uint16_t, 2> mapRange = {0,0};
     
     genome->sortPathsByOriginal();
+    
+    for (uint8_t i = 0; i < userInput.depth; ++i) {
+        
+        std::array<uint16_t, 2> mapRange = {0,0};
+        
+        while (mapRange[1] < mapCount) {
+            
+            mapRange = computeMapRange(mapRange);
+            loadMapRange(mapRange);
+//            searchGraph(mapRange);
+            deleteMapRange(mapRange);
+            
+        }
+    }
+    
+    std::array<uint16_t, 2> mapRange = {0,0};
     
     while (mapRange[1] < mapCount) {
         
         mapRange = computeMapRange(mapRange);
-        
         loadMapRange(mapRange);
         
-//        for (InPath& path : inPaths)
-//            jobs.push_back([this, path, mapRange] { return DBGtoGFA(path, mapRange); });
-        DBGtoGFA(mapRange);
-        
-//        threadPool.queueJobs(jobs);
-//        jobWait(threadPool);
-//        jobs.clear();
-        
+        //    std::vector<std::function<bool()>> jobs;
+        //        for (InPath& path : inPaths)
+        //            jobs.push_back([this, path, mapRange] { return DBGtoGFA(path, mapRange); });
+        DBGtoGFA();
+        //        threadPool.queueJobs(jobs);
+        //        jobWait(threadPool);
+        //        jobs.clear();
         deleteMapRange(mapRange);
-        
     }
 
     Report report;

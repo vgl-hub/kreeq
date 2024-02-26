@@ -26,7 +26,7 @@
 #include "gfa.h"
 #include "stream-obj.h"
 #include "output.h"
-#include "node-graph.h"
+#include "string-graph.h"
 
 #include "input.h"
 #include "kmer.h"
@@ -219,6 +219,54 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     
 }
 
+bool DBG::searchGraph(std::array<uint16_t, 2> mapRange) { // stub
+    
+    parallelMap* genomeDBG = new parallelMap;
+    
+    std::vector<InSegment*> *inSegments = genome->getInSegments();
+    
+    for (InSegment *inSegment : *inSegments) {
+    
+        uint64_t len = inSegment->getSegmentLen();
+        
+        if (len<k)
+            return true;
+        
+        uint64_t kcount = len-k+1;
+        
+        unsigned char* first = (unsigned char*)inSegment->getInSequencePtr()->c_str();
+        uint8_t* str = new uint8_t[len];
+        
+        for (uint64_t i = 0; i<len; ++i)
+            str[i] = ctoi[*(first+i)];
+        
+        uint64_t key, i;
+        bool isFw = false;
+        parallelMap *map;
+        
+        for(uint64_t c = 0; c<kcount; ++c){
+            
+            key = hash(str+c, &isFw);
+            i = key % mapCount;
+            
+            if (i >= mapRange[0] && i < mapRange[1]) {
+                
+                map = maps[i];
+                auto got = map->find(key);
+                
+                // check for DBG consistency
+                if (got == map->end()) {
+                    genomeDBG->insert(*got);
+//                    DBGkmer &dbgkmer = got->second;
+                }
+            }
+        }
+    }
+    delete genomeDBG;
+    return true;
+    
+}
+
 std::pair<DBGkmer*,bool> DBG::findDBGkmer(uint8_t *origin) {
     
     uint64_t key, i;
@@ -312,9 +360,7 @@ void DBG::printAltPaths(std::vector<std::vector<uint8_t>> altPaths) {
     }
 }
 
-bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
-    
-    parallelMap* genomeDBG = new parallelMap;
+bool DBG::DBGtoGFA() {
     
     std::vector<InPath> inPaths = genome->getInPaths();
     std::vector<InSegment*> *inSegments = genome->getInSegments();
@@ -372,42 +418,37 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                         altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
 //                        printAltPaths(altPaths);
                         
-                        bool anomaly = false;
+                        bool checkAnomaly = false;
                         
                         for (std::vector<uint8_t> altPath : altPaths) {
-                            
                             key = hash(&altPath[0], &isFw);
                             i = key % mapCount;
-                            
-                            if (i >= mapRange[0] && i < mapRange[1]) {
+
+                            map = maps[i];
+                            auto got = map->find(key);
                                 
-                                map = maps[i];
-                                auto got = map->find(key);
-                                    
-                                // check for DBG consistency
-                                if (got != map->end()) {
-                                    genomeDBG->insert(*got);
-                                    DBGkmer &dbgkmer = got->second;
-                                    if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
-                                        std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
-                                        DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-                                        lg.verbose("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
-                                        if (DBGpaths.size() > 1) { // only attempt to correct unique paths
-                                            DBGpaths.clear();
-                                            anomaly = false;
-                                            break;
-                                        }
-                                    }else{anomaly = true;}
-                                }else{anomaly = true;}
-                            }
+                            // check for DBG consistency
+                            if (got != map->end()) {
+                                DBGkmer &dbgkmer = got->second;
+                                if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
+                                    std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
+                                    DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+                                    lg.verbose("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
+                                    if (DBGpaths.size() > 1) { // only attempt to correct unique paths
+                                        DBGpaths.clear();
+                                        checkAnomaly = true;
+                                        break;
+                                    }
+                                }else{checkAnomaly = false;}
+                            }else{checkAnomaly = false;}
                         }
                         
-                        if (DBGpaths.size() == 0 && anomaly)
+                        if (DBGpaths.size() == 0 && checkAnomaly)
                             backtrack = true;
                         
                         if (backtrack) { // backtrack
                             
-                            for (uint8_t b = 0; b < 5; ++b) {
+                            for (uint8_t b = 0; b < userInput.depth; ++b) {
                                 
                                 lg.verbose("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
                                 stringGraph.backtrack(str, k, 1);
@@ -419,6 +460,9 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                 if (DBGpaths.size() > 0)
                                     break;
                             }
+                            
+                            if (DBGpaths.size() == 0)
+                                stringGraph.advancePos(userInput.depth+1);
                             
                             backtrack = false;
                             
@@ -523,6 +567,5 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
             }else{} // need to handle edges, cigars etc
         }
     }
-    delete genomeDBG;
     return true;
 }

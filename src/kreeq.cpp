@@ -394,6 +394,7 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                         lg.verbose("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
                                         if (DBGpaths.size() > 1) { // only attempt to correct unique paths
                                             DBGpaths.clear();
+                                            anomaly = false;
                                             break;
                                         }
                                         
@@ -404,8 +405,8 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                             }
                         }
                         
-//                        if (DBGpaths.size() == 0 && anomaly)
-//                            backtrack = true;
+                        if (DBGpaths.size() == 0 && anomaly)
+                            backtrack = true;
                         
                         if (backtrack) { // backtrack
                             

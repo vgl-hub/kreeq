@@ -372,7 +372,7 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                         altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
 //                        printAltPaths(altPaths);
                         
-                        bool anomaly = true;
+                        bool anomaly = false;
                         
                         for (std::vector<uint8_t> altPath : altPaths) {
                             
@@ -397,11 +397,8 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                             anomaly = false;
                                             break;
                                         }
-                                        
-                                    }else{anomaly = false;}
-                                }else{anomaly = false;}
-                                
-                                
+                                    }else{anomaly = true;}
+                                }else{anomaly = true;}
                             }
                         }
                         

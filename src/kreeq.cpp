@@ -1613,7 +1613,7 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                     cUId = inSegment->getuId();
                                     isCleaved = true;
                                     
-                                }else if(!isCleaved){--cleaved;}
+                                }
                                 
                                 if (dbgpath.type == SNV || dbgpath.type == DEL) {
                                     
@@ -1646,7 +1646,7 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                     genome->appendEdge(edge);
                                     
                                 }else if (dbgpath.type == DEL) {
-
+                                    
                                     alts.push_back(ctoi[(unsigned char)dbgpath.sequence[0]]);
                                     
                                     InEdge edge;

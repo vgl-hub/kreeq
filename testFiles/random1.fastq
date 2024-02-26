@@ -30,19 +30,5 @@ TCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
 TCGATCGAAATGcTAGCATGACTCAGACTGATCAGATCGA
 +
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-@9:29-52 error masking read for sequence9 (left)
-tCATGCAGTGATGTACGAATGtA
-+
-!!!!!!!!!!!!!!!!!!!!!!!
-@10:29-52 error masking read for sequence9 (right)
-ACATGCAGTGATGTACGAATGtc
-+
-!!!!!!!!!!!!!!!!!!!!!!!
-@11:29-52 error masking read for sequence9 (both)
-tCATGCAGTGATGTACGAATGtc
-+
-!!!!!!!!!!!!!!!!!!!!!!!
-@12:29-52 error masking read for sequence9 (none)
-ACATGCAGTGATGTACGAATGtA
-+
-!!!!!!!!!!!!!!!!!!!!!!!
+@9:29-52 error masking read for sequence9
+AGATCGACTGACTCGTACATGCAGTGATGTACGAATGtAC

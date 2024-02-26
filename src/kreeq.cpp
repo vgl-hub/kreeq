@@ -404,8 +404,8 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                             }
                         }
                         
-//                        if (DBGpaths.size() == 0 && anomaly)
-//                            backtrack = true;
+                        if (DBGpaths.size() == 0 && anomaly)
+                            backtrack = true;
                         
                         if (backtrack) { // backtrack
                             

@@ -64,6 +64,7 @@ void DBG::report() { // generates the output from the program
             validateSequences(); // validate the input sequence
             break;
         }
+        case 5: {}
             
     }
     
@@ -71,53 +72,29 @@ void DBG::report() { // generates the output from the program
         
         default:
         case 1: { // .kreeq
-            
             std::ofstream ofs(userInput.outFile + "/.index"); // adding index
-            
             ostream = std::make_unique<std::ostream>(ofs.rdbuf());
-            
             *ostream<<+k<<"\n"<<mapCount<<std::endl;
-            
             ofs.close();
-            
             break;
-            
         }
-            
         case 2: { // .bed .csv
-            
             printTable(ext);
-            
             break;
-            
         }
-            
         case 3: { // .kwig
-            
             printTableCompressed();
-            
             break;
-            
         }
-            
         case 4: { // .bkwig
-            
             printTableCompressedBinary();
-            
             break;
-            
         }
-            
         case 5: { // .gfa
-            
             printGFA();
-            
             break;
-            
         }
-            
     }
-    
 }
 
 void DBG::printTable(std::string ext) {

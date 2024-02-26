@@ -26,7 +26,6 @@
 #include "gfa.h"
 #include "stream-obj.h"
 #include "output.h"
-#include "node-graph.h"
 
 #include "input.h"
 #include "kmer.h"

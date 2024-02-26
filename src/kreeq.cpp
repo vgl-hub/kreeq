@@ -283,6 +283,8 @@ std::vector<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t de
                     newPath.sequence+=itoc[i];
                     std::vector<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath);
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+                    if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
+                        return DBGpaths;
                     
                     if (i == *(target+1) && newPath.sequence.size() > 1 && depth == 2) {
                         lg.verbose("found SNV\t" + newPath.sequence);
@@ -390,6 +392,10 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                         std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
                                         DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                                         lg.verbose("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
+                                        if (DBGpaths.size() > 1) { // only attempt to correct unique paths
+                                            DBGpaths.clear();
+                                            break;
+                                        }
                                         
                                     }else{anomaly = false;}
                                 }else{anomaly = false;}

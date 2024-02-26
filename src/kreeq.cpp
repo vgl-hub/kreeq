@@ -398,32 +398,32 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                             }
                         }
                         
-                        if (DBGpaths.size() == 0 && anomaly)
-                            backtrack = true;
+//                        if (DBGpaths.size() == 0 && anomaly)
+//                            backtrack = true;
                         
-//                        if (backtrack) { // backtrack
-//                            
-//                            for (uint8_t b = 0; b < 5; ++b) {
-//                                
-//                                lg.verbose("Anomaly detected but no path is found. Backtracking");
-//                                stringGraph.backtrack(str, k, 1);
-//                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-//                                std::vector<uint8_t> altPath = altPaths[0];
-////                                printAltPaths(altPaths);
-//                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
-//                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-//                                if (DBGpaths.size() > 0)
-//                                    break;
-//                            }
-//                            
-//                            backtrack = false;
-//                            
-//                        }
+                        if (backtrack) { // backtrack
+                            
+                            for (uint8_t b = 0; b < 5; ++b) {
+                                
+                                lg.verbose("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(absPos+k));
+                                stringGraph.backtrack(str, k, 1);
+                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
+                                std::vector<uint8_t> altPath = altPaths[0];
+//                                printAltPaths(altPaths);
+                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
+                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+                                if (DBGpaths.size() > 0)
+                                    break;
+                            }
+                            
+                            backtrack = false;
+                            
+                        }
                     
                         if (DBGpaths.size() != 0) {
                             
                             // create edge at error in GFA
-                            lg.verbose("Candidate error at:\t" + std::to_string(absPos));
+                            lg.verbose("Candidate error at:\t" + sHeader + "\t" + std::to_string(absPos+k));
                             std::string newSegment1 = sHeader + "." + std::to_string(segmentCounter++);
                             std::string newSegment2 = sHeader + "." + std::to_string(segmentCounter);
                             std::string newEdge = sHeader + ".edge." + std::to_string(edgeCounter++);

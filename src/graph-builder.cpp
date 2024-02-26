@@ -492,8 +492,6 @@ void DBG::finalize() {
         jobs.clear();
         
     }
-    
-    DBGstats();
 
 }
 

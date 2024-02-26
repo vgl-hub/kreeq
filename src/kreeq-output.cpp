@@ -48,6 +48,9 @@ void DBG::report() { // generates the output from the program
     if (userInput.outFile != "")
         ext = getFileExt("." + userInput.outFile);
     
+    if (userInput.outFile.find(".") != std::string::npos || userInput.outFile == "")
+        DBGstats();
+    
     lg.verbose("Writing ouput: " + userInput.outFile);
     
     std::unique_ptr<std::ostream> ostream; // smart pointer to handle any kind of output stream

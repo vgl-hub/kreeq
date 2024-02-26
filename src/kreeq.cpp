@@ -74,31 +74,35 @@ void DBG::validateSequences() {
         
     }
     
-    std::cout<<"Missing"<<"\t"
-             <<"Total"<<"\t"
-             <<"QV"<<"\t"
-             <<"Error"<<"\t"
-             <<"k"<<"\t"
-             <<"Method"<<std::endl;
-    
-    double merquryError = errorRate(totMissingKmers, totKcount, k), merquryQV = -10*log10(merquryError);
-    
-    std::cout<<totMissingKmers<<"\t"
-             <<totKcount<<"\t"
-             <<merquryQV<<"\t"
-             <<merquryError<<"\t"
-             <<std::to_string(k)<<"\t"
-             <<"Merqury"<<std::endl;
-    
-    double kreeqError = errorRate(totMissingKmers+totEdgeMissingKmers, totKcount, k), kreeqQV = -10*log10(kreeqError);
-    
-    std::cout
-             <<totMissingKmers+totEdgeMissingKmers<<"\t"
-             <<totKcount<<"\t"
-             <<kreeqQV<<"\t"
-             <<kreeqError<<"\t"
-             <<std::to_string(k)<<"\t"
-             <<"Kreeq"<<std::endl;
+    if (userInput.outFile.find(".") != std::string::npos || userInput.outFile == "") {
+        
+        std::cout<<"Missing"<<"\t"
+        <<"Total"<<"\t"
+        <<"QV"<<"\t"
+        <<"Error"<<"\t"
+        <<"k"<<"\t"
+        <<"Method"<<std::endl;
+        
+        double merquryError = errorRate(totMissingKmers, totKcount, k), merquryQV = -10*log10(merquryError);
+        
+        std::cout<<totMissingKmers<<"\t"
+        <<totKcount<<"\t"
+        <<merquryQV<<"\t"
+        <<merquryError<<"\t"
+        <<std::to_string(k)<<"\t"
+        <<"Merqury"<<std::endl;
+        
+        double kreeqError = errorRate(totMissingKmers+totEdgeMissingKmers, totKcount, k), kreeqQV = -10*log10(kreeqError);
+        
+        std::cout
+        <<totMissingKmers+totEdgeMissingKmers<<"\t"
+        <<totKcount<<"\t"
+        <<kreeqQV<<"\t"
+        <<kreeqError<<"\t"
+        <<std::to_string(k)<<"\t"
+        <<"Kreeq"<<std::endl;
+        
+    }
     
 }
 

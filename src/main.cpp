@@ -26,18 +26,10 @@ std::string version = "0.0.1";
 //global
 std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now(); // immediately start the clock when the program is run
 
-int hc_flag;
-int hc_cutoff;
-short int tabular_flag;
 int cmd_flag;
 int verbose_flag;
-int outBubbles_flag;
-int stats_flag;
-int discoverPaths_flag;
-int outFile_flag;
-int sortAlignment_flag;
-int terminalAlignments_flag;
-int maxThreads = 0;
+short int tabular_flag;
+int maxThreads;
 
 std::mutex mtx;
 ThreadPool<std::function<bool()>> threadPool;
@@ -186,7 +178,6 @@ int main(int argc, char **argv) {
 
                 case 'o': // handle output (file or stdout)
                     userInput.outFile = optarg;
-                    outFile_flag = 1;
                     break;
 
                 case 'r': // input reads
@@ -204,9 +195,6 @@ int main(int argc, char **argv) {
                             userInput.inReads.push_back(argv[optind]);
                             
                         }
-                        
-                        stats_flag = true;
-                        
                     }
                         
                     break;
@@ -323,7 +311,6 @@ int main(int argc, char **argv) {
                     
                 case 'o': // handle output (file or stdout)
                     userInput.outFile = optarg;
-                    outFile_flag = 1;
                     break;
                     
                 case 'h': // help

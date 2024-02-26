@@ -1,3 +1,19 @@
+#include <stdlib.h>
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <math.h>
+#include <functional>
+#include <list>
+#include <iomanip>
+#include <stdio.h>
+#include <chrono>
+#include <array>
+#include <atomic>
+#include <future>
+#include <cstdio>
+
 #include "parallel-hashmap/phmap.h"
 #include "parallel-hashmap/phmap_dump.h"
 

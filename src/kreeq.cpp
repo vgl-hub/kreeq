@@ -1509,6 +1509,8 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                     std::vector<std::vector<uint8_t>> altPaths;
                     StringGraph stringGraph(str, k);
                     
+                    bool backtrack = false;
+                    
                     while(stringGraph.currentPos() < kcount){
                         
                         std::vector<DBGpath> DBGpaths;
@@ -1516,6 +1518,8 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                         altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
                         
                         printAltPaths(altPaths);
+                        
+                        bool anomaly = true;
                         
                         for (std::vector<uint8_t> altPath : altPaths) {
                             
@@ -1537,27 +1541,36 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                         DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                                         std::cout<<"putative errors: "<<DBGpaths.size()<<std::endl;
                                         
-                                        if (DBGpaths.size() == 0) { // backtrack
-                                            
-                                            for (uint8_t b = 0; b < 5; ++b) {
-                                                
-                                                std::cout<<"backtracking"<<std::endl;
-                                                stringGraph.backtrack(str, k, 1);
-                                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-                                                altPath = altPaths[0];
-                                                printAltPaths(altPaths);
-                                                std::cout<<std::to_string(altPath[0])<<"\t"<<std::to_string(altPath[k])<<std::endl;
-                                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
-                                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-                                                if (DBGpaths.size() > 0)
-                                                    break;
-                                            }
-                                            
-                                        }
+                                       
                                         
-                                    }
-                                }
+                                    }else{anomaly = false;}
+                                }else{anomaly = false;}
+                                
+                                
                             }
+                        }
+                        
+                        if (DBGpaths.size() == 0 && anomaly)
+                            backtrack = true;
+                        
+                        if (backtrack) { // backtrack
+                            
+                            for (uint8_t b = 0; b < 5; ++b) {
+                                
+                                std::cout<<"backtracking"<<std::endl;
+                                stringGraph.backtrack(str, k, 1);
+                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
+                                std::vector<uint8_t> altPath = altPaths[0];
+                                printAltPaths(altPaths);
+                                std::cout<<std::to_string(altPath[0])<<"\t"<<std::to_string(altPath[k])<<std::endl;
+                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
+                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+                                if (DBGpaths.size() > 0)
+                                    break;
+                            }
+                            
+                            backtrack = false;
+                            
                         }
                     
                         if (DBGpaths.size() == 0) {
@@ -1590,8 +1603,6 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                 uint32_t sUId;
                                 
                                 if (dbgpath.type != DEL && !isCleaved) {
-                                    
-                                    std::cout<<"helo"<<std::endl;
                                     
                                     std::cout<<path.getHeader()<<"\t"<<absPos<<"\t"<<std::to_string(stringGraph.peek())<<"\terror"<<std::endl;
                                     newSegment1 = sHeader + "." + std::to_string(segmentCounter++);

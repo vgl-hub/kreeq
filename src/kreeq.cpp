@@ -1536,12 +1536,9 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                                     genomeDBG->insert(*got);
                                     DBGkmer &dbgkmer = got->second;
                                     if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
-                                    
                                         std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
                                         DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                                         std::cout<<"putative errors: "<<DBGpaths.size()<<std::endl;
-                                        
-                                       
                                         
                                     }else{anomaly = false;}
                                 }else{anomaly = false;}

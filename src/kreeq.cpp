@@ -418,7 +418,7 @@ bool DBG::DBGtoGFA() {
                         altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
 //                        printAltPaths(altPaths);
                         
-                        bool checkAnomaly = false;
+                        bool checkAnomaly = true;
                         
                         for (std::vector<uint8_t> altPath : altPaths) {
                             key = hash(&altPath[0], &isFw);
@@ -436,7 +436,6 @@ bool DBG::DBGtoGFA() {
                                     lg.verbose("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
                                     if (DBGpaths.size() > 1) { // only attempt to correct unique paths
                                         DBGpaths.clear();
-                                        checkAnomaly = true;
                                         break;
                                     }
                                 }else{checkAnomaly = false;}

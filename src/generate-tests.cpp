@@ -39,7 +39,9 @@ int main(int, char **argv) {
 
     std::map<std::set<std::string>, std::vector<std::string>> file_args = {
         {{"random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},
-        {{"random4.fasta"}, {"-r testFiles/random4.fastq -k3"}}
+        {{"random4.fasta"}, {"-r testFiles/random4.fastq -k3"}},
+        {{"testFiles/to_correct.fasta"}, {"-r testFiles/to_correct.fastq"}},
+        {{"testFiles/to_correct.fasta"}, {"-r testFiles/to_correct.fastq -o gfa -j1"}}
     //  {{set of test file paths}, {list of command line args to run with}}
     };
 

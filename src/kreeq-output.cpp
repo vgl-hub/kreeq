@@ -48,7 +48,7 @@ void DBG::report() { // generates the output from the program
     if (userInput.outFile != "")
         ext = getFileExt("." + userInput.outFile);
     
-    if (userInput.outFile.find(".") != std::string::npos || userInput.outFile == "")
+    if (userInput.outFile.find(".") != std::string::npos || userInput.outFile == "" || ext == "kreeq" || userInput.stats_flag)
         DBGstats();
     
     lg.verbose("Writing ouput: " + userInput.outFile);

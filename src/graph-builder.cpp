@@ -686,8 +686,6 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
     jobWait(threadPool);
     
-    DBGstats();
-    
 }
 
 bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same hashes

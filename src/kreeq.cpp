@@ -409,8 +409,6 @@ bool DBG::DBGtoGFA() {
                     std::vector<std::vector<uint8_t>> altPaths;
                     StringGraph stringGraph(str, k);
                     
-                    bool backtrack = false;
-                    
                     while(stringGraph.currentPos() < kcount){
                         
                         std::vector<DBGpath> DBGpaths;
@@ -419,6 +417,7 @@ bool DBG::DBGtoGFA() {
 //                        printAltPaths(altPaths);
                         
                         bool checkAnomaly = true;
+                        bool backtrack = false;
                         
                         for (std::vector<uint8_t> altPath : altPaths) {
                             key = hash(&altPath[0], &isFw);
@@ -445,9 +444,13 @@ bool DBG::DBGtoGFA() {
                         if (DBGpaths.size() == 0 && checkAnomaly)
                             backtrack = true;
                         
+                        uint8_t backtrackCnt = 0;
+                        
                         if (backtrack) { // backtrack
                             
                             for (uint8_t b = 0; b < userInput.depth; ++b) {
+                                
+                                ++backtrackCnt;
                                 
                                 lg.verbose("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
                                 stringGraph.backtrack(str, k, 1);
@@ -459,12 +462,6 @@ bool DBG::DBGtoGFA() {
                                 if (DBGpaths.size() > 0)
                                     break;
                             }
-                            
-                            if (DBGpaths.size() == 0)
-                                stringGraph.advancePos(userInput.depth+1);
-                            
-                            backtrack = false;
-                            
                         }
                     
                         if (DBGpaths.size() != 0) {
@@ -551,6 +548,9 @@ bool DBG::DBGtoGFA() {
                                 }
                             }
                             stringGraph.appendAlts(alts);
+                            if (backtrack) {
+                                stringGraph.advancePos(backtrackCnt);
+                            }
                         }
                         ++absPos;
                         stringGraph.pop_front();

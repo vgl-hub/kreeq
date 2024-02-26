@@ -401,24 +401,24 @@ bool DBG::DBGtoGFA(std::array<uint16_t, 2> mapRange) {
                         if (DBGpaths.size() == 0 && anomaly)
                             backtrack = true;
                         
-                        if (backtrack) { // backtrack
-                            
-                            for (uint8_t b = 0; b < 5; ++b) {
-                                
-                                lg.verbose("Anomaly detected but no path is found. Backtracking");
-                                stringGraph.backtrack(str, k, 1);
-                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-                                std::vector<uint8_t> altPath = altPaths[0];
-//                                printAltPaths(altPaths);
-                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
-                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-                                if (DBGpaths.size() > 0)
-                                    break;
-                            }
-                            
-                            backtrack = false;
-                            
-                        }
+//                        if (backtrack) { // backtrack
+//                            
+//                            for (uint8_t b = 0; b < 5; ++b) {
+//                                
+//                                lg.verbose("Anomaly detected but no path is found. Backtracking");
+//                                stringGraph.backtrack(str, k, 1);
+//                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
+//                                std::vector<uint8_t> altPath = altPaths[0];
+////                                printAltPaths(altPaths);
+//                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
+//                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+//                                if (DBGpaths.size() > 0)
+//                                    break;
+//                            }
+//                            
+//                            backtrack = false;
+//                            
+//                        }
                     
                         if (DBGpaths.size() != 0) {
                             

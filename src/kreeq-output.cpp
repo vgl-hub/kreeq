@@ -36,11 +36,12 @@ void DBG::report() { // generates the output from the program
     
     const static phmap::parallel_flat_hash_map<std::string,int> string_to_case{ // different outputs available
         {"kreeq",1},
-        {"bed",2},
-        {"csv",2},
+        {"bedtable",2},
+        {"csvtable",2},
         {"kwig",3},
         {"bkwig",4},
-        {"gfa",5}
+        {"gfa",5},
+        {"errorbed",6}
     };
     
     std::string ext = "stdout";

@@ -548,9 +548,8 @@ bool DBG::DBGtoGFA() {
                                 }
                             }
                             stringGraph.appendAlts(alts);
-                            if (backtrack) {
-                                stringGraph.advancePos(backtrackCnt);
-                            }
+                            if (backtrack)
+                                stringGraph.advancePos(backtrackCnt+1);
                         }
                         ++absPos;
                         stringGraph.pop_front();

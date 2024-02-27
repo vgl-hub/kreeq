@@ -416,8 +416,7 @@ bool DBG::DBGtoGFA() {
                         altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
 //                        printAltPaths(altPaths);
                         
-                        bool checkAnomaly = true;
-                        bool backtrack = false;
+                        bool backtrack = true;
                         
                         for (std::vector<uint8_t> altPath : altPaths) {
                             key = hash(&altPath[0], &isFw);
@@ -437,16 +436,13 @@ bool DBG::DBGtoGFA() {
                                         DBGpaths.clear();
                                         break;
                                     }
-                                }else{checkAnomaly = false;}
-                            }else{checkAnomaly = false;}
+                                }else{backtrack = false;}
+                            }else{backtrack = false;}
                         }
-                        
-                        if (DBGpaths.size() == 0 && checkAnomaly)
-                            backtrack = true;
                         
                         uint8_t backtrackCnt = 0;
                         
-                        if (backtrack) { // backtrack
+                        if (DBGpaths.size() == 0 && backtrack) { // backtrack
                             
                             for (uint8_t b = 0; b < userInput.depth; ++b) {
                                 
@@ -548,9 +544,9 @@ bool DBG::DBGtoGFA() {
                                 }
                             }
                             stringGraph.appendAlts(alts);
-                            if (backtrack)
-                                stringGraph.advancePos(backtrackCnt+1);
                         }
+                        if (backtrack)
+                            stringGraph.advancePos(backtrackCnt);
                         ++absPos;
                         stringGraph.pop_front();
                     }

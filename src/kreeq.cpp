@@ -448,7 +448,7 @@ bool DBG::DBGtoGFA() {
                                 
                                 ++backtrackCnt;
                                 
-                                if (stringGraph.currentPos()+backtrackCnt > cleaved) {
+                                if (stringGraph.currentPos()-backtrackCnt > cleaved) {
                                     
                                     lg.verbose("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()-1));
                                     stringGraph.backtrack(str, k, 1);

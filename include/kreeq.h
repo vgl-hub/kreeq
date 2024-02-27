@@ -3,15 +3,17 @@
 
 #include <future>
 
-enum ErrorType {SNV, INS, DEL};
+enum variantType {SNV, INS, DEL};
 struct DBGpath {
     
-    ErrorType type;
+    variantType type;
+    uint64_t pos;
     std::string sequence;
     double score = 0;
     
     DBGpath() {}
-    DBGpath(ErrorType type, std::string sequence) : type(type), sequence(sequence) {}
+    DBGpath(uint64_t pos) : pos(pos) {}
+    DBGpath(variantType type, uint64_t pos, std::string sequence) : type(type), pos(pos), sequence(sequence) {}
     
 };
 
@@ -163,6 +165,8 @@ public:
     void printAltPaths(std::vector<std::vector<uint8_t>> altPaths);
     
     bool DBGtoGFA();
+    
+    bool variantsToGFA(InSegment* inSegment, std::vector<DBGpath> variants);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

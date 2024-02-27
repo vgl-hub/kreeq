@@ -448,15 +448,18 @@ bool DBG::DBGtoGFA() {
                                 
                                 ++backtrackCnt;
                                 
-                                lg.verbose("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
-                                stringGraph.backtrack(str, k, 1);
-                                altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-                                std::vector<uint8_t> altPath = altPaths[0];
-//                                printAltPaths(altPaths);
-                                std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
-                                DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-                                if (DBGpaths.size() > 0)
-                                    break;
+                                if (stringGraph.currentPos()+backtrackCnt > cleaved) {
+                                    
+                                    lg.verbose("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()-1));
+                                    stringGraph.backtrack(str, k, 1);
+                                    altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
+                                    std::vector<uint8_t> altPath = altPaths[0];
+                                    //                                printAltPaths(altPaths);
+                                    std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath());
+                                    DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+                                    if (DBGpaths.size() > 0)
+                                        break;
+                                }
                             }
                         }
                     

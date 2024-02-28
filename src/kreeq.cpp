@@ -506,6 +506,8 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
         
         bool originalAdded = false;
         
+        processed = DBGpaths[0].pos;
+        
         for (DBGpath variant : DBGpaths) {
             
             if (variant.type != DEL && !originalAdded) {
@@ -521,6 +523,7 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
                 genome->appendEdge(edge);
                 
                 originalAdded = true;
+                ++processed;
                 
             }
             
@@ -551,7 +554,6 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
                 sUIds.push_back(sUId);
             }
         }
-        processed = DBGpaths[0].pos+1;
     }
     
     if (variants.size() > 0) { // residual sequence

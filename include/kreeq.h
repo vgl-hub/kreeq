@@ -166,7 +166,7 @@ public:
     
     bool DBGtoGFA();
     
-    bool variantsToGFA(InSegment* inSegment, std::vector<DBGpath> variants);
+    bool variantsToGFA(InSegment* inSegment, std::vector<std::vector<DBGpath>> variants);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

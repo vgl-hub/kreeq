@@ -40,6 +40,7 @@ void DBG::report() { // generates the output from the program
         {"kwig",3},
         {"bkwig",4},
         {"gfa",5},
+        {"gfa2",5},
         {"errorbed",6}
     };
     

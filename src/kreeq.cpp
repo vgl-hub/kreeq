@@ -282,7 +282,7 @@ std::pair<DBGkmer*,bool> DBG::findDBGkmer(uint8_t *origin) {
     
 }
 
-std::vector<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath) {
+std::vector<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath, Log &threadLog) {
     
     uint8_t breadth = 0;
     std::vector<DBGpath> DBGpaths;
@@ -317,25 +317,25 @@ std::vector<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t de
                     nextKmer[k-1] = i;
 
                     if(depth == 3 && i == *(target+1)) {
-                        lg.verbose("found INS\t" + newPath.sequence);
+                        threadLog.add("found INS\t" + newPath.sequence);
                         DBGpaths.push_back(DBGpath(INS, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1)));
                         break;
                     }
                     
                     if(depth == 2 && i == *target) {
-                        lg.verbose("found DEL\t" + newPath.sequence);
+                        threadLog.add("found DEL\t" + newPath.sequence);
                         newPath.type = DEL;
                         DBGpaths.push_back(newPath);
                     }
                     
                     newPath.sequence+=itoc[i];
-                    std::vector<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath);
+                    std::vector<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath, threadLog);
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
                         return DBGpaths;
                     
                     if (i == *(target+1) && newPath.sequence.size() > 1 && depth == 2) {
-                        lg.verbose("found SNV\t" + newPath.sequence);
+                        threadLog.add("found SNV\t" + newPath.sequence);
                         DBGpaths.push_back(DBGpath(SNV, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1)));
                     }
                 }
@@ -346,130 +346,133 @@ std::vector<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t de
     
 }
 
-void DBG::printAltPaths(std::vector<std::vector<uint8_t>> altPaths) {
+void DBG::printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadLog) {
     
     uint8_t pathCounter = 1;
     
     for (std::vector<uint8_t> altPath : altPaths) {
         
-        std::cout<<"P"<<+pathCounter++<<":";
+        std::string logMsg = "P" + std::to_string(pathCounter++) + ":";
         
         for (uint8_t base : altPath)
-            std::cout<<itoc[base];
-        std::cout<<std::endl;
+            logMsg += itoc[base];
+        threadLog.add(logMsg += "\n");
     }
 }
 
 bool DBG::DBGtoGFA(InSegment *inSegment) {
+    
+    Log threadLog;
+    threadLog.setId(inSegment->getuId());
         
-        std::string sHeader = inSegment->getSeqHeader();
-        parallelMap *map;
-        uint64_t key, i;
-        bool isFw = false;
-        std::vector<std::vector<DBGpath>> variants;
-            
-        uint64_t len = inSegment->getSegmentLen();
+    std::string sHeader = inSegment->getSeqHeader();
+    parallelMap *map;
+    uint64_t key, i;
+    bool isFw = false;
+    std::vector<std::vector<DBGpath>> variants;
         
-        if (len<k)
-            return true;
+    uint64_t len = inSegment->getSegmentLen();
+    
+    if (len<k)
+        return true;
+    
+    uint64_t kcount = len-k+1;
+    
+    unsigned char* first = (unsigned char*)inSegment->getInSequencePtr()->c_str();
+    uint8_t* str = new uint8_t[len];
+    
+    for (uint64_t i = 0; i<len; ++i)
+        str[i] = ctoi[*(first+i)];
+    
+    std::vector<std::vector<uint8_t>> altPaths;
+    StringGraph stringGraph(str, k);
+    
+    while(stringGraph.currentPos() < kcount){
         
-        uint64_t kcount = len-k+1;
+        std::vector<DBGpath> DBGpaths;
+        stringGraph.appendNext();
+        altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
+//                        printAltPaths(altPaths, threadLog);
         
-        unsigned char* first = (unsigned char*)inSegment->getInSequencePtr()->c_str();
-        uint8_t* str = new uint8_t[len];
+        bool backtrack = true;
         
-        for (uint64_t i = 0; i<len; ++i)
-            str[i] = ctoi[*(first+i)];
-        
-        std::vector<std::vector<uint8_t>> altPaths;
-        StringGraph stringGraph(str, k);
-        
-        while(stringGraph.currentPos() < kcount){
-            
-            std::vector<DBGpath> DBGpaths;
-            stringGraph.appendNext();
-            altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-//                        printAltPaths(altPaths);
-            
-            bool backtrack = true;
-            
-            for (std::vector<uint8_t> altPath : altPaths) {
-                key = hash(&altPath[0], &isFw);
-                i = key % mapCount;
+        for (std::vector<uint8_t> altPath : altPaths) {
+            key = hash(&altPath[0], &isFw);
+            i = key % mapCount;
 
-                map = maps[i];
-                auto got = map->find(key);
-                    
-                // check for DBG consistency
-                if (got != map->end()) {
-                    DBGkmer &dbgkmer = got->second;
-                    if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
-                        std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()));
-                        DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-                        lg.verbose("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
-                        if (DBGpaths.size() > 1) { // only attempt to correct unique paths
-                            DBGpaths.clear();
-                            break;
-                        }
-                    }else{backtrack = false;}
+            map = maps[i];
+            auto got = map->find(key);
+                
+            // check for DBG consistency
+            if (got != map->end()) {
+                DBGkmer &dbgkmer = got->second;
+                if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
+                    std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
+                    DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+                    threadLog.add("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
+                    if (DBGpaths.size() > 1) { // only attempt to correct unique paths
+                        DBGpaths.clear();
+                        break;
+                    }
                 }else{backtrack = false;}
-            }
-            
-            uint8_t backtrackCnt = 0;
-            
-            if (DBGpaths.size() == 0 && backtrack) { // backtrack
-                
-                for (uint8_t b = 0; b < userInput.depth; ++b) {
-                    
-                    ++backtrackCnt;
-                    
-                    if (variants.size() == 0 || stringGraph.currentPos()-backtrackCnt > variants.back()[0].pos) { // prevent going past the previously discovered variant
-                        
-                        lg.verbose("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()-1));
-                        stringGraph.backtrack(str, k, 1);
-                        altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-                        std::vector<uint8_t> altPath = altPaths[0];
-                        //                                printAltPaths(altPaths);
-                        std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()));
-                        DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-                        if (DBGpaths.size() > 0)
-                            break;
-                    }
-                }
-            }
-        
-            if (DBGpaths.size() != 0) {
-                
-                // create edge at error in GFA
-                lg.verbose("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
-                std::vector<uint8_t> alts;
-                
-                for (DBGpath dbgpath : DBGpaths) {
-                    
-                    if (dbgpath.type == SNV) {
-                        alts.push_back(stringGraph.peek());
-                        alts.push_back(ctoi[(unsigned char)dbgpath.sequence[0]]);
-                    }else if (dbgpath.type == INS) {
-                        alts.push_back(stringGraph.peek());
-                        alts.push_back(4);
-                    }else if (dbgpath.type == DEL) {
-                        alts.push_back(ctoi[(unsigned char)dbgpath.sequence[0]]);
-                    }
-                }
-                stringGraph.appendAlts(alts);
-            }
-            if (backtrack)
-                stringGraph.advancePos(backtrackCnt);
-            stringGraph.pop_front();
-            if (DBGpaths.size() != 0)
-                variants.push_back(DBGpaths);
+            }else{backtrack = false;}
         }
-        delete[] str;
-        variantsToGFA(inSegment, variants);
+        
+        uint8_t backtrackCnt = 0;
+        
+        if (DBGpaths.size() == 0 && backtrack) { // backtrack
+            
+            for (uint8_t b = 0; b < userInput.depth; ++b) {
+                
+                ++backtrackCnt;
+                
+                if (variants.size() == 0 || stringGraph.currentPos()-backtrackCnt > variants.back()[0].pos) { // prevent going past the previously discovered variant
+                    
+                    threadLog.add("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()-1));
+                    stringGraph.backtrack(str, k, 1);
+                    altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
+                    std::vector<uint8_t> altPath = altPaths[0];
+                    //                                printAltPaths(altPaths, threadLog);
+                    std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
+                    DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
+                    if (DBGpaths.size() > 0)
+                        break;
+                }
+            }
+        }
+    
+        if (DBGpaths.size() != 0) {
+            
+            // create edge at error in GFA
+            threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
+            std::vector<uint8_t> alts;
+            
+            for (DBGpath dbgpath : DBGpaths) {
+                
+                if (dbgpath.type == SNV) {
+                    alts.push_back(stringGraph.peek());
+                    alts.push_back(ctoi[(unsigned char)dbgpath.sequence[0]]);
+                }else if (dbgpath.type == INS) {
+                    alts.push_back(stringGraph.peek());
+                    alts.push_back(4);
+                }else if (dbgpath.type == DEL) {
+                    alts.push_back(ctoi[(unsigned char)dbgpath.sequence[0]]);
+                }
+            }
+            stringGraph.appendAlts(alts);
+        }
+        if (backtrack)
+            stringGraph.advancePos(backtrackCnt);
+        stringGraph.pop_front();
+        if (DBGpaths.size() != 0)
+            variants.push_back(DBGpaths);
+    }
+    delete[] str;
+    variantsToGFA(inSegment, variants, threadLog);
     return true;
 }
 
-bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> variants) {
+bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> variants, Log &threadLog) {
     
     uint64_t processed = 0;
     uint32_t segmentCounter = 0, edgeCounter = 0, sUId, sUIdNew;
@@ -483,11 +486,11 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
     
     for (std::vector<DBGpath> DBGpaths : variants) {
         
-        lg.verbose("Introducing variants at pos: " + std::to_string(DBGpaths[0].pos+1));
+        threadLog.add("Introducing variants at pos: " + std::to_string(DBGpaths[0].pos+1));
         
         inSequence = new std::string(oldSequence->substr(processed, DBGpaths[0].pos-processed));
         newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "", inSequence, NULL, seqPos};
-        lg.verbose("Previous sequence: " + newSequence->header);
+        threadLog.add("Previous sequence: " + newSequence->header);
         newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>(), sId++);
         sUId = newSegment->getuId();
         
@@ -509,7 +512,7 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
                 
                 inSequence = new std::string(oldSequence->substr(DBGpaths[0].pos, 1));
                 newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "Candidate sequence", inSequence, NULL, seqPos};
-                lg.verbose("Old segment from SNV/DEL error: " + newSequence->header + "\t" + *inSequence);
+                threadLog.add("Old segment from SNV/DEL error: " + newSequence->header + "\t" + *inSequence);
                 newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>(), sId++);
                 sUIdNew = newSegment->getuId();
                 sUIds.push_back(sUIdNew);
@@ -526,7 +529,7 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
                 
                 inSequence = new std::string(variant.sequence);
                 newSequence = new Sequence{sHeader + "." + std::to_string(segmentCounter) + ".alt" + std::to_string(++altCounter), "Candidate sequence", inSequence, NULL, seqPos};
-                lg.verbose("New segment from SNV error: " + newSequence->header + "\t" + *inSequence);
+                threadLog.add("New segment from SNV error: " + newSequence->header + "\t" + *inSequence);
                 newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>(), sId++);
                 sUIdNew = newSegment->getuId();
                 sUIds.push_back(sUIdNew);
@@ -555,7 +558,7 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
         
         inSequence = new std::string(oldSequence->substr(processed));
         newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "", inSequence, NULL, seqPos};
-        lg.verbose("Previous sequence: " + newSequence->header);
+        threadLog.add("Previous sequence: " + newSequence->header);
         newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>(), sId++);
         sUId = newSegment->getuId();
         
@@ -567,6 +570,9 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
         genome->deleteSegment(sHeader);
         
     }
+    
+    std::unique_lock<std::mutex> lck (mtx);
+    logs.push_back(threadLog);
     
     return true;
     

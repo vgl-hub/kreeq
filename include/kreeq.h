@@ -160,13 +160,13 @@ public:
     
     std::pair<DBGkmer*,bool> findDBGkmer(uint8_t *origin);
     
-    std::vector<DBGpath> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath);
+    std::vector<DBGpath> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath, Log &threadLog);
     
-    void printAltPaths(std::vector<std::vector<uint8_t>> altPaths);
+    void printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadLog);
     
     bool DBGtoGFA(InSegment *inSegment);
     
-    bool variantsToGFA(InSegment* inSegment, std::vector<std::vector<DBGpath>> variants);
+    bool variantsToGFA(InSegment* inSegment, std::vector<std::vector<DBGpath>> variants, Log &threadLog);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

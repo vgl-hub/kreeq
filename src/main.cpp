@@ -34,6 +34,7 @@ int maxThreads;
 std::mutex mtx;
 ThreadPool<std::function<bool()>> threadPool;
 Log lg;
+std::vector<Log> logs;
 
 void printHelp() {
     

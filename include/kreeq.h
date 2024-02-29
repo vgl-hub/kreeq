@@ -164,7 +164,7 @@ public:
     
     void printAltPaths(std::vector<std::vector<uint8_t>> altPaths);
     
-    bool DBGtoGFA();
+    bool DBGtoGFA(InSegment *inSegment);
     
     bool variantsToGFA(InSegment* inSegment, std::vector<std::vector<DBGpath>> variants);
     

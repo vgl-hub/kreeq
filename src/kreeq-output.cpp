@@ -342,37 +342,41 @@ void DBG::printGFA() {
     
     lg.verbose("Generating GFA");
     
-    genome->sortPathsByOriginal();
-    
     std::array<uint16_t, 2> mapRange = {0,0};
     
-    if (computeMapRange(mapRange)[1] < mapCount) {
-        
-        for (uint8_t i = 0; i < userInput.depth; ++i) {
-            
-            mapRange = {0,0};
-            
-            while (mapRange[1] < mapCount) {
-                
-                mapRange = computeMapRange(mapRange);
-                loadMapRange(mapRange);
-                //            searchGraph(mapRange);
-                deleteMapRange(mapRange);
-                
-            }
-        }
-    }
-        
+//    if (computeMapRange(mapRange)[1] < mapCount) {
+//        
+//        for (uint8_t i = 0; i < userInput.depth; ++i) {
+//            
+//            mapRange = {0,0};
+//            
+//            while (mapRange[1] < mapCount) {
+//                
+//                mapRange = computeMapRange(mapRange);
+//                loadMapRange(mapRange);
+//                //            searchGraph(mapRange);
+//                deleteMapRange(mapRange);
+//                
+//            }
+//        }
+//    }
+    
+    std::vector<std::function<bool()>> jobs;
     mapRange = computeMapRange(mapRange);
     loadMapRange(mapRange);
-    //    std::vector<std::function<bool()>> jobs;
-    //        for (InPath& path : inPaths)
-    //            jobs.push_back([this, path, mapRange] { return DBGtoGFA(path, mapRange); });
-    DBGtoGFA();
-    //        threadPool.queueJobs(jobs);
-    //        jobWait(threadPool);
-    //        jobs.clear();
+    
+    std::vector<InSegment*> inSegments = *genome->getInSegments();
+
+    for (InSegment *inSegment : inSegments)
+        jobs.push_back([this, inSegment] { return DBGtoGFA(inSegment); });
+
+    threadPool.queueJobs(jobs);
+    jobWait(threadPool);
     deleteMapRange(mapRange);
+    
+    genome->sortSegmentsByOriginal();
+    genome->sortEdgesByOriginal();
+    genome->sortPathsByOriginal();
 
     Report report;
     report.outFile(*genome, userInput.outFile, userInput, 0);

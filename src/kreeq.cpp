@@ -360,11 +360,7 @@ void DBG::printAltPaths(std::vector<std::vector<uint8_t>> altPaths) {
     }
 }
 
-bool DBG::DBGtoGFA() {
-
-    std::vector<InSegment*> inSegments = *genome->getInSegments();
-    
-    for (InSegment *inSegment : inSegments) {
+bool DBG::DBGtoGFA(InSegment *inSegment) {
         
         std::string sHeader = inSegment->getSeqHeader();
         parallelMap *map;
@@ -470,7 +466,6 @@ bool DBG::DBGtoGFA() {
         }
         delete[] str;
         variantsToGFA(inSegment, variants);
-    }
     return true;
 }
 
@@ -482,22 +477,22 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
     std::string sHeader = inSegment->getSeqHeader();
     std::string* inSequence;
     Sequence* newSequence;
-    InEdge edge;
     InSegment* newSegment;
     std::vector<uint32_t> sUIds;
+    uint32_t seqPos = inSegment->getSeqPos(), sId = 0, eId = 0;
     
     for (std::vector<DBGpath> DBGpaths : variants) {
         
         lg.verbose("Introducing variants at pos: " + std::to_string(DBGpaths[0].pos+1));
         
         inSequence = new std::string(oldSequence->substr(processed, DBGpaths[0].pos-processed));
-        newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "", inSequence, NULL};
+        newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "", inSequence, NULL, seqPos};
         lg.verbose("Previous sequence: " + newSequence->header);
-        newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>());
+        newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>(), sId++);
         sUId = newSegment->getuId();
         
         for (uint32_t sUIdprev : sUIds) {
-            edge.newEdge(genome->uId.next(), sUIdprev, sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
+            InEdge edge(seqPos, eId++, sUIdprev, sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
             genome->appendEdge(edge);
         }
         sUIds.clear();
@@ -513,13 +508,13 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
             if (variant.type != DEL && !originalAdded) {
                 
                 inSequence = new std::string(oldSequence->substr(DBGpaths[0].pos, 1));
-                newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "Candidate sequence", inSequence, NULL};
+                newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "Candidate sequence", inSequence, NULL, seqPos};
                 lg.verbose("Old segment from SNV/DEL error: " + newSequence->header + "\t" + *inSequence);
-                newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>());
+                newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>(), sId++);
                 sUIdNew = newSegment->getuId();
                 sUIds.push_back(sUIdNew);
                 
-                edge.newEdge(genome->uId.next(), sUId, sUIdNew, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
+                InEdge edge(seqPos, eId++, sUId, sUIdNew, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
                 genome->appendEdge(edge);
                 
                 originalAdded = true;
@@ -530,9 +525,9 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
             if (variant.type == SNV || variant.type == DEL) {
                 
                 inSequence = new std::string(variant.sequence);
-                newSequence = new Sequence{sHeader + "." + std::to_string(segmentCounter) + ".alt" + std::to_string(++altCounter), "Candidate sequence", inSequence, NULL};
+                newSequence = new Sequence{sHeader + "." + std::to_string(segmentCounter) + ".alt" + std::to_string(++altCounter), "Candidate sequence", inSequence, NULL, seqPos};
                 lg.verbose("New segment from SNV error: " + newSequence->header + "\t" + *inSequence);
-                newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>());
+                newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>(), sId++);
                 sUIdNew = newSegment->getuId();
                 sUIds.push_back(sUIdNew);
                 
@@ -540,7 +535,7 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
             
             if (variant.type == SNV) {
 
-                edge.newEdge(genome->uId.next(), sUId, sUIdNew, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
+                InEdge edge(seqPos, eId++, sUId, sUIdNew, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
                 genome->appendEdge(edge);
                 
             }else if (variant.type == INS) {
@@ -549,7 +544,7 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
                 
             }else if (variant.type == DEL) {
                 
-                edge.newEdge(genome->uId.next(), sUId, sUIdNew, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
+                InEdge edge(seqPos, eId++, sUId, sUIdNew, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
                 genome->appendEdge(edge);
                 sUIds.push_back(sUId);
             }
@@ -559,13 +554,13 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
     if (variants.size() > 0) { // residual sequence
         
         inSequence = new std::string(oldSequence->substr(processed));
-        newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "", inSequence, NULL};
+        newSequence = new Sequence{sHeader + "." + std::to_string(++segmentCounter), "", inSequence, NULL, seqPos};
         lg.verbose("Previous sequence: " + newSequence->header);
-        newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>());
+        newSegment = genome->traverseInSegment(newSequence, std::vector<Tag>(), sId++);
         sUId = newSegment->getuId();
         
         for (uint32_t sUIdprev : sUIds) {
-            edge.newEdge(genome->uId.next(), sUIdprev, sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
+            InEdge edge(seqPos, eId++, sUIdprev, sUId, '+', '+', "0M", sHeader + ".edge." + std::to_string(++edgeCounter));
             genome->appendEdge(edge);
         }
         

@@ -1,4 +1,4 @@
-validate -f testFiles/to_correct.fasta -r testFiles/to_correct.fastq -o gfa -j1
+validate -f testFiles/to_correct.fasta -r testFiles/to_correct.fastq -o gfa
 embedded
 H	VN:Z:1.2
 S	sequence1.1	CATACTACGATCAGATCGACTGACTCGTACATGCAGTGATGTACGAATGCATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA

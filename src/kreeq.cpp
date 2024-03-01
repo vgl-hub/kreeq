@@ -219,6 +219,63 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     
 }
 
+void DBG::correctSequences() {
+    
+    if (userInput.inSequence.empty())
+        return;
+    
+    lg.verbose("Generating candidates for correction");
+    
+    std::array<uint16_t, 2> mapRange = {0,0};
+    
+    // this section will need to be implemented to manage memory
+    
+//    if (computeMapRange(mapRange)[1] < mapCount) {
+//
+//        for (uint8_t i = 0; i < userInput.depth; ++i) {
+//
+//            mapRange = {0,0};
+//
+//            while (mapRange[1] < mapCount) {
+//
+//                mapRange = computeMapRange(mapRange);
+//                loadMapRange(mapRange);
+//                //            searchGraph(mapRange);
+//                deleteMapRange(mapRange);
+//
+//            }
+//        }
+//    }
+    
+    std::vector<std::function<bool()>> jobs;
+    mapRange = computeMapRange(mapRange);
+    loadMapRange(mapRange);
+    
+    std::vector<InSegment*> inSegments = *genome->getInSegments();
+
+    for (InSegment *inSegment : inSegments)
+        jobs.push_back([this, inSegment] { return DBGtoVariants(inSegment); });
+
+    threadPool.queueJobs(jobs);
+    jobWait(threadPool);
+    deleteMapRange(mapRange);
+    
+    std::string ext;
+    if (userInput.outFile != "")
+        ext = getFileExt("." + userInput.outFile);
+    
+    if (ext == "vcf") {
+        jobs.clear();
+        genome->sortPathsByOriginal();
+        std::vector<InPath> inPaths = genome->getInPaths();
+        for (InPath& path : inPaths)
+            jobs.push_back([this, path] { return variantsToVCF(path); });
+        threadPool.queueJobs(jobs);
+        jobWait(threadPool);
+    }
+    
+}
+
 bool DBG::searchGraph(std::array<uint16_t, 2> mapRange) { // stub
     
     parallelMap* genomeDBG = new parallelMap;
@@ -360,7 +417,7 @@ void DBG::printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadL
     }
 }
 
-bool DBG::DBGtoGFA(InSegment *inSegment) {
+bool DBG::DBGtoVariants(InSegment *inSegment) {
     
     Log threadLog;
     threadLog.setId(inSegment->getuId());
@@ -468,11 +525,21 @@ bool DBG::DBGtoGFA(InSegment *inSegment) {
             variants.push_back(DBGpaths);
     }
     delete[] str;
-    variantsToGFA(inSegment, variants, threadLog);
+    
+    inSegment->addVariants(variants);
+    
+    std::string ext = "stdout";
+    
+    if (userInput.outFile != "")
+        ext = getFileExt("." + userInput.outFile);
+    
+    if (ext == "gfa" || ext == "gfa2" || ext == "gfa.gz" || ext == "gfa2.gz")
+        variantsToGFA(inSegment, threadLog);
+    
     return true;
 }
 
-bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> variants, Log &threadLog) {
+bool DBG::variantsToGFA(InSegment *inSegment, Log &threadLog) {
     
     uint64_t processed = 0;
     uint32_t segmentCounter = 0, edgeCounter = 0, sUId, sUIdNew;
@@ -483,6 +550,7 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
     InSegment* newSegment;
     std::vector<uint32_t> sUIds;
     uint32_t seqPos = inSegment->getSeqPos(), sId = 0, eId = 0;
+    std::vector<std::vector<DBGpath>>& variants = inSegment->getVariants();
     
     for (std::vector<DBGpath> DBGpaths : variants) {
         
@@ -576,4 +644,58 @@ bool DBG::variantsToGFA(InSegment *inSegment, std::vector<std::vector<DBGpath>> 
     
     return true;
     
+}
+
+bool DBG::variantsToVCF(InPath path) {
+    
+    Log threadLog;
+    threadLog.setId(path.getpUId());
+
+    std::vector<InSegment*> *inSegments = genome->getInSegments();
+    std::vector<InGap> *inGaps = genome->getInGaps();
+
+        
+    unsigned int cUId = 0, gapLen = 0, sIdx = 0;
+    
+    std::vector<PathComponent> pathComponents = path.getComponents();
+    
+    uint64_t absPos = 0;
+    
+    for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
+        
+        cUId = component->id;
+        
+        if (component->type == SEGMENT) {
+            
+            auto inSegment = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
+            
+            if (inSegment != inSegments->end()) {sIdx = std::distance(inSegments->begin(), inSegment);} // gives us the segment index
+            
+            if (component->orientation == '+') {
+                
+                for (uint64_t i = 0; i < (*inSegment)->getSegmentLen(); ++i) {
+                    
+                    
+                    
+                    ++absPos;
+                    
+                }
+                
+            }else{
+                
+                // GFA not handled yet
+                
+            }
+            
+        }else if (component->type == GAP){
+            
+            auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
+            
+            gapLen += inGap->getDist(component->start - component->end);
+            
+            absPos += gapLen;
+            
+        }else{} // need to handle edges, cigars etc
+    }
+    return true;
 }

@@ -3,20 +3,6 @@
 
 #include <future>
 
-enum variantType {SNV, INS, DEL};
-struct DBGpath {
-    
-    variantType type;
-    uint64_t pos;
-    std::string sequence;
-    double score = 0;
-    
-    DBGpath() {}
-    DBGpath(uint64_t pos) : pos(pos) {}
-    DBGpath(variantType type, uint64_t pos, std::string sequence) : type(type), pos(pos), sequence(sequence) {}
-    
-};
-
 struct edgeBit {
     
     uint8_t edges = 0;
@@ -118,9 +104,11 @@ public:
     
     void loadGenome(InSequencesDBG *genome);
     
-    void validateSequences();
+    void correctSequences();
     
     bool evaluateSegment(uint32_t i, std::array<uint16_t, 2> mapRange);
+    
+    void validateSequences();
     
     bool dumpTmpMap(std::string prefix, uint16_t m);
     
@@ -156,6 +144,8 @@ public:
     
     void printGFA();
     
+    void printVCF();
+    
     bool searchGraph(std::array<uint16_t, 2> mapRange);
     
     std::pair<DBGkmer*,bool> findDBGkmer(uint8_t *origin);
@@ -164,9 +154,11 @@ public:
     
     void printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadLog);
     
-    bool DBGtoGFA(InSegment *inSegment);
+    bool DBGtoVariants(InSegment *inSegment);
     
-    bool variantsToGFA(InSegment* inSegment, std::vector<std::vector<DBGpath>> variants, Log &threadLog);
+    bool variantsToGFA(InSegment *inSegment, Log &threadLog);
+    
+    bool variantsToVCF(InPath inPath);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

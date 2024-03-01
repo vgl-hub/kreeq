@@ -35,13 +35,15 @@ void DBG::report() { // generates the output from the program
     
     const static phmap::parallel_flat_hash_map<std::string,int> string_to_case{ // different outputs available
         {"kreeq",1},
-        {"bedtable",2},
+        {"bed",2},
         {"csvtable",2},
         {"kwig",3},
         {"bkwig",4},
         {"gfa",5},
         {"gfa2",5},
-        {"errorbed",6}
+        {"gfa.gz",5},
+        {"gfa2.gz",5},
+        {"vcf",6}
     };
     
     std::string ext = "stdout";
@@ -64,7 +66,11 @@ void DBG::report() { // generates the output from the program
             validateSequences(); // validate the input sequence
             break;
         }
-        case 5: {}
+        case 5:
+        case 6: {
+            correctSequences();
+            break;
+        }
             
     }
     
@@ -92,6 +98,10 @@ void DBG::report() { // generates the output from the program
         }
         case 5: { // .gfa
             printGFA();
+            break;
+        }
+        case 6: { // .vcf
+            printVCF();
             break;
         }
     }
@@ -340,43 +350,20 @@ void DBG::printTableCompressedBinary() {
 
 void DBG::printGFA() {
     
-    lg.verbose("Generating GFA");
-    
-    std::array<uint16_t, 2> mapRange = {0,0};
-    
-//    if (computeMapRange(mapRange)[1] < mapCount) {
-//        
-//        for (uint8_t i = 0; i < userInput.depth; ++i) {
-//            
-//            mapRange = {0,0};
-//            
-//            while (mapRange[1] < mapCount) {
-//                
-//                mapRange = computeMapRange(mapRange);
-//                loadMapRange(mapRange);
-//                //            searchGraph(mapRange);
-//                deleteMapRange(mapRange);
-//                
-//            }
-//        }
-//    }
-    
-    std::vector<std::function<bool()>> jobs;
-    mapRange = computeMapRange(mapRange);
-    loadMapRange(mapRange);
-    
-    std::vector<InSegment*> inSegments = *genome->getInSegments();
-
-    for (InSegment *inSegment : inSegments)
-        jobs.push_back([this, inSegment] { return DBGtoGFA(inSegment); });
-
-    threadPool.queueJobs(jobs);
-    jobWait(threadPool);
-    deleteMapRange(mapRange);
+    lg.verbose("Outputting GFA");
     
     genome->sortSegmentsByOriginal();
     genome->sortEdgesByOriginal();
     genome->sortPathsByOriginal();
+
+    Report report;
+    report.outFile(*genome, userInput.outFile, userInput, 0);
+    
+}
+
+void DBG::printVCF() {
+    
+    lg.verbose("Outputting VCF");
 
     Report report;
     report.outFile(*genome, userInput.outFile, userInput, 0);

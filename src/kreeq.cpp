@@ -490,7 +490,6 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             // create edge at error in GFA
             threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
             std::vector<uint8_t> alts;
-            DBGpaths.push_front(DBGpath(REF, stringGraph.currentPos(), std::string(1,first[stringGraph.currentPos()]))); // primary
             
             for (DBGpath dbgpath : DBGpaths) {
                 
@@ -558,7 +557,6 @@ bool DBG::variantsToGFA(InSegment *inSegment, Log &threadLog) {
         uint32_t altCounter = 0;
         bool originalAdded = false;
         processed = DBGpaths[0].pos;
-        DBGpaths.pop_front();
         
         for (DBGpath variant : DBGpaths) {
             

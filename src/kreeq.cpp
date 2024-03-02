@@ -13,6 +13,7 @@
 #include <atomic>
 #include <future>
 #include <cstdio>
+#include <deque>
 
 #include "parallel-hashmap/phmap.h"
 #include "parallel-hashmap/phmap_dump.h"
@@ -260,20 +261,6 @@ void DBG::correctSequences() {
     jobWait(threadPool);
     deleteMapRange(mapRange);
     
-    std::string ext;
-    if (userInput.outFile != "")
-        ext = getFileExt("." + userInput.outFile);
-    
-    if (ext == "vcf") {
-        jobs.clear();
-        genome->sortPathsByOriginal();
-        std::vector<InPath> inPaths = genome->getInPaths();
-        for (InPath& path : inPaths)
-            jobs.push_back([this, path] { return variantsToVCF(path); });
-        threadPool.queueJobs(jobs);
-        jobWait(threadPool);
-    }
-    
 }
 
 bool DBG::searchGraph(std::array<uint16_t, 2> mapRange) { // stub
@@ -339,10 +326,10 @@ std::pair<DBGkmer*,bool> DBG::findDBGkmer(uint8_t *origin) {
     
 }
 
-std::vector<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath, Log &threadLog) {
+std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath, Log &threadLog) {
     
     uint8_t breadth = 0;
-    std::vector<DBGpath> DBGpaths;
+    std::deque<DBGpath> DBGpaths;
     
     for (uint8_t a = 0; a <= breadth; ++a) { // to expand the search before and after the current pos
         
@@ -386,7 +373,7 @@ std::vector<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t de
                     }
                     
                     newPath.sequence+=itoc[i];
-                    std::vector<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath, threadLog);
+                    std::deque<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath, threadLog);
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
                         return DBGpaths;
@@ -426,7 +413,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     parallelMap *map;
     uint64_t key, i;
     bool isFw = false;
-    std::vector<std::vector<DBGpath>> variants;
+    std::vector<std::deque<DBGpath>> variants;
         
     uint64_t len = inSegment->getSegmentLen();
     
@@ -446,7 +433,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     
     while(stringGraph.currentPos() < kcount){
         
-        std::vector<DBGpath> DBGpaths;
+        std::deque<DBGpath> DBGpaths;
         stringGraph.appendNext();
         altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
 //                        printAltPaths(altPaths, threadLog);
@@ -464,7 +451,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             if (got != map->end()) {
                 DBGkmer &dbgkmer = got->second;
                 if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
-                    std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
+                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     threadLog.add("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
                     if (DBGpaths.size() > 1) { // only attempt to correct unique paths
@@ -490,7 +477,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
                     std::vector<uint8_t> altPath = altPaths[0];
                     //                                printAltPaths(altPaths, threadLog);
-                    std::vector<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
+                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     if (DBGpaths.size() > 0)
                         break;
@@ -499,10 +486,11 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
         }
     
         if (DBGpaths.size() != 0) {
-            
+
             // create edge at error in GFA
             threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
             std::vector<uint8_t> alts;
+            DBGpaths.push_front(DBGpath(REF, stringGraph.currentPos(), std::string(1,first[stringGraph.currentPos()]))); // primary
             
             for (DBGpath dbgpath : DBGpaths) {
                 
@@ -517,24 +505,23 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                 }
             }
             stringGraph.appendAlts(alts);
+            variants.push_back(DBGpaths);
         }
         if (backtrack)
             stringGraph.advancePos(backtrackCnt);
         stringGraph.pop_front();
-        if (DBGpaths.size() != 0)
-            variants.push_back(DBGpaths);
+
     }
     delete[] str;
     
     inSegment->addVariants(variants);
     
-    std::string ext = "stdout";
-    
-    if (userInput.outFile != "")
-        ext = getFileExt("." + userInput.outFile);
-    
+    std::string ext = getFileExt("." + userInput.outFile);
     if (ext == "gfa" || ext == "gfa2" || ext == "gfa.gz" || ext == "gfa2.gz")
         variantsToGFA(inSegment, threadLog);
+    
+    std::unique_lock<std::mutex> lck (mtx);
+    logs.push_back(threadLog);
     
     return true;
 }
@@ -550,9 +537,9 @@ bool DBG::variantsToGFA(InSegment *inSegment, Log &threadLog) {
     InSegment* newSegment;
     std::vector<uint32_t> sUIds;
     uint32_t seqPos = inSegment->getSeqPos(), sId = 0, eId = 0;
-    std::vector<std::vector<DBGpath>>& variants = inSegment->getVariants();
+    std::vector<std::deque<DBGpath>>& variants = inSegment->getVariants();
     
-    for (std::vector<DBGpath> DBGpaths : variants) {
+    for (std::deque<DBGpath> DBGpaths : variants) {
         
         threadLog.add("Introducing variants at pos: " + std::to_string(DBGpaths[0].pos+1));
         
@@ -569,10 +556,9 @@ bool DBG::variantsToGFA(InSegment *inSegment, Log &threadLog) {
         sUIds.clear();
         
         uint32_t altCounter = 0;
-        
         bool originalAdded = false;
-        
         processed = DBGpaths[0].pos;
+        DBGpaths.pop_front();
         
         for (DBGpath variant : DBGpaths) {
             
@@ -639,63 +625,6 @@ bool DBG::variantsToGFA(InSegment *inSegment, Log &threadLog) {
         
     }
     
-    std::unique_lock<std::mutex> lck (mtx);
-    logs.push_back(threadLog);
-    
     return true;
     
-}
-
-bool DBG::variantsToVCF(InPath path) {
-    
-    Log threadLog;
-    threadLog.setId(path.getpUId());
-
-    std::vector<InSegment*> *inSegments = genome->getInSegments();
-    std::vector<InGap> *inGaps = genome->getInGaps();
-
-        
-    unsigned int cUId = 0, gapLen = 0, sIdx = 0;
-    
-    std::vector<PathComponent> pathComponents = path.getComponents();
-    
-    uint64_t absPos = 0;
-    
-    for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
-        
-        cUId = component->id;
-        
-        if (component->type == SEGMENT) {
-            
-            auto inSegment = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
-            
-            if (inSegment != inSegments->end()) {sIdx = std::distance(inSegments->begin(), inSegment);} // gives us the segment index
-            
-            if (component->orientation == '+') {
-                
-                for (uint64_t i = 0; i < (*inSegment)->getSegmentLen(); ++i) {
-                    
-                    
-                    
-                    ++absPos;
-                    
-                }
-                
-            }else{
-                
-                // GFA not handled yet
-                
-            }
-            
-        }else if (component->type == GAP){
-            
-            auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
-            
-            gapLen += inGap->getDist(component->start - component->end);
-            
-            absPos += gapLen;
-            
-        }else{} // need to handle edges, cigars etc
-    }
-    return true;
 }

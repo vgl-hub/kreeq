@@ -68,8 +68,6 @@ public:
         
     };
     
-    std::vector<Log> logs;
-    
     void status();
     
     void joinThreads();
@@ -150,15 +148,13 @@ public:
     
     std::pair<DBGkmer*,bool> findDBGkmer(uint8_t *origin);
     
-    std::vector<DBGpath> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath, Log &threadLog);
+    std::deque<DBGpath> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath, Log &threadLog);
     
     void printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadLog);
     
     bool DBGtoVariants(InSegment *inSegment);
     
     bool variantsToGFA(InSegment *inSegment, Log &threadLog);
-    
-    bool variantsToVCF(InPath inPath);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

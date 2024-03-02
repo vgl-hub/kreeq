@@ -350,8 +350,6 @@ void DBG::printTableCompressedBinary() {
 
 void DBG::printGFA() {
     
-    lg.verbose("Outputting GFA");
-    
     genome->sortSegmentsByOriginal();
     genome->sortEdgesByOriginal();
     genome->sortPathsByOriginal();
@@ -363,7 +361,7 @@ void DBG::printGFA() {
 
 void DBG::printVCF() {
     
-    lg.verbose("Outputting VCF");
+    genome->sortPathsByOriginal();
 
     Report report;
     report.outFile(*genome, userInput.outFile, userInput, 0);

@@ -225,16 +225,16 @@ P	sequence5	sequence5.1+	*	CM:Z:- one homopolymer insertion error (70:A)
 P	sequence6	sequence6.1+	*	CM:Z:- one homopolymer deletion error (69:A)
 P	sequence7	sequence7.1+	*	CM:Z:- two point errors overlapping (25:T>A, 35:C>T)
 P	sequence8	sequence8.1+	*	CM:Z:- one point error masked by same kmers partially overlapping (72:A>C)
-P	sequence9	sequence9.1+	*	CM:Z:- one point error masked by same kmers before, backtracking by 2 (50:C>T)
-P	sequence10	sequence10.1+	*	CM:Z:- two point errors overlapping (25:T>A, 27:C>T)
-P	sequence11	sequence11.1+	*	CM:Z:- two point errors overlapping and one apart (25:T>A, 27:C>T, 65:C>T)
-P	sequence12	sequence12.1+	*	CM:Z:- three point errors overlapping (25:T>A, 27:C>T, 35:C>T)
+P	sequence9	sequence9.1+	*	CM:Z:- one point error masked by same kmers before, backtracking by 2 (50:C>T) < two variants reported
+P	sequence10	sequence10.1+	*	CM:Z:- two point errors overlapping (25:T>A, 27:G>C)
+P	sequence11	sequence11.1+	*	CM:Z:- two point errors overlapping and one apart (25:T>A, 27:G>C, 65:C>T)
+P	sequence12	sequence12.1+	*	CM:Z:- three point errors overlapping (25:T>A, 27:G>C, 35:C>T)
 P	sequence13	sequence13.1+	*	CM:Z:- one point error and one homopolymer deletion apart (25:T>A, 69:A)
-P	sequence14	sequence14.1+	*	CM:Z:- two deletions apart (34:C, homopolymer 69:A)
-P	sequence15	sequence15.1+	*	CM:Z:- two deletions overlapping (homopolymer 47:A, homopolymer 69:A) < only one detected
+P	sequence14	sequence14.1+	*	CM:Z:- two deletions apart (34:C, homopolymer 68:A)
+P	sequence15	sequence15.1+	*	CM:Z:- two deletions overlapping (homopolymer 47:A, homopolymer 68:A) < only one detected
 P	sequence16	sequence16.1+	*	CM:Z:- two homopolymer deletions (68-69:AA) < only one detected
 P	sequence17	sequence17.1+	*	CM:Z:- one point error and one homopolymer insertion apart (25:T>A, 69:A)
-P	sequence18	sequence18.1+	*	CM:Z:- two insertions apart (34:A, 69:A)
+P	sequence18	sequence18.1+	*	CM:Z:- two insertions apart (34:A, 70:A)
 P	sequence19	sequence19.1+	*	CM:Z:- two insertions overlapping (34:A, homopolymer 44:A)
 P	sequence20	sequence20.1+	*	CM:Z:- two homopolymer insertions (69-70:AA) < only one detected
 P	sequence21	sequence21.1+	*	CM:Z:- two point errors next to each other (25:T>A, 26:C>T) < only one detected

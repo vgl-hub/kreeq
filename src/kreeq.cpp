@@ -326,16 +326,11 @@ std::pair<DBGkmer*,bool> DBG::findDBGkmer(uint8_t *origin) {
     
 }
 
-int8_t DBG::scorePath(std::string path) {
+int8_t DBG::scorePath(std::string path) { // not tested
     
     int8_t score = 0;
     uint8_t len = path.size();
-    
-    uint8_t str[len];
     unsigned char* first = (unsigned char*)path.c_str();
-    
-    for (uint8_t i = 0; i<len; ++i)
-        str[i] = ctoi[*(first+i)];
     
     for (uint8_t i = 0; i < len-k; ++i) {
         
@@ -419,36 +414,39 @@ std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t dep
                     nextKmer[k-1] = i;
 
                     if(depth == 3 && i == *(target+1)) {
-                        newPath.score += checkNext(nextKmer, target+1);
-                        threadLog.add("found INS (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
-                        DBGpaths.push_back(DBGpath(INS, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1), newPath.score));
-                        break;
+                        newPath.score += checkNext(nextKmer, target+1);1\   q
+                        if (newPath.score > 0) {
+                            threadLog.add("found INS (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
+                            DBGpaths.push_back(DBGpath(INS, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1), newPath.score));
+                        }
                     }
                     
                     if(depth == 2 && i == *target) {
                         newPath.score += checkNext(nextKmer, target);
-                        threadLog.add("found DEL (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
-                        newPath.type = DEL;
-                        DBGpaths.push_back(newPath);
+                        if (newPath.score > 0) {
+                            threadLog.add("found DEL (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
+                            newPath.type = DEL;
+                            DBGpaths.push_back(newPath);
+                        }
+                    }
+                    
+                    if (i == *(target+1) && newPath.sequence.size() > 0 && depth == 2) {
+                        newPath.score += checkNext(nextKmer, target+1);
+                        if (newPath.score > 0) {
+                            threadLog.add("found SNV (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
+                            DBGpaths.push_back(DBGpath(SNV, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()), newPath.score));
+                        }
                     }
                     
                     newPath.sequence+=itoc[i];
                     std::deque<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath, threadLog);
-                    if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
-                        return DBGpaths;
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-                    
-                    if (i == *(target+1) && newPath.sequence.size() > 1 && depth == 2) {
-                        newPath.score += checkNext(nextKmer, target+1);
-                        threadLog.add("found SNV (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
-                        DBGpaths.push_back(DBGpath(SNV, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1), newPath.score));
-                    }
                 }
             }
         }
     }
-    if (DBGpaths.size() > 2)
-        DBGpaths.clear();
+//    if (DBGpaths.size() > 3) // limit the number of paths to avoid extensive search
+//        DBGpaths.clear();
     return DBGpaths;
     
 }
@@ -515,19 +513,16 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                 DBGkmer &dbgkmer = got->second;
                 if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
                     
-                    double score = checkNext(&altPath[0], &altPath[k]);
+                    double score = - checkNext(&altPath[0], &altPath[k]);
                     
-                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
-                    
-                    for (DBGpath& path : newDBGpaths)
-                        path.score -= score;
+                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos(), score), threadLog);
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     threadLog.add("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
-                    if (DBGpaths.size() > 1) { // only attempt to correct unique paths
-                        DBGpaths.clear();
-                        break;
-                    }
+//                    if (DBGpaths.size() > 1) { // only attempt to correct unique paths
+//                        DBGpaths.clear();
+//                        break;
+//                    }
                 }else{backtrack = false;}
             }else{backtrack = false;}
         }
@@ -549,7 +544,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     //                                printAltPaths(altPaths, threadLog);
                     double score = checkNext(&altPath[0], &altPath[k]);
                     
-                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
+                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos(), score), threadLog);
                     
                     for (DBGpath& path : newDBGpaths)
                         path.score -= score;

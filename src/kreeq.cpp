@@ -326,6 +326,60 @@ std::pair<DBGkmer*,bool> DBG::findDBGkmer(uint8_t *origin) {
     
 }
 
+int8_t DBG::scorePath(std::string path) {
+    
+    int8_t score = 0;
+    uint8_t len = path.size();
+    
+    uint8_t str[len];
+    unsigned char* first = (unsigned char*)path.c_str();
+    
+    for (uint8_t i = 0; i<len; ++i)
+        str[i] = ctoi[*(first+i)];
+    
+    for (uint8_t i = 0; i < len-k; ++i) {
+        
+        std::cout<<itoc[first[i]];
+        
+        auto it = findDBGkmer(first+i);
+        DBGkmer *dbgOrigin = it.first;
+        
+        if (dbgOrigin == nullptr) {
+            --score;
+        }else{
+            ++score;
+        }
+    }
+    
+    std::cout<<std::endl;
+    
+    return score;
+    
+}
+
+int8_t DBG::checkNext(uint8_t *nextKmer, uint8_t *target) {
+    
+    int8_t score = 0;
+    
+    for (uint8_t i = 1; i < k; ++i) {
+            
+        auto it = findDBGkmer(nextKmer);
+        DBGkmer *dbgOrigin = it.first;
+        
+        if (dbgOrigin == nullptr)
+            --score;
+        else
+            ++score;
+
+        memcpy(nextKmer, nextKmer+1, k-1);
+        nextKmer[k-1] = *(target+i+1);
+        
+    }
+    
+    return score;
+    
+}
+
 std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath, Log &threadLog) {
     
     uint8_t breadth = 0;
@@ -356,36 +410,43 @@ std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t dep
                 
                 if ((isFw && dbgOrigin->fw[e] != 0) || (!isFw && dbgOrigin->bw[e] != 0)) {
                     
+                    ++newPath.score;
+                    
                     uint8_t nextKmer[k];
                     memcpy(nextKmer, origin+1, k-1);
                     nextKmer[k-1] = i;
 
                     if(depth == 3 && i == *(target+1)) {
-                        threadLog.add("found INS\t" + newPath.sequence);
-                        DBGpaths.push_back(DBGpath(INS, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1)));
+                        newPath.score += checkNext(nextKmer, target);
+                        threadLog.add("found INS (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
+                        DBGpaths.push_back(DBGpath(INS, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1), newPath.score));
                         break;
                     }
                     
                     if(depth == 2 && i == *target) {
-                        threadLog.add("found DEL\t" + newPath.sequence);
+                        newPath.score += checkNext(nextKmer, target-1);
+                        threadLog.add("found DEL (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
                         newPath.type = DEL;
                         DBGpaths.push_back(newPath);
                     }
                     
                     newPath.sequence+=itoc[i];
                     std::deque<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath, threadLog);
-                    DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
                         return DBGpaths;
+                    DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     
                     if (i == *(target+1) && newPath.sequence.size() > 1 && depth == 2) {
-                        threadLog.add("found SNV\t" + newPath.sequence);
-                        DBGpaths.push_back(DBGpath(SNV, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1)));
+                        newPath.score += checkNext(nextKmer, target);
+                        threadLog.add("found SNV (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
+                        DBGpaths.push_back(DBGpath(SNV, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1), newPath.score));
                     }
                 }
             }
         }
     }
+    if (DBGpaths.size() > 2)
+        DBGpaths.clear();
     return DBGpaths;
     
 }
@@ -436,7 +497,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
         std::deque<DBGpath> DBGpaths;
         stringGraph.appendNext();
         altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-//                        printAltPaths(altPaths, threadLog);
+//        printAltPaths(altPaths, threadLog);
         
         bool backtrack = true;
         

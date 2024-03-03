@@ -148,6 +148,10 @@ public:
     
     std::pair<DBGkmer*,bool> findDBGkmer(uint8_t *origin);
     
+    int8_t scorePath(std::string path);
+    
+    int8_t checkNext(uint8_t *nextKmer, uint8_t *origin);
+    
     std::deque<DBGpath> findPaths(uint8_t *origin, uint8_t *target, uint8_t depth, DBGpath currentPath, Log &threadLog);
     
     void printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadLog);

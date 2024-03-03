@@ -357,11 +357,13 @@ int8_t DBG::scorePath(std::string path) {
     
 }
 
-int8_t DBG::checkNext(uint8_t *nextKmer, uint8_t *target) {
+int8_t DBG::checkNext(uint8_t *origin, uint8_t *target) {
     
     int8_t score = 0;
+    uint8_t nextKmer[k];
+    memcpy(nextKmer, origin, k);
     
-    for (uint8_t i = 1; i < k; ++i) {
+    for (uint8_t i = 0; i < k; ++i) {
             
         auto it = findDBGkmer(nextKmer);
         DBGkmer *dbgOrigin = it.first;
@@ -417,14 +419,14 @@ std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t dep
                     nextKmer[k-1] = i;
 
                     if(depth == 3 && i == *(target+1)) {
-                        newPath.score += checkNext(nextKmer, target);
+                        newPath.score += checkNext(nextKmer, target+1);
                         threadLog.add("found INS (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
                         DBGpaths.push_back(DBGpath(INS, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1), newPath.score));
                         break;
                     }
                     
                     if(depth == 2 && i == *target) {
-                        newPath.score += checkNext(nextKmer, target-1);
+                        newPath.score += checkNext(nextKmer, target);
                         threadLog.add("found DEL (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
                         newPath.type = DEL;
                         DBGpaths.push_back(newPath);
@@ -437,7 +439,7 @@ std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t dep
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     
                     if (i == *(target+1) && newPath.sequence.size() > 1 && depth == 2) {
-                        newPath.score += checkNext(nextKmer, target);
+                        newPath.score += checkNext(nextKmer, target+1);
                         threadLog.add("found SNV (score: " + std::to_string(newPath.score) + ")\t" + newPath.sequence);
                         DBGpaths.push_back(DBGpath(SNV, newPath.pos, newPath.sequence.substr(0, newPath.sequence.size()-1), newPath.score));
                     }
@@ -512,7 +514,14 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             if (got != map->end()) {
                 DBGkmer &dbgkmer = got->second;
                 if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
+                    
+                    double score = checkNext(&altPath[0], &altPath[k]);
+                    
                     std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
+                    
+                    for (DBGpath& path : newDBGpaths)
+                        path.score -= score;
+                    
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     threadLog.add("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
                     if (DBGpaths.size() > 1) { // only attempt to correct unique paths
@@ -538,7 +547,13 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
                     std::vector<uint8_t> altPath = altPaths[0];
                     //                                printAltPaths(altPaths, threadLog);
+                    double score = checkNext(&altPath[0], &altPath[k]);
+                    
                     std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos()), threadLog);
+                    
+                    for (DBGpath& path : newDBGpaths)
+                        path.score -= score;
+                    
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     if (DBGpaths.size() > 0)
                         break;

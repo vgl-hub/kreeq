@@ -211,7 +211,7 @@ void Input::loadGenome(InSequencesDBG& inSequences) {
                     getline(*stream, *inSequence, '>');
                     alloc += inSequence->size() * sizeof(char);
                     
-                    lg.verbose("Individual fasta sequence read.");
+                    lg.verbose("Individual fasta sequence read");
                     
                     Sequence* sequence = new Sequence {seqHeader, seqComment, inSequence};
                     

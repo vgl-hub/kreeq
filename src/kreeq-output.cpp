@@ -67,7 +67,7 @@ void DBG::report() { // generates the output from the program
             break;
         }
         case 5:
-        case 6: {
+        case 6: { // .gfa*, .vcf
             correctSequences();
             break;
         }

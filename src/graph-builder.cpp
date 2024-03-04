@@ -484,24 +484,17 @@ void DBG::stats() {
     while (mapRange[1] < mapCount) {
         
         mapRange = computeMapRange(mapRange);
-        
         loadMapRange(mapRange);
         
         for (uint32_t i = mapRange[0]; i < mapRange[1]; ++i)
             jobs.push_back([this, i] { return summary(i); });
         
         threadPool.queueJobs(jobs);
-        
         jobWait(threadPool);
-        
         jobs.clear();
-        
         deleteMapRange(mapRange);
-        
     }
-    
     DBGstats();
-    
 }
 
 bool DBG::summary(uint16_t m) {

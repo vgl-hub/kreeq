@@ -446,6 +446,8 @@ std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t dep
             }
         }
     }
+    if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
+        DBGpaths.clear();
     return DBGpaths;
     
 }

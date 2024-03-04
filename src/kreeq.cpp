@@ -436,14 +436,16 @@ std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t dep
                     }
                     
                     newPath.sequence+=itoc[i];
+                    
+                    if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
+                        return DBGpaths;
+                    
                     std::deque<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath, threadLog);
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                 }
             }
         }
     }
-    if (DBGpaths.size() > 3) // limit the number of paths to avoid extensive search
-        DBGpaths.clear();
     return DBGpaths;
     
 }

@@ -47,6 +47,15 @@ kreeq validate -f testFiles/random1.fasta -r testFiles/random1.fastq -o test.bkw
 kreeq-decompress test.bkwig --expand | python mycoolscript.py
 ```
 
+### Error correction
+Kreeq can also generate a vcf of candidate variants, which can be used for correction:
+
+```
+kreeq validate -f testFiles/to_correct.fasta -d testFiles/test1.kreeq -o candidate_errors.vcf
+bgzip -c candidate_errors.vcf > candidate_errors.vcf.gz
+tabix -pvcf candidate_errors.vcf.gz
+bcftools consensus -f testFiles/to_correct.fasta candidate_errors.vcf.gz > corrected.fasta
+```
 ## How to cite
 
 This tool is part of the **gfastar** tool suite. If you use **kreeq** in your work, please cite:

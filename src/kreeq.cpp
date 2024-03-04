@@ -522,10 +522,10 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     threadLog.add("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
-//                    if (DBGpaths.size() > 1) { // only attempt to correct unique paths
-//                        DBGpaths.clear();
-//                        break;
-//                    }
+                    if (DBGpaths.size() > 2) { // only attempt to correct unique paths
+                        DBGpaths.clear();
+                        break;
+                    }
                 }else{backtrack = false;}
             }else{backtrack = false;}
         }
@@ -545,12 +545,9 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
                     std::vector<uint8_t> altPath = altPaths[0];
                     //                                printAltPaths(altPaths, threadLog);
-                    double score = checkNext(&altPath[0], &altPath[k]);
+                    double score = - checkNext(&altPath[0], &altPath[k]);
                     
                     std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos(), score), threadLog);
-                    
-                    for (DBGpath& path : newDBGpaths)
-                        path.score -= score;
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     if (DBGpaths.size() > 0)

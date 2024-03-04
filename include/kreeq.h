@@ -96,6 +96,8 @@ public:
     
     void finalize();
     
+    void stats();
+    
     bool summary(uint16_t m);
     
     void DBGstats();

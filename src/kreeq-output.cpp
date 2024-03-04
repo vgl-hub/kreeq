@@ -52,7 +52,7 @@ void DBG::report() { // generates the output from the program
         ext = getFileExt("." + userInput.outFile);
     
     if (userInput.outFile.find(".") != std::string::npos || userInput.outFile == "" || ext == "kreeq" || userInput.stats_flag)
-        DBGstats();
+        stats();
     
     lg.verbose("Writing ouput: " + userInput.outFile);
     

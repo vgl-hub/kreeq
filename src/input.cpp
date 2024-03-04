@@ -88,21 +88,12 @@ void Input::read(uint8_t mode) {
                 
                 lg.verbose("Reads loaded.");
                 
-            }else{
-                
-                std::ifstream file;
-                
-                file.open(userInput.inDBG[0] + "/.index"); // reads the kmer length from the index file
-                std::string line;
-                
-                getline(file, line);
-                file.close();
-                
-                knav.load(); // loads kmers into the new kreeqdb
+                knav.finalize();
                 
             }
-            
-            knav.finalize();
+
+            if (userInput.inDBG.size() > 0)
+                userInput.prefix = userInput.inDBG[0];
             
             InSequencesDBG genome; // initialize sequence collection object
             

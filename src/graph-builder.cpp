@@ -471,6 +471,10 @@ void DBG::finalize() {
         buffersToMaps();
         
     }
+
+}
+
+void DBG::stats() {
     
     lg.verbose("Computing summary statistics");
     
@@ -481,6 +485,8 @@ void DBG::finalize() {
         
         mapRange = computeMapRange(mapRange);
         
+        loadMapRange(mapRange);
+        
         for (uint32_t i = mapRange[0]; i < mapRange[1]; ++i)
             jobs.push_back([this, i] { return summary(i); });
         
@@ -490,16 +496,18 @@ void DBG::finalize() {
         
         jobs.clear();
         
+        deleteMapRange(mapRange);
+        
     }
-
+    
+    DBGstats();
+    
 }
 
 bool DBG::summary(uint16_t m) {
     
     uint64_t kmersUnique = 0, kmersDistinct = 0, edgeCount = 0;
     phmap::parallel_flat_hash_map<uint64_t, uint64_t> hist;
-    
-    loadMap(userInput.prefix, m);
     
     for (auto pair : *maps[m]) {
         
@@ -514,8 +522,6 @@ bool DBG::summary(uint16_t m) {
         
     }
  
-    deleteMap(m);
-    
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;
     totKmersDistinct += kmersDistinct;

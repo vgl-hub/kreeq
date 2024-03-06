@@ -531,11 +531,9 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             }else{backtrack = false;}
         }
         
-        auto max = std::max_element(DBGpaths.begin(), DBGpaths.end(), []( const DBGpath v1, const DBGpath v2) {return v1.score < v2.score;});
-        
-        if (max != DBGpaths.end()) {
-            DBGpaths = std::deque<DBGpath>();
-            DBGpaths.push_back(*max);
+        if (DBGpaths.size() > 0) {
+            std::sort(DBGpaths.begin(), DBGpaths.end(), [](const DBGpath& v1, const DBGpath& v2) {return v1.score > v2.score;});
+            DBGpaths = std::deque<DBGpath>(DBGpaths.begin(), DBGpaths.begin()+1); // get at most two branches in the search tree
         }
         
         uint8_t backtrackCnt = 0;

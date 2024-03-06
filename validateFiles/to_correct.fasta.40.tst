@@ -11,7 +11,6 @@ S	sequence2.1.4.alt1	C
 S	sequence2.1.5	GAAATGATAGCATGACTCAGACTGATCAGATCGA
 S	sequence3.1.1	CATACTACGATCAGATCGACTGACTCGTACATG
 S	sequence3.1.2	a
-S	sequence3.1.2.alt1	C
 S	sequence3.1.3	CAGTGATGTACGAATGCATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
 S	sequence4.1.1	CATACTACGATCAGATCGACTGACTCGTACATG
 S	sequence4.1.1.alt1	C
@@ -90,13 +89,11 @@ S	sequence17.1.4	a
 S	sequence17.1.5	TGATAGCATGACTCAGACTGATCAGATCGA
 S	sequence18.1.1	CATACTACGATCAGATCGACTGACTCGTACATG
 S	sequence18.1.2	a
-S	sequence18.1.2.alt1	C
 S	sequence18.1.3	CAGTGATGTACGAATGCATGCATCGATCGATCGAAA
 S	sequence18.1.4	a
 S	sequence18.1.5	TGATAGCATGACTCAGACTGATCAGATCGA
 S	sequence19.1.1	CATACTACGATCAGATCGACTGACTCGTACATG
 S	sequence19.1.2	a
-S	sequence19.1.2.alt1	C
 S	sequence19.1.3	CAGTGATGT
 S	sequence19.1.4	a
 S	sequence19.1.5	ACGAATGCATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
@@ -115,10 +112,7 @@ L	sequence2.1.3	+	sequence2.1.4.alt1	+	0M
 L	sequence2.1.4	+	sequence2.1.5	+	0M
 L	sequence2.1.4.alt1	+	sequence2.1.5	+	0M
 L	sequence3.1.1	+	sequence3.1.2	+	0M
-L	sequence3.1.1	+	sequence3.1.2.alt1	+	0M
 L	sequence3.1.2	+	sequence3.1.3	+	0M
-L	sequence3.1.1	+	sequence3.1.3	+	0M
-L	sequence3.1.2.alt1	+	sequence3.1.3	+	0M
 L	sequence3.1.1	+	sequence3.1.3	+	0M
 L	sequence4.1.1	+	sequence4.1.1.alt1	+	0M
 L	sequence4.1.1.alt1	+	sequence4.1.2	+	0M
@@ -206,19 +200,13 @@ L	sequence17.1.3	+	sequence17.1.4	+	0M
 L	sequence17.1.4	+	sequence17.1.5	+	0M
 L	sequence17.1.3	+	sequence17.1.5	+	0M
 L	sequence18.1.1	+	sequence18.1.2	+	0M
-L	sequence18.1.1	+	sequence18.1.2.alt1	+	0M
 L	sequence18.1.2	+	sequence18.1.3	+	0M
-L	sequence18.1.1	+	sequence18.1.3	+	0M
-L	sequence18.1.2.alt1	+	sequence18.1.3	+	0M
 L	sequence18.1.1	+	sequence18.1.3	+	0M
 L	sequence18.1.3	+	sequence18.1.4	+	0M
 L	sequence18.1.4	+	sequence18.1.5	+	0M
 L	sequence18.1.3	+	sequence18.1.5	+	0M
 L	sequence19.1.1	+	sequence19.1.2	+	0M
-L	sequence19.1.1	+	sequence19.1.2.alt1	+	0M
 L	sequence19.1.2	+	sequence19.1.3	+	0M
-L	sequence19.1.1	+	sequence19.1.3	+	0M
-L	sequence19.1.2.alt1	+	sequence19.1.3	+	0M
 L	sequence19.1.1	+	sequence19.1.3	+	0M
 L	sequence19.1.3	+	sequence19.1.4	+	0M
 L	sequence19.1.4	+	sequence19.1.5	+	0M

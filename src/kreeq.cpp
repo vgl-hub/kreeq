@@ -566,7 +566,6 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     
         if (DBGpaths.size() != 0) {
 
-            // create edge at error in GFA
             threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
             std::vector<uint8_t> alts;
             

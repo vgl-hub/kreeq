@@ -6,7 +6,7 @@ embedded
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE
 sequence2	25	.	a	T	42	PASS	.	GT:GQ	1/1:42
 sequence2	65	.	t	C	42	PASS	.	GT:GQ	1/1:42
-sequence3	33	.	Ga	G,GCa	22	PASS	.	GT:GQ	1/1:42
+sequence3	33	.	Ga	G	42	PASS	.	GT:GQ	1/1:42
 sequence4	33	.	GA	GCA	40	PASS	.	GT:GQ	1/1:40
 sequence5	69	.	Aa	A	36	PASS	.	GT:GQ	1/1:36
 sequence6	68	.	AT	AAT	36	PASS	.	GT:GQ	1/1:36
@@ -30,9 +30,9 @@ sequence15	46	.	AT	AAT	36	PASS	.	GT:GQ	1/1:36
 sequence16	66	.	GA	GAA	2	PASS	.	GT:GQ	1/1:2
 sequence17	25	.	a	T	42	PASS	.	GT:GQ	1/1:42
 sequence17	69	.	Aa	A	36	PASS	.	GT:GQ	1/1:36
-sequence18	33	.	Ga	G,GCa	22	PASS	.	GT:GQ	1/1:42
+sequence18	33	.	Ga	G	42	PASS	.	GT:GQ	1/1:42
 sequence18	70	.	Aa	A	36	PASS	.	GT:GQ	1/1:36
-sequence19	33	.	Ga	G,GCa	10	PASS	.	GT:GQ	1/1:20
+sequence19	33	.	Ga	G	20	PASS	.	GT:GQ	1/1:20
 sequence19	43	.	Ta	T	40	PASS	.	GT:GQ	1/1:40
 sequence20	68	.	Aa	A	2	PASS	.	GT:GQ	1/1:2
 sequence21	24	.	Ca	C	2	PASS	.	GT:GQ	1/1:2

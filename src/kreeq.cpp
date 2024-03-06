@@ -437,8 +437,8 @@ std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t dep
                     
                     newPath.sequence+=itoc[i];
                     
-                    if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
-                        return DBGpaths;
+//                    if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
+//                        return DBGpaths;
                     
                     std::deque<DBGpath> newDBGpaths = findPaths(nextKmer, target, depth-1, newPath, threadLog);
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
@@ -446,8 +446,8 @@ std::deque<DBGpath> DBG::findPaths(uint8_t *origin, uint8_t *target, uint8_t dep
             }
         }
     }
-    if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
-        DBGpaths.clear();
+//    if (DBGpaths.size() > 2) // limit the number of paths to avoid extensive search
+//        DBGpaths.clear();
     return DBGpaths;
     
 }
@@ -522,12 +522,20 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     threadLog.add("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
-                    if (DBGpaths.size() > 2) { // only attempt to correct unique paths
-                        DBGpaths.clear();
-                        break;
-                    }
+//                    if (DBGpaths.size() > 2) { // only attempt to correct unique paths
+//                        DBGpaths.clear();
+//                        break;
+//                    }
+                    
                 }else{backtrack = false;}
             }else{backtrack = false;}
+        }
+        
+        auto max = std::max_element(DBGpaths.begin(), DBGpaths.end(), []( const DBGpath v1, const DBGpath v2) {return v1.score < v2.score;});
+        
+        if (max != DBGpaths.end()) {
+            DBGpaths = std::deque<DBGpath>();
+            DBGpaths.push_back(*max);
         }
         
         uint8_t backtrackCnt = 0;

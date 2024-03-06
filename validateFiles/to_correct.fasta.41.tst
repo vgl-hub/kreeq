@@ -1,6 +1,8 @@
 validate -f testFiles/to_correct.fasta -r testFiles/to_correct.fastq -o vcf
 embedded
 ##fileformat=VCFv4.2
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE
 sequence2	25	.	a	T	42	PASS	.	GT:GQ	1/1:42
 sequence2	65	.	t	C	42	PASS	.	GT:GQ	1/1:42

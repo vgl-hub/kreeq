@@ -534,7 +534,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
         
         if (DBGpaths.size() == 0 && backtrack) { // backtrack
             
-            for (uint8_t b = 0; b < userInput.backtracking; ++b) {
+            for (uint8_t b = 0; b < userInput.backtrackingSpan; ++b) {
                 
                 ++backtrackCnt;
                 

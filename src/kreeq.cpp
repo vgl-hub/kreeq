@@ -531,7 +531,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             }else{backtrack = false;}
         }
         
-        if (DBGpaths.size() > 0) {
+        if (DBGpaths.size() > 1) {
             std::sort(DBGpaths.begin(), DBGpaths.end(), [](const DBGpath& v1, const DBGpath& v2) {return v1.score > v2.score;});
             DBGpaths = std::deque<DBGpath>(DBGpaths.begin(), DBGpaths.begin()+1); // get at most two branches in the search tree
         }

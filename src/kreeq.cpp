@@ -518,7 +518,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     
                     threadLog.add(std::to_string(altPath[0]) + "," + std::to_string(altPath[k]) + "," + std::to_string(score));
                     
-                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos(), score), threadLog);
+                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], userInput.depth, DBGpath(stringGraph.currentPos(), score), threadLog);
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     threadLog.add("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
@@ -534,7 +534,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
         
         if (DBGpaths.size() == 0 && backtrack) { // backtrack
             
-            for (uint8_t b = 0; b < userInput.depth; ++b) {
+            for (uint8_t b = 0; b < userInput.backtracking; ++b) {
                 
                 ++backtrackCnt;
                 
@@ -547,7 +547,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     //                                printAltPaths(altPaths, threadLog);
                     double score = - checkNext(&altPath[0], &altPath[k]);
                     
-                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], 3, DBGpath(stringGraph.currentPos(), score), threadLog);
+                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], userInput.depth, DBGpath(stringGraph.currentPos(), score), threadLog);
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     if (DBGpaths.size() > 0)

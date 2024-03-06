@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
             {"input-sequence", required_argument, 0, 'f'},
             {"kmer-length", required_argument, 0, 'k'},
             {"search-depth", required_argument, 0, 0},
+            {"backtracking-span", required_argument, 0, 0},
             {"out-format", required_argument, 0, 'o'},
             {"input-reads", required_argument, 0, 'r'},
             {"tmp-prefix", required_argument, 0, 't'},
@@ -117,9 +118,11 @@ int main(int argc, char **argv) {
                     
                 case 0: // case for long options without short options
                     
-                    if(strcmp(long_options[option_index].name,"search-depth") == 0) {
+                    if(strcmp(long_options[option_index].name,"search-depth") == 0)
                         userInput.depth = atoi(optarg);
-                    }
+                    
+                    if(strcmp(long_options[option_index].name,"backtracking-span") == 0)
+                        userInput.backtrackingSpan = atoi(optarg);
                     
                     break;
 

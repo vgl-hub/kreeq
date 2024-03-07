@@ -35,7 +35,6 @@ S	sequence8.1.3	TAGCATGACTCAGACTGATCAGATCGA
 S	sequence9.1.1	CATACTACGATCAGATCGACTGACTCGTACATGCAGTGATGTACGAATG
 S	sequence9.1.2	t
 S	sequence9.1.2.alt1	C
-S	sequence9.1.2.alt2	T
 S	sequence9.1.3	ATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
 S	sequence10.1.1	CATACTACGATCAGATCGACTGAC
 S	sequence10.1.2	a
@@ -137,10 +136,8 @@ L	sequence8.1.2	+	sequence8.1.3	+	0M
 L	sequence8.1.2.alt1	+	sequence8.1.3	+	0M
 L	sequence9.1.1	+	sequence9.1.2	+	0M
 L	sequence9.1.1	+	sequence9.1.2.alt1	+	0M
-L	sequence9.1.1	+	sequence9.1.2.alt2	+	0M
 L	sequence9.1.2	+	sequence9.1.3	+	0M
 L	sequence9.1.2.alt1	+	sequence9.1.3	+	0M
-L	sequence9.1.2.alt2	+	sequence9.1.3	+	0M
 L	sequence10.1.1	+	sequence10.1.2	+	0M
 L	sequence10.1.1	+	sequence10.1.2.alt1	+	0M
 L	sequence10.1.2	+	sequence10.1.3	+	0M
@@ -225,7 +222,7 @@ P	sequence5	sequence5.1+	*	CM:Z:- one homopolymer insertion error (70:A)
 P	sequence6	sequence6.1+	*	CM:Z:- one homopolymer deletion error (69:A)
 P	sequence7	sequence7.1+	*	CM:Z:- two point errors overlapping (25:T>A, 35:C>T)
 P	sequence8	sequence8.1+	*	CM:Z:- one point error masked by same kmers partially overlapping (72:A>C)
-P	sequence9	sequence9.1+	*	CM:Z:- one point error masked by same kmers before, backtracking by 2 (50:C>T) < two variants reported
+P	sequence9	sequence9.1+	*	CM:Z:- one point error masked by same kmers before, backtracking by 2 (50:C>T)
 P	sequence10	sequence10.1+	*	CM:Z:- two point errors overlapping (25:T>A, 27:G>C)
 P	sequence11	sequence11.1+	*	CM:Z:- two point errors overlapping and one apart (25:T>A, 27:G>C, 65:C>T)
 P	sequence12	sequence12.1+	*	CM:Z:- three point errors overlapping (25:T>A, 27:G>C, 35:C>T)

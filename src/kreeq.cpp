@@ -556,9 +556,12 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], userInput.depth, DBGpath(stringGraph.currentPos(), score), threadLog);
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
-                    if (DBGpaths.size() > 0)
-                        break;
                 }
+            }
+            
+            if (DBGpaths.size() > 1) {
+                std::sort(DBGpaths.begin(), DBGpaths.end(), [](const DBGpath& v1, const DBGpath& v2) {return v1.score > v2.score;});
+                DBGpaths = std::deque<DBGpath>(DBGpaths.begin(), DBGpaths.begin()+1); // get at most two branches in the search tree
             }
         }
     

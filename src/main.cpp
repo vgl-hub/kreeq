@@ -28,7 +28,7 @@ std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolut
 
 int cmd_flag;
 int verbose_flag;
-short int tabular_flag;
+int tabular_flag;
 int maxThreads;
 
 std::mutex mtx;
@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
                     
                     break;
 
-                case 'c': // input kreeq db
+                case 'c': // coverage cutoff
                     
                     if (!isNumber(optarg)) {
                         fprintf(stderr, "input '%s' to option -%c must be a number\n", optarg, optopt);

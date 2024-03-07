@@ -11,6 +11,8 @@
 #include <vector>
 #include <regex>
 #include <array>
+#include <array>
+#include <sstream>
 
 int main(int argc, char *argv[])
 {
@@ -31,36 +33,48 @@ int main(int argc, char *argv[])
         char entrySep = ',', colSep = ',';
         uint64_t absPos = 0;
         
-        ifs.read(reinterpret_cast<char *>(&k), sizeof(uint8_t));
+        ifs.read(reinterpret_cast<char *>(&k), sizeof(uint8_t)); // read k length
         if (argv[2] == NULL)
-            std::cout<<std::to_string(k)<<"\n";
+            std::cout<<std::to_string(k)<<"\n"; // print k length
 
-        while(ifs && !(ifs.peek() == EOF)) {
+        while(ifs && !(ifs.peek() == EOF)) { // read the entire file
             
-            ifs.read(reinterpret_cast<char *>(&size), sizeof(uint16_t));
+            ifs.read(reinterpret_cast<char *>(&size), sizeof(uint16_t)); // read header length
             std::string header;
-            header.resize(size);
-            ifs.read(reinterpret_cast<char *>(&header[0]), sizeof(header[0])*size);
-            ifs.read(reinterpret_cast<char *>(&len), sizeof(uint64_t));
+            header.resize(size); // resize string to fit the header
+            ifs.read(reinterpret_cast<char *>(&header[0]), sizeof(header[0])*size); // read header into string
+            ifs.read(reinterpret_cast<char *>(&len), sizeof(uint64_t)); // read number of bases/rows
 
-            std::regex start("start\\=(\\d+)");
+            std::regex start("start\\=(\\d+)"); // match wig start position
             std::smatch match;
             std::regex_search(header, match, start);
-            absPos = std::stoi(match[1]);
+            absPos = std::stoi(match[1]); // read wig start position to absolute position
             
             if(argv[2] == NULL) {
                 
                 std::cout<<header<<"\n";
+                
+                uint8_t *values = new uint8_t[len*3];
+                ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3*len);
+                std::ostringstream os;
+                uint8_t comma = 0;
                     
-                for (uint64_t i = 0; i < len; ++i) {
-                    ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
-                    for (auto iter = values.begin(); iter != values.end(); iter++) {
-                        std::cout<<std::to_string(*iter);
-                        if (std::next(iter) != values.end())
-                            std::cout<<",";
+                for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
+                    
+                    os<<std::to_string(values[i]);
+                    if (comma < 2) {
+                        os<<",";
+                        ++comma;
+                    }else{
+                        os<<"\n";
+                        comma = 0;
                     }
-                    std::cout<<"\n";
+                    
                 }
+                
+                delete[] values;
+                auto str = os.str();
+                std::cout.write(str.c_str(), static_cast<std::streamsize>(str.size()));
                     
             } else if (argv[2] == std::string("--expand")){
                 
@@ -71,7 +85,7 @@ int main(int argc, char *argv[])
                 std::vector<uint8_t> edgeCovFw(k-1,0);
                 std::vector<uint8_t> edgeCovBw(k-1,0);
                 
-                for (uint64_t i = 0; i < len; ++i) {
+                for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
                     ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
                     
                     std::cout<<header<<colSep<<absPos<<colSep;

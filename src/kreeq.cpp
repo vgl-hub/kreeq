@@ -540,13 +540,15 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
         
         if (DBGpaths.size() == 0 && backtrack) { // backtrack
             
+            threadLog.add("Anomaly detected but no path is found. Backtracking");
+            
             for (uint8_t b = 0; b < userInput.backtrackingSpan; ++b) {
                 
                 ++backtrackCnt;
                 
                 if (variants.size() == 0 || stringGraph.currentPos()-backtrackCnt > variants.back()[0].pos) { // prevent going past the previously discovered variant
                     
-                    threadLog.add("Anomaly detected but no path is found. Backtracking at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()-1));
+                    threadLog.add("Testing position:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
                     stringGraph.backtrack(str, k, 1);
                     altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
                     std::vector<uint8_t> altPath = altPaths[0];
@@ -567,7 +569,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     
         if (DBGpaths.size() != 0) {
 
-            threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
+            threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()+1));
             std::vector<uint8_t> alts;
             
             for (DBGpath dbgpath : DBGpaths) {

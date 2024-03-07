@@ -52,10 +52,8 @@ int main(int argc, char *argv[])
             
             if(argv[2] == NULL) {
                 
-                std::cout<<header<<"\n";
-                
                 uint8_t *values = new uint8_t[len*3];
-                ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3*len);
+                ifs.read(reinterpret_cast<char *>(values), sizeof(uint8_t)*len*3);
                 std::ostringstream os;
                 uint8_t comma = 0;
                     

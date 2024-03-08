@@ -141,7 +141,7 @@ bool DBG::hashSequences() {
             if (readBatches.size() == 0)
                 continue;
             
-            std::condition_variable mutexCondition;
+            std::condition_variable &mutexCondition = threadPool.getMutexCondition();
             mutexCondition.wait(lck, [] {
                 return !freeMemory;
             });
@@ -318,7 +318,7 @@ bool DBG::processBuffers(uint16_t m) {
         
         {
             std::unique_lock<std::mutex> lck(mtx);
-            std::condition_variable mutexCondition;
+            std::condition_variable &mutexCondition = threadPool.getMutexCondition();
             mutexCondition.wait(lck, [] {
                 return !freeMemory;
             });

@@ -360,7 +360,7 @@ int main(int argc, char **argv) {
     Input in;
     
     threadPool.init(maxThreads); // initialize threadpool
-    maxMem = (userInput.maxMem == 0 ? get_mem_total(3) * 0.5 : userInput.maxMem); // set memory limit
+    maxMem = (userInput.maxMem == 0 ? get_mem_total(3) * 0.9 : userInput.maxMem); // set memory limit
     
     in.loadInput(userInput); // load user input
     lg.verbose("User input loaded");

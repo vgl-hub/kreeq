@@ -130,8 +130,6 @@ bool DBG::hashSequences() {
     uint64_t len;
     
     while (true) {
-        
-        while (freeMemory) {}
             
         {
             
@@ -142,6 +140,11 @@ bool DBG::hashSequences() {
 
             if (readBatches.size() == 0)
                 continue;
+            
+            std::condition_variable mutexCondition;
+            mutexCondition.wait(lck, [] {
+                return !freeMemory;
+            });
             
             readBatch = readBatches.front();
             readBatches.pop();
@@ -313,6 +316,14 @@ bool DBG::processBuffers(uint16_t m) {
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         
+        {
+            std::unique_lock<std::mutex> lck(mtx);
+            std::condition_variable mutexCondition;
+            mutexCondition.wait(lck, [] {
+                return !freeMemory;
+            });
+        }
+        
         parallelMap& map = *maps[m]; // the map associated to this buffer
         uint64_t map_size = mapSize(map);
         
@@ -349,14 +360,8 @@ bool DBG::processBuffers(uint16_t m) {
         delete buf;
         alloc += mapSize(*maps[m]) - map_size;
         
-        if (freeMemory || !bufFile || bufFile.peek() == EOF) {
-            
+        if (freeMemory || !bufFile || bufFile.peek() == EOF)
             dumpTmpMap(userInput.prefix, m); // if it does, dump map
-            
-            while (freeMemory) {}
-
-        }
-        
     }
 
     bufFile.close();

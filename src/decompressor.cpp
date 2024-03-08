@@ -33,7 +33,7 @@ int maxThreads;
 struct UserInputDecompressor : UserInput {
 
     std::string inputFile, coordinateFile, outFile;
-    double maxMem = 0;
+    uint64_t maxMem = 0;
     int expand = 0;
     uint32_t span = 0;
 

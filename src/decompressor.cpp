@@ -305,6 +305,9 @@ int main(int argc, char *argv[]) {
                 
                 for(BkwigIndexComponent component : components) {
                     
+                    if(component.componentType != SEGMENT)
+                        continue;
+                    
                     uint64_t len = component.len;
                     
                     if(!userInput.expand) {

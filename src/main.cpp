@@ -38,7 +38,7 @@ std::vector<Log> logs;
 
 void printHelp() {
     
-    printf("kreeq [mode]\n-h for additional help.\n");
+    printf("kreeq [mode] -h\nfor additional help.\n");
     printf("\nModes:\n");
     printf("validate\n");
     printf("union\n");
@@ -59,11 +59,8 @@ int main(int argc, char **argv) {
 
     UserInputKreeq userInput; // initialize input object
     
-    if (argc == 1) { // gfastats with no arguments
-            
+    if (argc == 1 || argc == 2) // kreeq with no arguments
         printHelp();
-        
-    }
 
     if(strcmp(argv[1],"validate") == 0) {
 

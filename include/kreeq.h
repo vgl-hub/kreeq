@@ -140,6 +140,8 @@ public:
     
     void printTableCompressed();
     
+    void writeIndex(std::ofstream &ofs);
+    
     void printTableCompressedBinary();
     
     void printGFA();

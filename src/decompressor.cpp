@@ -10,14 +10,14 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <regex>
 #include <array>
 #include <array>
 #include <sstream>
 
+#include "parallel-hashmap/phmap.h"
+
 #include "global.h"
 #include "log.h"
-
 #include "bed.h"
 #include "struct.h"
 #include "functions.h"
@@ -30,14 +30,38 @@ int verbose_flag;
 int tabular_flag;
 int maxThreads;
 
+struct BkwigIndexComponent {
+    
+    ComponentType componentType;
+    uint64_t bytePos, absPos, len;
+    uint8_t step;
+    
+};
+
+struct BkwigIndex {
+    
+    phmap::parallel_flat_hash_map<std::string,std::vector<BkwigIndexComponent>> paths;
+    uint64_t indexByteSize = 0;
+    
+    void printIndex() {
+        
+        for (auto pair : paths) {
+            std::cout<<pair.first<<std::endl;
+            for (auto comp : pair.second)
+                std::cout<<+comp.componentType<<"\t"<<+comp.absPos<<"\t"<<+comp.len<<"\t"<<+comp.step<<std::endl;
+        }
+    }
+};
+
 struct UserInputDecompressor : UserInput {
 
     std::string inputFile, coordinateFile, outFile;
     uint64_t maxMem = 0;
     int expand = 0;
     uint32_t span = 0;
-
+    BkwigIndex bkwigIndex;
 };
+
 
 void printHelp() {
     
@@ -46,6 +70,55 @@ void printHelp() {
     printf("inflate\n");
     exit(0);
     
+}
+
+void readIndex(std::ifstream &ifs, BkwigIndex &bkwigIndex) { // reads: nPaths, and for each path reads size and path header and nComponents, and for each segment 1) type 2) absPos 3) segment length
+    
+    uint64_t bytePos = 0;
+    
+    uint32_t nPaths;
+    ifs.read(reinterpret_cast<char *>(&nPaths), sizeof(uint32_t));
+    bkwigIndex.indexByteSize += sizeof(uint32_t);
+    
+    for (uint32_t i = 0; i < nPaths; ++i) {
+        
+        uint16_t headerSize;
+        ifs.read(reinterpret_cast<char *>(&headerSize), sizeof(uint16_t));
+        bkwigIndex.indexByteSize += sizeof(uint16_t);
+        std::string pHeader;
+        pHeader.resize(headerSize);
+        ifs.read(reinterpret_cast<char *>(&pHeader[0]), sizeof(pHeader[0])*headerSize);
+        bkwigIndex.indexByteSize += sizeof(pHeader[0])*headerSize;
+        uint32_t nComponents;
+        ifs.read(reinterpret_cast<char *>(&nComponents), sizeof(uint32_t));
+        bkwigIndex.indexByteSize += sizeof(uint32_t);
+        
+        std::vector<BkwigIndexComponent> componentsVec;
+        
+        for (uint32_t e = 0; e < nComponents; ++e) {
+            
+            bytePos += headerSize * sizeof(char) + sizeof(uint64_t);
+            
+            ComponentType componentType;
+            ifs.read(reinterpret_cast<char *>(&componentType), sizeof(ComponentType));
+            bkwigIndex.indexByteSize += sizeof(ComponentType);
+            bytePos += sizeof(ComponentType);
+            uint64_t absPos;
+            ifs.read(reinterpret_cast<char *>(&absPos), sizeof(uint64_t));
+            bkwigIndex.indexByteSize += sizeof(uint64_t);
+            bytePos += sizeof(uint64_t)*absPos;
+            uint64_t len;
+            ifs.read(reinterpret_cast<char *>(&len), sizeof(uint64_t));
+            bkwigIndex.indexByteSize += sizeof(uint64_t);
+            uint8_t step;
+            ifs.read(reinterpret_cast<char *>(&step), sizeof(uint8_t));
+            if (componentType == SEGMENT)
+                bytePos += sizeof(uint64_t)*len;
+            
+            componentsVec.push_back({componentType, bytePos, absPos, len, step});
+        }
+        bkwigIndex.paths[pHeader] = componentsVec;
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -61,11 +134,8 @@ int main(int argc, char *argv[]) {
     
     UserInputDecompressor userInput; // initialize input object
     
-    if (argc == 1) { // gfastats with no arguments
-            
+    if (argc == 1) // decompressor with no arguments
         printHelp();
-        
-    }
 
     if(strcmp(argv[1],"inflate") == 0) {
 
@@ -214,102 +284,102 @@ int main(int argc, char *argv[]) {
             
             uint8_t k;
             uint16_t size;
-            uint64_t len;
             std::array<uint8_t, 3> values;
             char entrySep = ',', colSep = ',';
             uint64_t absPos = 0;
             
             ifs.read(reinterpret_cast<char *>(&k), sizeof(uint8_t)); // read k length
-            if (argv[2] == NULL)
+            if (!userInput.expand)
                 std::cout<<std::to_string(k)<<"\n"; // print k length
+            
+            readIndex(ifs, userInput.bkwigIndex);
+//            userInput.bkwigIndex.printIndex();
             
             while(ifs && !(ifs.peek() == EOF)) { // read the entire file
                 
                 ifs.read(reinterpret_cast<char *>(&size), sizeof(uint16_t)); // read header length
-                std::string header;
-                header.resize(size); // resize string to fit the header
-                ifs.read(reinterpret_cast<char *>(&header[0]), sizeof(header[0])*size); // read header into string
-                ifs.read(reinterpret_cast<char *>(&len), sizeof(uint64_t)); // read number of bases/rows
+                std::string pHeader;
+                pHeader.resize(size); // resize string to fit the header
+                ifs.read(reinterpret_cast<char *>(&pHeader[0]), sizeof(pHeader[0])*size); // read header into string
+                std::vector<BkwigIndexComponent> components = userInput.bkwigIndex.paths[pHeader];
                 
-                std::regex start("start\\=(\\d+)"); // match wig start position
-                std::smatch match;
-                std::regex_search(header, match, start);
-                
-                absPos = std::stoi(match[1]); // read wig start position to absolute position
-                
-                if(!userInput.expand) {
+                for(BkwigIndexComponent component : components) {
                     
-                    std::cout<<header<<"\n";
+                    uint64_t len = component.len;
                     
-                    uint8_t *values = new uint8_t[len*3];
-                    ifs.read(reinterpret_cast<char *>(values), sizeof(uint8_t)*len*3);
-                    std::ostringstream os;
-                    uint8_t comma = 0;
-                    
-                    for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
+                    if(!userInput.expand) {
                         
-                        os<<std::to_string(values[i]);
-                        if (comma < 2) {
-                            os<<",";
-                            ++comma;
-                        }else{
-                            os<<"\n";
-                            comma = 0;
+                        std::cout<<"fixedStep chrom="<<pHeader<<" start="<<std::to_string(component.absPos)<<" step="<<std::to_string(component.step)<<std::endl;
+                        
+                        uint8_t *values = new uint8_t[len*3];
+                        ifs.read(reinterpret_cast<char *>(values), sizeof(uint8_t)*len*3);
+                        std::ostringstream os;
+                        uint8_t comma = 0;
+                        
+                        for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
+                            
+                            os<<std::to_string(values[i]);
+                            if (comma < 2) {
+                                os<<",";
+                                ++comma;
+                            }else{
+                                os<<"\n";
+                                comma = 0;
+                            }
                         }
-                    }
-                    delete[] values;
-                    auto str = os.str();
-                    std::cout.write(str.c_str(), static_cast<std::streamsize>(str.size()));
-                    
-                }else{
-                    
-                    std::regex chrom("chrom\\=([^ ]*) ");
-                    std::regex_search(header, match, chrom);
-                    header = match[1];
-                    std::vector<uint8_t> kmerCov(k-1,0);
-                    std::vector<uint8_t> edgeCovFw(k-1,0);
-                    std::vector<uint8_t> edgeCovBw(k-1,0);
-                    
-                    for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
-                        ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
+                        delete[] values;
+                        auto str = os.str();
+                        std::cout.write(str.c_str(), static_cast<std::streamsize>(str.size()));
                         
-                        std::cout<<header<<colSep<<absPos<<colSep;
+                    }else{
                         
-                        kmerCov.push_back(values[0]);
+                        std::vector<uint8_t> kmerCov(k-1,0);
+                        std::vector<uint8_t> edgeCovFw(k-1,0);
+                        std::vector<uint8_t> edgeCovBw(k-1,0);
                         
-                        for(uint8_t c = 0; c<k; ++c){
-                            std::cout<<std::to_string(kmerCov[c]);
-                            if (c < k - 1)
-                                std::cout<<entrySep;
+                        absPos = component.absPos;
+                        
+                        for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
+                            ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
+                            
+                            std::cout<<pHeader<<colSep<<absPos<<colSep;
+                            
+                            kmerCov.push_back(values[0]);
+                            
+                            for(uint8_t c = 0; c<k; ++c){
+                                std::cout<<std::to_string(kmerCov[c]);
+                                if (c < k - 1)
+                                    std::cout<<entrySep;
+                            }
+                            
+                            std::cout<<colSep;
+                            
+                            edgeCovFw.push_back(values[1]);
+                            
+                            for(uint8_t c = 0; c<k; ++c){
+                                std::cout<<std::to_string(edgeCovFw[c]);
+                                if (c < k - 1)
+                                    std::cout<<entrySep;
+                            }
+                            
+                            std::cout<<colSep;
+                            
+                            edgeCovBw.push_back(values[2]);
+                            
+                            for(uint8_t c = 0; c<k; ++c){
+                                std::cout<<std::to_string(edgeCovBw[c]);
+                                if (c < k - 1)
+                                    std::cout<<entrySep;
+                            }
+                            
+                            std::cout<<"\n";
+                            
+                            kmerCov.erase(kmerCov.begin());
+                            edgeCovFw.erase(edgeCovFw.begin());
+                            edgeCovBw.erase(edgeCovBw.begin());
+                            
+                            ++absPos;
                         }
-                        
-                        std::cout<<colSep;
-                        
-                        edgeCovFw.push_back(values[1]);
-                        
-                        for(uint8_t c = 0; c<k; ++c){
-                            std::cout<<std::to_string(edgeCovFw[c]);
-                            if (c < k - 1)
-                                std::cout<<entrySep;
-                        }
-                        
-                        std::cout<<colSep;
-                        
-                        edgeCovBw.push_back(values[2]);
-                        
-                        for(uint8_t c = 0; c<k; ++c){
-                            std::cout<<std::to_string(edgeCovBw[c]);
-                            if (c < k - 1)
-                                std::cout<<entrySep;
-                        }
-                        
-                        std::cout<<"\n";
-                        
-                        kmerCov.erase(kmerCov.begin());
-                        edgeCovFw.erase(edgeCovFw.begin());
-                        edgeCovBw.erase(edgeCovBw.begin());
-                        
-                        ++absPos;
                     }
                 }
             }

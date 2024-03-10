@@ -32,7 +32,6 @@ int maxThreads;
 
 struct BkwigIndexComponent {
     
-    ComponentType componentType;
     uint64_t bytePos, absPos, len;
     uint8_t step;
     
@@ -48,7 +47,7 @@ struct BkwigIndex {
         for (auto pair : paths) {
             std::cout<<pair.first<<std::endl;
             for (auto comp : pair.second)
-                std::cout<<+comp.componentType<<"\t"<<+comp.absPos<<"\t"<<+comp.len<<"\t"<<+comp.step<<std::endl;
+                std::cout<<+comp.absPos<<"\t"<<+comp.len<<"\t"<<+comp.step<<std::endl;
         }
     }
 };
@@ -97,12 +96,6 @@ void readIndex(std::ifstream &ifs, BkwigIndex &bkwigIndex) { // reads: nPaths, a
         
         for (uint32_t e = 0; e < nComponents; ++e) {
             
-            bytePos += headerSize * sizeof(char) + sizeof(uint64_t);
-            
-            ComponentType componentType;
-            ifs.read(reinterpret_cast<char *>(&componentType), sizeof(ComponentType));
-            bkwigIndex.indexByteSize += sizeof(ComponentType);
-            bytePos += sizeof(ComponentType);
             uint64_t absPos;
             ifs.read(reinterpret_cast<char *>(&absPos), sizeof(uint64_t));
             bkwigIndex.indexByteSize += sizeof(uint64_t);
@@ -112,10 +105,9 @@ void readIndex(std::ifstream &ifs, BkwigIndex &bkwigIndex) { // reads: nPaths, a
             bkwigIndex.indexByteSize += sizeof(uint64_t);
             uint8_t step;
             ifs.read(reinterpret_cast<char *>(&step), sizeof(uint8_t));
-            if (componentType == SEGMENT)
-                bytePos += sizeof(uint64_t)*len;
+            bytePos += sizeof(uint64_t)*len;
             
-            componentsVec.push_back({componentType, bytePos, absPos, len, step});
+            componentsVec.push_back({bytePos, absPos, len, step});
         }
         bkwigIndex.paths[pHeader] = componentsVec;
     }
@@ -305,9 +297,6 @@ int main(int argc, char *argv[]) {
                 
                 for(BkwigIndexComponent component : components) {
                     
-                    if(component.componentType != SEGMENT)
-                        continue;
-                    
                     uint64_t len = component.len;
                     
                     if(!userInput.expand) {
@@ -319,7 +308,7 @@ int main(int argc, char *argv[]) {
                         std::ostringstream os;
                         uint8_t comma = 0;
                         
-                        for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
+                        for (uint64_t i = 0; i < len*3; ++i) { // loop through all position for this record
                             
                             os<<std::to_string(values[i]);
                             if (comma < 2) {

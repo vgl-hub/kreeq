@@ -297,13 +297,15 @@ void DBG::writeIndex(std::ofstream &ofs) { // writes: indexSize, nPaths, and for
         ofs.write(reinterpret_cast<const char *>(&headerSize), sizeof(uint16_t));
         ofs<<path.getHeader();
         
-        uint32_t nComponents = pathComponents.size();
+        uint32_t nComponents = 0;
+        for (PathComponent &component : pathComponents)
+            if (component.componentType == SEGMENT)
+                ++nComponents;
         ofs.write(reinterpret_cast<const char *>(&nComponents), sizeof(uint32_t));
         
         for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
             
             cUId = component->id;
-            ofs.write(reinterpret_cast<const char *>(&component->componentType), sizeof(ComponentType));
             
             if (component->componentType == SEGMENT) {
                 
@@ -316,12 +318,10 @@ void DBG::writeIndex(std::ofstream &ofs) { // writes: indexSize, nPaths, and for
                 ofs.write(reinterpret_cast<const char *>(&step), sizeof(uint8_t));
                 absPos += segmentlen;
                 
-            }else if (component->componentType == GAP){
+            }else if(component->componentType == GAP){
                 
                 auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
-                ofs.write(reinterpret_cast<const char *>(&absPos), sizeof(uint64_t));
                 uint64_t gapLen = inGap->getDist(component->start - component->end);
-                ofs.write(reinterpret_cast<const char *>(&gapLen), sizeof(uint64_t));
                 absPos += gapLen;
                 
             }else{}
@@ -339,14 +339,12 @@ void DBG::printTableCompressedBinary() {
     
     std::vector<InPath> inPaths = genome->getInPaths();
     std::vector<InSegment*> *inSegments = genome->getInSegments();
-    std::vector<InGap> *inGaps = genome->getInGaps();
     std::vector<DBGbase*> *dbgbases = genome->getInSegmentsDBG();
     
     for (InPath& path : inPaths) {
         
-        unsigned int cUId = 0, gapLen = 0, sIdx = 0;
+        unsigned int cUId = 0, sIdx = 0;
         std::vector<PathComponent> pathComponents = path.getComponents();
-        uint64_t absPos = 0;
         
         uint16_t pHeaderLen = path.getHeader().size();
         ofs.write(reinterpret_cast<const char *>(&pHeaderLen), sizeof(uint16_t));
@@ -372,20 +370,12 @@ void DBG::printTableCompressedBinary() {
                         ofs.write(reinterpret_cast<const char *>(&dbgbase[i].cov), sizeof(uint8_t));
                         ofs.write(reinterpret_cast<const char *>(dbgbase[i].isFw ? &dbgbase[i].fw : &dbgbase[i].bw), sizeof(uint8_t));
                         ofs.write(reinterpret_cast<const char *>(dbgbase[i].isFw ? &dbgbase[i].bw : &dbgbase[i].fw), sizeof(uint8_t));
-                        ++absPos;
                     }
                 }else{
                     
                     // GFA not handled yet
-                    
                 }
-            }else if (component->componentType == GAP){
-                
-                auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
-                gapLen += inGap->getDist(component->start - component->end);
-                absPos += gapLen;
-                
-            }else{} // need to handle edges, cigars etc
+            }
         }
     }
     ofs.close();

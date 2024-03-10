@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
                     printf("\t-o --out-format supported extensions:\n");
                     printf("\t\t .kreeq dumps hashmaps to file for reuse.\n");
                     printf("\t-t --tmp-prefix prefix to temporary directory.\n");
-                    printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.5 of max).\n");
+                    printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.9 of max).\n");
                     printf("\t-j --threads <n> numbers of threads (default: max).\n");
                     printf("\t-v --version software version.\n");
                     printf("\t--cmd print $0 to stdout.\n");

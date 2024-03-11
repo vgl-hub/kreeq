@@ -274,7 +274,7 @@ void DBG::printTableCompressed() {
     ofs.close();
 }
 
-void DBG::writeIndex(std::ofstream &ofs) { // writes: indexSize, nPaths, and for each path writes size and path header and nComponents, and for each segment 1) type 2) absPos 3) segment length
+void DBG::writeIndex(std::ofstream &ofs) { // writes: nPaths, and for each path writes size and path header and nComponents, and for each segment 1) type 2) absPos 3) segment length
 
     std::vector<InPath> inPaths = genome->getInPaths();
     std::vector<InSegment*> *inSegments = genome->getInSegments();
@@ -342,10 +342,6 @@ void DBG::printTableCompressedBinary() {
         unsigned int cUId = 0, sIdx = 0;
         std::vector<PathComponent> pathComponents = path.getComponents();
         
-        uint16_t pHeaderLen = path.getHeader().size();
-        ofs.write(reinterpret_cast<const char *>(&pHeaderLen), sizeof(uint16_t));
-        ofs<<path.getHeader();
-        
         for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
             
             cUId = component->id;
@@ -367,10 +363,7 @@ void DBG::printTableCompressedBinary() {
                         ofs.write(reinterpret_cast<const char *>(dbgbase[i].isFw ? &dbgbase[i].fw : &dbgbase[i].bw), sizeof(uint8_t));
                         ofs.write(reinterpret_cast<const char *>(dbgbase[i].isFw ? &dbgbase[i].bw : &dbgbase[i].fw), sizeof(uint8_t));
                     }
-                }else{
-                    
-                    // GFA not handled yet
-                }
+                }else{} // GFA not handled yet
             }
         }
     }

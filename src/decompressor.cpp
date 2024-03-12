@@ -49,7 +49,7 @@ struct BkwigIndex {
         for (auto pair : paths) {
             std::cout<<pair.first<<std::endl;
             for (auto comp : pair.second)
-                std::cout<<+comp.absPos<<"\t"<<+comp.len<<"\t"<<+comp.step<<std::endl;
+                std::cout<<+comp.bytePos<<"\t"<<+comp.absPos<<"\t"<<+comp.len<<"\t"<<+comp.step<<std::endl;
         }
     }
 };
@@ -101,7 +101,6 @@ void readIndex(std::ifstream &ifs, BkwigIndex &bkwigIndex) { // reads: nPaths, a
             uint64_t absPos;
             ifs.read(reinterpret_cast<char *>(&absPos), sizeof(uint64_t));
             bkwigIndex.indexByteSize += sizeof(uint64_t);
-            bytePos += sizeof(uint64_t)*absPos;
             uint64_t len;
             ifs.read(reinterpret_cast<char *>(&len), sizeof(uint64_t));
             bkwigIndex.indexByteSize += sizeof(uint64_t);
@@ -109,6 +108,7 @@ void readIndex(std::ifstream &ifs, BkwigIndex &bkwigIndex) { // reads: nPaths, a
             ifs.read(reinterpret_cast<char *>(&step), sizeof(uint8_t));
             bkwigIndex.indexByteSize += sizeof(uint8_t);
             componentsVec.push_back({bytePos, absPos, len, step});
+            bytePos += sizeof(uint8_t)*len*3;
         }
         bkwigIndex.paths[pHeader] = componentsVec;
         bkwigIndex.sortOrder.push_back(pHeader);
@@ -117,29 +117,53 @@ void readIndex(std::ifstream &ifs, BkwigIndex &bkwigIndex) { // reads: nPaths, a
 
 void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint64_t,uint64_t>>> coordinateSet, UserInputDecompressor &userInput) {
     
-    uint64_t offset = sizeof(uint8_t) + userInput.bkwigIndex.indexByteSize;
-    std::vector<BkwigIndexComponent> index = userInput.bkwigIndex.paths[coordinateSet.first];
+    uint64_t start, end;
+    std::vector<BkwigIndexComponent> index;
+
+    auto got = userInput.bkwigIndex.paths.find(coordinateSet.first);
+    if (got == userInput.bkwigIndex.paths.end()) {
+        fprintf(stderr, "Could not find header (%s) Exiting.\n", coordinateSet.first.c_str());
+        exit(EXIT_FAILURE);
+    }else{
+        index = got->second;
+    }
     
-    for (auto pair : coordinateSet.second)
-        std::cout<<+pair.first<<"\t"<<pair.second<<std::endl;
+//    userInput.bkwigIndex.printIndex();
     
-    for (BkwigIndexComponent comp : index) {
-        std::cout<<+comp.absPos<<"\t"<<+comp.len<<"\t"<<+comp.step<<"\t"<<comp.bytePos<<std::endl;
+    for (auto pair : coordinateSet.second) {
         
-        ifs.seekg(offset);
+        start = pair.first-userInput.span-1, end = pair.second+userInput.span-1;
         
-        uint8_t k = userInput.bkwigIndex.k;
+        uint64_t initOffset = sizeof(uint8_t) + userInput.bkwigIndex.indexByteSize, offset = initOffset;
+            
+        for (BkwigIndexComponent comp : index) {
+            
+            if(!(start >= comp.absPos && start < comp.absPos+comp.len)) // check that the start coordinate falls in the component
+               continue;
+            
+            if (end > comp.absPos+comp.len) {
+                fprintf(stderr, "End coordinate (%llu) exceed component size (%llu). Exiting.\n", end, comp.absPos+comp.len);
+                exit(EXIT_FAILURE);
+            }else if (comp.absPos+comp.len > end) {
+                offset += comp.bytePos + (start-comp.absPos)*3;
+                break;
+            }
+        }
+
         std::array<uint8_t, 3> values;
         char entrySep = ',', colSep = ',';
-        uint64_t absPos = 0, len = userInput.span;
+        uint64_t absPos = start, len = end-start;
         
         if(!userInput.expand) {
+            
+            ifs.seekg(offset);
             
             uint8_t *values = new uint8_t[len*3];
             ifs.read(reinterpret_cast<char *>(values), sizeof(uint8_t)*len*3);
             std::ostringstream os;
             uint8_t comma = 0;
             
+            std::cout<<coordinateSet.first<<":"<<+start+1<<"-"<<end+1<<std::endl;
             for (uint64_t i = 0; i < len*3; ++i) { // loop through all position for this record
                 
                 os<<std::to_string(values[i]);
@@ -157,17 +181,32 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
             
         }else{
             
+            uint8_t k = userInput.bkwigIndex.k, p = k;
+            offset -= k*sizeof(uint8_t)*3;
+            if (offset < initOffset) {
+                offset = initOffset;
+                p = k - absPos; // this is wrong
+            }
+            
+            ifs.seekg(offset);
+            
             std::vector<uint8_t> kmerCov(k-1,0);
             std::vector<uint8_t> edgeCovFw(k-1,0);
             std::vector<uint8_t> edgeCovBw(k-1,0);
             
-            absPos = comp.absPos;
+            for (uint8_t i = 0; i < p; ++i) { // prefill vector
+                ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
+                kmerCov.push_back(values[0]);
+                edgeCovFw.push_back(values[1]);
+                edgeCovBw.push_back(values[2]);
+                kmerCov.erase(kmerCov.begin());
+                edgeCovFw.erase(edgeCovFw.begin());
+                edgeCovBw.erase(edgeCovBw.begin());
+            }
             
             for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
                 ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
-                
                 std::cout<<coordinateSet.first<<colSep<<absPos<<colSep;
-                
                 kmerCov.push_back(values[0]);
                 
                 for(uint8_t c = 0; c<k; ++c){

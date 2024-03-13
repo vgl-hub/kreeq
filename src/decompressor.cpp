@@ -336,7 +336,7 @@ int main(int argc, char *argv[]) {
                     exit(0);
                     
                 case 'h': // help
-                    printf("kreeq [command]\n");
+                    printf("kreeq inflate\n");
                     printf("\nOptions:\n");
                     printf("\t-i --input-file kreeq input.\n");
                     printf("\t-o --out-format supported extensions:\n");
@@ -400,6 +400,14 @@ int main(int argc, char *argv[]) {
                     }
                     break;
                 default: // handle positional arguments
+                    if (pos_op == 2) { // if >1 positional argument, check what additional positional arguments are present
+                        
+                        std::tuple<std::string, uint64_t, uint64_t> coordinate = parseCoordinate(std::string(optarg));
+                        userInput.bedIncludeList.pushCoordinates(std::get<0>(coordinate), std::get<1>(coordinate), std::get<2>(coordinate));
+                        
+                    }else if (pos_op > 2){printf("Error: too many positional arguments (%s).\n",optarg);exit(1);}
+                    pos_op++;
+                    break;
                     
                 case 0: // case for long options without short options
                     
@@ -437,7 +445,7 @@ int main(int argc, char *argv[]) {
                     exit(0);
                     
                 case 'h': // help
-                    printf("kreeq [command]\n");
+                    printf("kreeq lookup [header[:start-end]]\n");
                     printf("\nOptions:\n");
                     printf("\t-i --input-file kreeq input.\n");
                     printf("\t-c --coordinate-file sequence coordinates to extract.\n");
@@ -582,8 +590,6 @@ int main(int argc, char *argv[]) {
         }
         case 1: { // lookup
             
-            BedCoordinates bedIncludeList;
-            
             if (!userInput.coordinateFile.empty()) {
                 
                 std::string line, bedHeader;
@@ -595,13 +601,13 @@ int main(int argc, char *argv[]) {
                     std::istringstream iss(line);
                     iss >> bedHeader >> begin >> end;
                     
-                    bedIncludeList.pushCoordinates(bedHeader, begin, end);
+                    userInput.bedIncludeList.pushCoordinates(bedHeader, begin, end);
                     
                 }
                 
             }
             
-            auto coordinates = bedIncludeList.getCoordinates();
+            auto coordinates = userInput.bedIncludeList.getCoordinates();
             
             for (auto coordinateSet : coordinates)
                 lookup(ifs, coordinateSet, userInput);

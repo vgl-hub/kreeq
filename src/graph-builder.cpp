@@ -680,14 +680,12 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     std::vector<uint64_t> fileSizes;
     
     for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
-        fileSizes.push_back(fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin"));
+        fileSizes.push_back(fileSize(userInput.inDBG[0] + "/.map." + std::to_string(m) + ".bin"));
     
     std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
     
     for(uint32_t i : idx)
         mergeMaps(i);
-    
-    jobWait(threadPool);
     
 }
 

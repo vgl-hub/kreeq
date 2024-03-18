@@ -160,6 +160,10 @@ public:
     
     void printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadLog);
     
+    bool loadAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies);
+    
+    bool detectAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies);
+    
     bool DBGtoVariants(InSegment *inSegment);
     
     bool variantsToGFA(InSegment *inSegment, Log &threadLog);

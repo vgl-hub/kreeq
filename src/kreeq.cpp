@@ -334,7 +334,7 @@ int8_t DBG::scorePath(std::string path) { // not tested
     
     for (uint8_t i = 0; i < len-k; ++i) {
         
-        std::cout<<itoc[first[i]];
+//        std::cout<<itoc[first[i]];
         
         auto it = findDBGkmer(first+i);
         DBGkmer *dbgOrigin = it.first;
@@ -346,7 +346,7 @@ int8_t DBG::scorePath(std::string path) { // not tested
         }
     }
     
-    std::cout<<std::endl;
+//    std::cout<<std::endl;
     
     return score;
     
@@ -563,6 +563,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             stringGraph->deleteStringGraph(stringGraph->root);
 //                delete stringGraph;
             stringGraph = new StringGraph(str, k, *anomaly-k);
+            altPaths = stringGraph->walkStringGraph(stringGraph->root, std::vector<uint8_t>());
         }
         
         bool backtrack = true;

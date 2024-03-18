@@ -27,6 +27,7 @@ sequence13	68	.	AT	AAT	36	PASS	.	GT:GQ	1/1:36
 sequence14	33	.	GA	GCA	40	PASS	.	GT:GQ	1/1:40
 sequence14	67	.	AT	AAT	36	PASS	.	GT:GQ	1/1:36
 sequence15	46	.	AT	AAT	36	PASS	.	GT:GQ	1/1:36
+sequence15	67	.	AT	AAT	36	PASS	.	GT:GQ	1/1:36
 sequence16	66	.	GA	GAA	2	PASS	.	GT:GQ	1/1:2
 sequence17	25	.	a	T	42	PASS	.	GT:GQ	1/1:42
 sequence17	69	.	Aa	A	36	PASS	.	GT:GQ	1/1:36

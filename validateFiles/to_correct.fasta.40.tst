@@ -76,7 +76,9 @@ S	sequence14.1.2.alt1	A
 S	sequence14.1.3	TGATAGCATGACTCAGACTGATCAGATCGA
 S	sequence15.1.1	CATACTACGATCAGATCGACTGACTCGTACATGCAGTGATGTACGA
 S	sequence15.1.1.alt1	A
-S	sequence15.1.2	TGCATGCATCGATCGATCGAATGATAGCATGACTCAGACTGATCAGATCGA
+S	sequence15.1.2	TGCATGCATCGATCGATCGAA
+S	sequence15.1.2.alt1	A
+S	sequence15.1.3	TGATAGCATGACTCAGACTGATCAGATCGA
 S	sequence16.1.1	CATACTACGATCAGATCGACTGACTCGTACATGCAGTGATGTACGAATGCATGCATCGATCGATCG
 S	sequence16.1.1.alt1	A
 S	sequence16.1.2	ATGATAGCATGACTCAGACTGATCAGATCGA
@@ -186,6 +188,9 @@ L	sequence14.1.2	+	sequence14.1.3	+	0M
 L	sequence15.1.1	+	sequence15.1.1.alt1	+	0M
 L	sequence15.1.1.alt1	+	sequence15.1.2	+	0M
 L	sequence15.1.1	+	sequence15.1.2	+	0M
+L	sequence15.1.2	+	sequence15.1.2.alt1	+	0M
+L	sequence15.1.2.alt1	+	sequence15.1.3	+	0M
+L	sequence15.1.2	+	sequence15.1.3	+	0M
 L	sequence16.1.1	+	sequence16.1.1.alt1	+	0M
 L	sequence16.1.1.alt1	+	sequence16.1.2	+	0M
 L	sequence16.1.1	+	sequence16.1.2	+	0M
@@ -228,7 +233,7 @@ P	sequence11	sequence11.1+	*	CM:Z:- two point errors overlapping and one apart (
 P	sequence12	sequence12.1+	*	CM:Z:- three point errors overlapping (25:T>A, 27:G>C, 35:C>T)
 P	sequence13	sequence13.1+	*	CM:Z:- one point error and one homopolymer deletion apart (25:T>A, 69:A)
 P	sequence14	sequence14.1+	*	CM:Z:- two deletions apart (34:C, homopolymer 68:A)
-P	sequence15	sequence15.1+	*	CM:Z:- two deletions overlapping (homopolymer 47:A, homopolymer 68:A) < only one detected
+P	sequence15	sequence15.1+	*	CM:Z:- two deletions overlapping (homopolymer 47:A, homopolymer 68:A)
 P	sequence16	sequence16.1+	*	CM:Z:- two homopolymer deletions (68-69:AA) < only one detected
 P	sequence17	sequence17.1+	*	CM:Z:- one point error and one homopolymer insertion apart (25:T>A, 69:A)
 P	sequence18	sequence18.1+	*	CM:Z:- two insertions apart (34:A, 70:A)

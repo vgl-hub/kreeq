@@ -35,7 +35,7 @@ int main(int, char **argv) {
     };
     
     const std::set<std::string> excludeExt {};
-    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "to_correct.fasta", "to_correct.fastq"};
+    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta"};
 
     std::map<std::set<std::string>, std::vector<std::string>> file_args = {
         {{"random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},

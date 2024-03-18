@@ -480,7 +480,7 @@ bool DBG::detectAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies
     std::string sHeader = inSegment->getSeqHeader();
     parallelMap *map;
     uint64_t key, i;
-    bool isFw = false;
+    bool isFw = false, anomaly = false;
         
     uint64_t len = inSegment->getSegmentLen();
     
@@ -506,10 +506,13 @@ bool DBG::detectAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies
         // check for DBG consistency
         if (got != map->end()) {
             DBGkmer &dbgkmer = got->second;
-            if (c < kcount-1 && ((isFw && dbgkmer.fw[*(str+c+k)] == 0) || (!isFw && dbgkmer.bw[3-*(str+c+k)] == 0))) { // find alternative paths
-                anomalies.push_back(c+k);
-                threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(c+k+1));
-            }
+            if (c < kcount-1 && ((isFw && dbgkmer.fw[*(str+c+k)] == 0) || (!isFw && dbgkmer.bw[3-*(str+c+k)] == 0))) // find alternative paths
+                anomaly = true;
+        }else{anomaly = true;}
+        if (anomaly) {
+            anomalies.push_back(c+k);
+            threadLog.add("Anomaly at:\t" + sHeader + "\t" + std::to_string(c+k+1));
+            anomaly = false;
         }
     }
     delete[] str;
@@ -548,13 +551,19 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     
     std::vector<std::vector<uint8_t>> altPaths;
     
-    for(uint64_t anomaly : anomalies) {
+    StringGraph *stringGraph = new StringGraph(str, k, anomalies[0]-k);
+    
+    for(std::vector<uint64_t>::iterator anomaly = anomalies.begin(); anomaly < anomalies.end(); ++anomaly) {
         
-        StringGraph stringGraph(str, k, anomaly-k);
-
         std::deque<DBGpath> DBGpaths;
-        altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
-        printAltPaths(altPaths, threadLog);
+        altPaths = stringGraph->walkStringGraph(stringGraph->root, std::vector<uint8_t>());
+//        printAltPaths(altPaths, threadLog);
+        
+        if (altPaths.size() < 2) {
+            stringGraph->deleteStringGraph(stringGraph->root);
+//                delete stringGraph;
+            stringGraph = new StringGraph(str, k, *anomaly-k);
+        }
         
         bool backtrack = true;
         
@@ -568,13 +577,13 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             // check for DBG consistency
             if (got != map->end()) {
                 DBGkmer &dbgkmer = got->second;
-                if (stringGraph.currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
+                if (stringGraph->currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
                     
                     double score = - checkNext(&altPath[0], &altPath[k]);
                     
                     threadLog.add(std::to_string(altPath[0]) + "," + std::to_string(altPath[k]) + "," + std::to_string(score));
                     
-                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], userInput.depth, DBGpath(stringGraph.currentPos(), score), threadLog);
+                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], userInput.depth, DBGpath(stringGraph->currentPos(), score), threadLog);
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                     threadLog.add("Found " + std::to_string(DBGpaths.size()) + " alternative paths");
@@ -602,16 +611,16 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                 
                 ++backtrackCnt;
                 
-                if (variants.size() == 0 || stringGraph.currentPos()-backtrackCnt > variants.back()[0].pos) { // prevent going past the previously discovered variant
+                if (variants.size() == 0 || stringGraph->currentPos()-backtrackCnt > variants.back()[0].pos) { // prevent going past the previously discovered variant
                     
-                    threadLog.add("Testing position:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()));
-                    stringGraph.backtrack(str, k, 1);
-                    altPaths = stringGraph.walkStringGraph(stringGraph.root, std::vector<uint8_t>());
+                    threadLog.add("Testing position:\t" + sHeader + "\t" + std::to_string(stringGraph->currentPos()));
+                    stringGraph->backtrack(str, k, 1);
+                    altPaths = stringGraph->walkStringGraph(stringGraph->root, std::vector<uint8_t>());
                     std::vector<uint8_t> altPath = altPaths[0];
                     //                                printAltPaths(altPaths, threadLog);
                     double score = - checkNext(&altPath[0], &altPath[k]);
                     
-                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], userInput.depth, DBGpath(stringGraph.currentPos(), score), threadLog);
+                    std::deque<DBGpath> newDBGpaths = findPaths(&altPath[0], &altPath[k], userInput.depth, DBGpath(stringGraph->currentPos(), score), threadLog);
                     
                     DBGpaths.insert(DBGpaths.end(), newDBGpaths.begin(), newDBGpaths.end());
                 }
@@ -625,27 +634,35 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
         
         if (DBGpaths.size() != 0) {
             
-            threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph.currentPos()+1));
+            threadLog.add("Candidate error at:\t" + sHeader + "\t" + std::to_string(stringGraph->currentPos()+1));
             std::vector<uint8_t> alts;
             
             for (DBGpath dbgpath : DBGpaths) {
                 
                 if (dbgpath.type == SNV) {
-                    alts.push_back(stringGraph.peek());
+                    alts.push_back(stringGraph->peek());
                     alts.push_back(ctoi[(unsigned char)dbgpath.sequence[0]]);
                 }else if (dbgpath.type == INS) {
-                    alts.push_back(stringGraph.peek());
+                    alts.push_back(stringGraph->peek());
                     alts.push_back(4);
                 }else if (dbgpath.type == DEL) {
                     alts.push_back(ctoi[(unsigned char)dbgpath.sequence[0]]);
                 }
             }
-            stringGraph.appendAlts(alts);
+            stringGraph->appendAlts(alts);
             variants.push_back(DBGpaths);
         }
         if (backtrack)
-            stringGraph.advancePos(backtrackCnt);
-        stringGraph.pop_front();
+            stringGraph->advancePos(backtrackCnt);
+        if (std::next(anomaly) != anomalies.end()) {
+            if (*std::next(anomaly) < (*anomaly)+k) {
+                stringGraph->appendNext(*std::next(anomaly) - *anomaly);
+                for (uint8_t e = 0; e < *std::next(anomaly) - *anomaly; ++e)
+                    stringGraph->pop_front();
+            }
+        }else{
+            delete stringGraph;
+        }
     }
     delete[] str;
     

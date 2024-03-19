@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
                     
                 case 'p': // input coordinates
                     ifFileExists(optarg);
-                    userInput.positions = optarg;
+                    userInput.inBedInclude = optarg;
                     break;
 
                 case 'r': // input reads

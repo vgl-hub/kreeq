@@ -252,11 +252,27 @@ void DBG::correctSequences() {
     mapRange = computeMapRange(mapRange);
     loadMapRange(mapRange);
     
+    if (!userInput.inBedInclude.empty() || userInput.pipeType == 'i') {
+        
+        StreamObj streamObj;
+        std::shared_ptr<std::istream> stream = streamObj.openStream(userInput, 'i');
+        std::string line, bedHeader;
+        
+        while (getline(*stream, line)) {
+            
+            uint64_t begin = 0, end = 0;
+            std::istringstream iss(line);
+            iss >> bedHeader >> begin >> end;
+            userInput.bedIncludeList.pushCoordinates(bedHeader, begin, end);
+        }
+        lg.verbose("Finished reading BED include list");
+        userInput.bedIncludeList = BEDPathsToSegments();
+    }
+    
     std::vector<InSegment*> inSegments = *genome->getInSegments();
-
     for (InSegment *inSegment : inSegments)
         jobs.push_back([this, inSegment] { return DBGtoVariants(inSegment); });
-
+    
     threadPool.queueJobs(jobs);
     jobWait(threadPool);
     deleteMapRange(mapRange);
@@ -468,8 +484,66 @@ void DBG::printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadL
 
 bool DBG::loadAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies) {
     
+    auto coordinates = userInput.bedIncludeList.getCoordinates();
+    auto got = coordinates.find(inSegment->getSeqHeader());
+    if (got != coordinates.end()) {
+        for (auto coordinate : got->second) {
+            for (uint64_t i = coordinate.first; i < coordinate.second; ++i)
+                anomalies.push_back(i);
+        }
+    }
     return true;
+}
+
+BedCoordinates DBG::BEDPathsToSegments() { // project path coordinates to segments
     
+    BedCoordinates inBedIncludeSegments;
+    
+    std::vector<InPath> inPaths = genome->getInPaths();
+    std::vector<InSegment*> *inSegments = genome->getInSegments();
+    std::vector<InGap> *inGaps = genome->getInGaps();
+    auto coordinates = userInput.bedIncludeList.getCoordinates();
+    
+    for (InPath& path : inPaths) {
+        
+        auto got = coordinates.find(path.getHeader());
+        if (got == coordinates.end())
+            continue;
+        
+        unsigned int cUId = 0, gapLen = 0;
+        std::vector<PathComponent> pathComponents = path.getComponents();
+        uint64_t absPos = 0;
+        std::vector<std::pair<uint64_t,uint64_t>>::iterator pathCoordinatePtr = got->second.begin();
+        
+        for (std::vector<PathComponent>::iterator component = pathComponents.begin(); component != pathComponents.end(); component++) {
+            
+            cUId = component->id;
+            
+            if (component->componentType == SEGMENT) {
+                
+                auto inSegment = find_if(inSegments->begin(), inSegments->end(), [cUId](InSegment* obj) {return obj->getuId() == cUId;}); // given a node Uid, find it
+                
+                if (component->orientation == '+') {
+                    
+                    while (pathCoordinatePtr->first > absPos && pathCoordinatePtr->first < absPos + (*inSegment)->getSegmentLen()) {
+                        uint64_t cBegin = pathCoordinatePtr->first - absPos, cEnd = pathCoordinatePtr->second - absPos;
+                        inBedIncludeSegments.pushCoordinates((*inSegment)->getSeqHeader(), cBegin, cEnd);
+                        ++pathCoordinatePtr;
+                        if (pathCoordinatePtr == got->second.end())
+                            break;
+                    }
+                }else{} // GFA not handled yet
+            }else if (component->componentType == GAP){
+                
+                auto inGap = find_if(inGaps->begin(), inGaps->end(), [cUId](InGap& obj) {return obj.getuId() == cUId;}); // given a node Uid, find it
+                gapLen = inGap->getDist(component->start - component->end);
+                absPos += gapLen;
+                
+            }else{} // need to handle edges, cigars etc
+        }
+    }
+    
+    return inBedIncludeSegments;
 }
 
 bool DBG::detectAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies) {
@@ -535,7 +609,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     bool isFw = false;
     std::vector<std::deque<DBGpath>> variants;
     std::vector<uint64_t> anomalies;
-    userInput.positions == "" ? detectAnomalies(inSegment, anomalies) : loadAnomalies(inSegment, anomalies);
+    userInput.inBedInclude == "" ? detectAnomalies(inSegment, anomalies) : loadAnomalies(inSegment, anomalies);
     uint64_t len = inSegment->getSegmentLen();
     
     if (len<k || anomalies.size() == 0)
@@ -577,6 +651,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             
             // check for DBG consistency
             if (got != map->end()) {
+                
                 DBGkmer &dbgkmer = got->second;
                 if (stringGraph->currentPos() < kcount-1 && ((isFw && dbgkmer.fw[altPath[k]] == 0) || (!isFw && dbgkmer.bw[3-altPath[k]] == 0))) { // find alternative paths
                     

@@ -162,6 +162,8 @@ public:
     
     bool loadAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies);
     
+    BedCoordinates BEDPathsToSegments();
+    
     bool detectAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies);
     
     bool DBGtoVariants(InSegment *inSegment);

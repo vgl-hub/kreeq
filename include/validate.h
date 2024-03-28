@@ -15,7 +15,7 @@ std::string parseExePath(const std::string &exePath) {
     exePath += ".exe";
     std::replace(exePath.begin(), exePath.end(), '\\', '/');
 #endif
-    return exePath;
+    return "build/bin/" + exePath;
 }
 
 std::string rmFileExt(const std::string path) { // utility to strip file extension from file

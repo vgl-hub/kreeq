@@ -11,7 +11,6 @@
 #include <fstream>
 #include <vector>
 #include <array>
-#include <array>
 #include <sstream>
 #include <stdint.h>
 #include <inttypes.h>
@@ -144,7 +143,7 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
                continue;
             
             if (end > comp.absPos+comp.len) {
-                fprintf(stderr, "End coordinate (%" PRIu64 ") exceed component size (%" PRIu64 "). Exiting.\n", end, comp.absPos+comp.len);
+                std::cerr<<"End coordinate ("<<end<<") exceed component size ("<<comp.absPos+comp.len<<"). Exiting.\n";
                 exit(EXIT_FAILURE);
             }else if (comp.absPos+comp.len > end) {
                 offset += comp.bytePos + (start-comp.absPos)*3;

@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
         line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
 #ifdef _WIN32
-        std::string cmd = "\""+exePath+line+" > "+tmp+" 2>"+err+"\"";
+        std::string cmd = "\"\""+exePath+line+"\" > "+tmp+" 2>"+err+"\"";
 #else
         std::string cmd = exePath+line+" > "+tmp+" 2>"+err;
 #endif

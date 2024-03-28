@@ -10,12 +10,13 @@
 #include <set>
 #include <string>
 
-std::string parseExePath(const std::string &exePath) {
+std::string getExePath(const std::string &argv0) {
+    std::string exePath = argv0.substr(0, argv0.find_last_of("/\\")+1);
+    std::replace(exePath.begin(), exePath.end(), '\\', '/');
 #ifdef _WIN32
     exePath += ".exe";
-    std::replace(exePath.begin(), exePath.end(), '\\', '/');
 #endif
-    return "build/bin/" + exePath;
+    return exePath;
 }
 
 std::string rmFileExt(const std::string path) { // utility to strip file extension from file
@@ -80,17 +81,17 @@ void get_recursive(const std::string &path, std::set<std::string> &paths) {
 
 int i = 0;
 
-void genTest(std::string exePath, const std::string mode, const std::string &input, const std::string &args){
+void genTest(std::string executable, const std::string mode, const std::string &input, const std::string &args){
     std::string tstFile = "validateFiles/test."+std::to_string(i)+".tst";
     std::cout << "generating: " << tstFile << std::endl;
     std::ofstream ostream;
     ostream.open(tstFile);
-    ostream << parseExePath(exePath) << " " + mode + " " << input << " " << args << "\nembedded" << std::endl;
+    ostream << executable << " " + mode + " " << input << " " << args << "\nembedded" << std::endl;
     ostream.close();
 #ifdef _WIN32
-    std::string cmd = "\"\""+parseExePath(exePath)+"\" " + mode + " " + input + " " + args + " >> " + tstFile + "\"";
+    std::string cmd = "\"\""+executable+"\" " + mode + " " + input + " " + args + " >> " + tstFile + "\"";
 #else
-    std::string cmd = "\""+parseExePath(exePath)+"\" " + mode + " " + input + " "+ args + " >> " + tstFile;
+    std::string cmd = "\""+executable+"\" " + mode + " " + input + " "+ args + " >> " + tstFile;
 #endif
     int exit = system(cmd.c_str());
     if (exit == EXIT_SUCCESS) {

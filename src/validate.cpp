@@ -46,6 +46,8 @@ int main(int argc, char **argv) {
         get_recursive(argv[i], input_files);
     }
 
+    std::string exePath = getExePath(argv[0]);
+
     std::string line;
     std::ifstream istream, exp, actOutput, *expOutput;
     for(const auto &input_file : input_files) {
@@ -62,9 +64,9 @@ int main(int argc, char **argv) {
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
         line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
 #ifdef _WIN32
-        std::string cmd = line+" > "+tmp+" 2>"+err+"\"";
+        std::string cmd = exePath+line+" > "+tmp+" 2>"+err+"\"";
 #else
-        std::string cmd = line+" > "+tmp+" 2>"+err;
+        std::string cmd = exePath+line+" > "+tmp+" 2>"+err;
 #endif
         if(printCommand) std::cout << cmd << std::endl;
 

@@ -1,4 +1,4 @@
-validate -f testFiles/random1.fasta -r testFiles/random1.fastq
+kreeq validate -f testFiles/random1.fasta -r testFiles/random1.fastq
 embedded
 DBG Summary statistics:
 Total kmers: 172

@@ -4,7 +4,7 @@
 
 #include "validate.h"
 
-int main(int, char **argv) {
+int main(void) {
     std::cout << "WARNING: only run this program if gfastats is in a working state" << std::endl;
     std::cout << "WARNING: previous validate files will be deleted" << std::endl;
     std::cout << "continue? (Y/N) ";
@@ -26,8 +26,6 @@ int main(int, char **argv) {
     }
 
     std::cout << "generating new validate files..." << std::endl;
-
-    std::string exePath = getExePath(argv[0]);
 
     const std::map<std::set<std::string>, std::vector<std::string>> ext_args = {
         {{"fasta", "fasta.gz", "fastq", "fastq.gz", "gfa"}, {"-r testFiles/random1.fastq", "-r testFiles/random2.fastq", "-r testFiles/random1.fastq.gz", "-r testFiles/random1.fastq testFiles/random2.fastq", "-r testFiles/random1.fastq.gz testFiles/random2.fastq.gz"}}
@@ -51,7 +49,7 @@ int main(int, char **argv) {
         for(auto pair : ext_args) {
             if(!pair.first.count(ext)) continue;
             for(auto args : pair.second) {
-                genTest(exePath, "-f testFiles/" + file, args, "validate");
+                genTest("kreeq", "validate", "-f testFiles/" + file, args);
             }
         }
     }
@@ -63,7 +61,7 @@ int main(int, char **argv) {
             if(!fstream) continue;
             fstream.close();
             for(const std::string &args : pair.second) {
-                genTest(exePath, file, args, "validate");
+                genTest("kreeq", "validate", file, args);
             }
         }
     }
@@ -77,7 +75,7 @@ int main(int, char **argv) {
     for(const auto &pair : file_args) {
         for(const std::string &input : pair.first) {
             for(const std::string &args : pair.second) {
-                genTest(exePath, input, args, "union");
+                genTest("kreeq", "union", input, args);
             }
         }
     }
@@ -91,7 +89,7 @@ int main(int, char **argv) {
     for(const auto &pair : file_args) {
         for(const std::string &input : pair.first) {
             for(const std::string &args : pair.second) {
-                genTest("kreeq-decompressor", input, args, "lookup");
+                genTest("kreeq-decompressor", "lookup", input, args);
             }
         }
     }

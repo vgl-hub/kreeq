@@ -1,4 +1,4 @@
-lookup -i testFiles/decompressor1.bkwig -c testFiles/decompressor1.bed 
+kreeq-decompressor lookup -i testFiles/decompressor1.bkwig -c testFiles/decompressor1.bed 
 embedded
 21
 sequence1:20-30

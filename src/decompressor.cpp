@@ -13,6 +13,7 @@
 #include <array>
 #include <array>
 #include <sstream>
+#include <stdint.h>
 #include <inttypes.h>
 
 #include "parallel-hashmap/phmap.h"

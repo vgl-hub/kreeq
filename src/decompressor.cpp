@@ -13,6 +13,7 @@
 #include <array>
 #include <array>
 #include <sstream>
+#include <inttypes.h>
 
 #include "parallel-hashmap/phmap.h"
 
@@ -142,7 +143,7 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
                continue;
             
             if (end > comp.absPos+comp.len) {
-                fprintf(stderr, "End coordinate (%llu) exceed component size (%llu). Exiting.\n", end, comp.absPos+comp.len);
+                fprintf(stderr, "End coordinate (%" PRIu64 ") exceed component size (%" PRIu64 "). Exiting.\n", end, comp.absPos+comp.len);
                 exit(EXIT_FAILURE);
             }else if (comp.absPos+comp.len > end) {
                 offset += comp.bytePos + (start-comp.absPos)*3;

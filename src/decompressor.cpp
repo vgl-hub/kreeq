@@ -602,10 +602,14 @@ int main(int argc, char *argv[]) {
                 
             }
             
-            auto coordinates = userInput.bedIncludeList.getCoordinates();
             
-            for (auto coordinateSet : coordinates)
+            auto coordinates = userInput.bedIncludeList.getCoordinates();
+            auto headers = userInput.bedIncludeList.getHeaders();
+            
+            for (auto header : headers) {
+                auto coordinateSet = std::make_pair(header, coordinates[header]);
                 lookup(ifs, coordinateSet, userInput);
+            }
             
         }
         break;

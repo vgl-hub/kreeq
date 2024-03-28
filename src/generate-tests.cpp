@@ -38,10 +38,10 @@ int main(int, char **argv) {
     const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta"};
 
     std::map<std::set<std::string>, std::vector<std::string>> file_args = {
-        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},
-        {{"random4.fasta"}, {"-r testFiles/random4.fastq -k3"}},
-        {{"to_correct.fasta"}, {"-r testFiles/to_correct.fastq", "-r testFiles/to_correct.fastq -o gfa", "-r testFiles/to_correct.fastq -o vcf", "-r testFiles/to_correct.fastq -o vcf -p testFiles/random1.anomalies.bed"}}
-    //  {{set of test file paths}, {list of command line args to run with}}
+        {{"-f testFiles/random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},
+        {{"-f testFiles/random4.fasta"}, {"-r testFiles/random4.fastq -k3"}},
+        {{"-f testFiles/to_correct.fasta"}, {"-r testFiles/to_correct.fastq", "-r testFiles/to_correct.fastq -o gfa", "-r testFiles/to_correct.fastq -o vcf", "-r testFiles/to_correct.fastq -o vcf -p testFiles/random1.anomalies.bed"}}
+    //  {{set of test inputs}, {list of command line args to run with}}
     };
 
     for(const std::string &file : list_dir("testFiles")) {
@@ -51,7 +51,7 @@ int main(int, char **argv) {
         for(auto pair : ext_args) {
             if(!pair.first.count(ext)) continue;
             for(auto args : pair.second) {
-                genTest(exePath, file, args, "validate");
+                genTest(exePath, "-f testFiles/" + file, args, "validate");
             }
         }
     }
@@ -68,15 +68,30 @@ int main(int, char **argv) {
         }
     }
     
+    // test union
     file_args = {
         {{"-d testFiles/test1.kreeq testFiles/test2.kreeq"}, {""}}
-    //  {{set of test file paths}, {list of command line args to run with}}
+    //  {{set of test inputs}, {list of command line args to run with}}
     };
     
     for(const auto &pair : file_args) {
-        for(const std::string &file : pair.first) {
+        for(const std::string &input : pair.first) {
             for(const std::string &args : pair.second) {
-                genTestUnion(exePath, file, args, "union");
+                genTest(exePath, input, args, "union");
+            }
+        }
+    }
+    
+    // test decompressor
+    file_args = {
+        {{"-i testFiles/decompressor1.bkwig -c testFiles/decompressor1.bed"}, {""}}
+    //  {{set of test inputs}, {list of command line args to run with}}
+    };
+    
+    for(const auto &pair : file_args) {
+        for(const std::string &input : pair.first) {
+            for(const std::string &args : pair.second) {
+                genTest("kreeq-decompressor", input, args, "lookup");
             }
         }
     }

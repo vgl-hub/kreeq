@@ -1,4 +1,4 @@
-kreeq union -d testFiles/test1.kreeq testFiles/test2.kreeq 
+kreeq union -d testFiles/test1.kreeq testFiles/test3.kreeq 
 embedded
 DBG Summary statistics:
 Total kmers: 1572

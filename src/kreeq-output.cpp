@@ -384,7 +384,6 @@ void DBG::printGFA() {
 void DBG::printVCF() {
     
     genome->sortPathsByOriginal();
-
     Report report;
     report.outFile(*genome, userInput.outFile, userInput, 0);
     

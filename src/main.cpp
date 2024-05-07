@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
         static struct option long_options[] = { // struct mapping long options
             {"coverage-cutoff", required_argument, 0, 'c'},
             {"database", required_argument, 0, 'd'},
+            {"input-positions", required_argument, 0, 'p'},
             {"input-sequence", required_argument, 0, 'f'},
             {"kmer-length", required_argument, 0, 'k'},
             {"search-depth", required_argument, 0, 0},
@@ -92,7 +93,7 @@ int main(int argc, char **argv) {
             
             int option_index = 0;
             
-            c = getopt_long(argc, argv, "-:c:d:f:k:o:r:t:m:j:v:h",
+            c = getopt_long(argc, argv, "-:c:d:f:k:o:p:r:t:m:j:v:h",
                             long_options, &option_index);
             
             if (c == -1) { // exit the loop if run out of options
@@ -182,6 +183,11 @@ int main(int argc, char **argv) {
                 case 'o': // handle output (file or stdout)
                     userInput.outFile = optarg;
                     break;
+                    
+                case 'p': // input coordinates
+                    ifFileExists(optarg);
+                    userInput.inBedInclude = optarg;
+                    break;
 
                 case 'r': // input reads
                     
@@ -224,6 +230,7 @@ int main(int argc, char **argv) {
                     printf("\t-k --kmer-length length of kmers.\n");
                     printf("\t-o --out-format supported extensions:\n");
                     printf("\t\t .kreeq dumps hashmaps to file for reuse.\n");
+                    printf("\t-p --input-positions BED coordinates of positions to evaluate.\n");
                     printf("\t-t --tmp-prefix prefix to temporary directory.\n");
                     printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.9 of max).\n");
                     printf("\t-j --threads <n> numbers of threads (default: max).\n");

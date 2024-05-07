@@ -11,8 +11,9 @@
 #include <fstream>
 #include <vector>
 #include <array>
-#include <array>
 #include <sstream>
+#include <stdint.h>
+#include <inttypes.h>
 
 #include "parallel-hashmap/phmap.h"
 
@@ -141,9 +142,8 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
             if(!(start >= comp.absPos && start < comp.absPos+comp.len)) // check that the start coordinate falls in the component
                continue;
             
-            if (end > comp.absPos+comp.len) {
-                fprintf(stderr, "End coordinate (%llu) exceed component size (%llu). Exiting.\n", end, comp.absPos+comp.len);
-                exit(EXIT_FAILURE);
+            if (end > comp.absPos+comp.len) { // shrink span to fit
+                end = comp.absPos+comp.len;
             }else if (comp.absPos+comp.len > end) {
                 offset += comp.bytePos + (start-comp.absPos)*3;
                 break;
@@ -431,10 +431,6 @@ int main(int argc, char *argv[]) {
                     maxThreads = atoi(optarg);
                     break;
                     
-                case 'o': // handle output (file or stdout)
-                    userInput.outFile = optarg;
-                    break;
-                    
                 case 'm': // prefix for temporary files
                     userInput.maxMem = atof(optarg);
                     break;
@@ -450,7 +446,6 @@ int main(int argc, char *argv[]) {
                     printf("\t-i --input-file kreeq input.\n");
                     printf("\t-c --coordinate-file sequence coordinates to extract.\n");
                     printf("\t-s --span <int> print context before and after coordinate positions.\n");
-                    printf("\t-o --out-format supported extensions:\n");
                     printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.5 of max).\n");
                     printf("\t-j --threads <n> numbers of threads (default: max).\n");
                     printf("\t-v --version software version.\n");
@@ -607,10 +602,14 @@ int main(int argc, char *argv[]) {
                 
             }
             
-            auto coordinates = userInput.bedIncludeList.getCoordinates();
             
-            for (auto coordinateSet : coordinates)
+            auto coordinates = userInput.bedIncludeList.getCoordinates();
+            auto headers = userInput.bedIncludeList.getHeaders();
+            
+            for (auto header : headers) {
+                auto coordinateSet = std::make_pair(header, coordinates[header]);
                 lookup(ifs, coordinateSet, userInput);
+            }
             
         }
         break;

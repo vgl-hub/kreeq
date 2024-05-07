@@ -13,11 +13,6 @@
 std::string getExePath(const std::string &argv0) {
     std::string exePath = argv0.substr(0, argv0.find_last_of("/\\")+1);
     std::replace(exePath.begin(), exePath.end(), '\\', '/');
-#ifdef _WIN32
-    exePath += "kreeq.exe";
-#else
-    exePath += "kreeq";
-#endif
     return exePath;
 }
 
@@ -83,37 +78,17 @@ void get_recursive(const std::string &path, std::set<std::string> &paths) {
 
 int i = 0;
 
-void genTest(std::string exePath, const std::string &file, const std::string &args, const std::string mode){
-    std::string tstFile = "validateFiles/"+file+"."+std::to_string(i)+".tst";
+void genTest(std::string executable, const std::string mode, const std::string &input, const std::string &args){
+    std::string tstFile = "validateFiles/test."+std::to_string(i)+".tst";
     std::cout << "generating: " << tstFile << std::endl;
     std::ofstream ostream;
     ostream.open(tstFile);
-    ostream << mode + " -f testFiles/" << file << " " << args << "\nembedded" << std::endl;
+    ostream << executable << " " + mode + " " << input << " " << args << "\nembedded" << std::endl;
     ostream.close();
 #ifdef _WIN32
-    std::string cmd = "\"\""+exePath+"\" " + mode + " -f testFiles/"+file+" "+args+" >> "+tstFile+"\"";
+    std::string cmd = "\"\""+executable+"\" " + mode + " " + input + " " + args + " >> " + tstFile + "\"";
 #else
-    std::string cmd = "\""+exePath+"\" " + mode + " -f testFiles/"+file+" "+args+" >> "+tstFile;
-#endif
-    int exit = system(cmd.c_str());
-    if (exit == EXIT_SUCCESS) {
-        ostream << cmd << std::endl;
-        ostream << "Command executed.";
-    }
-    ++i;
-};
-
-void genTestUnion(std::string exePath, const std::string &input, const std::string &args, const std::string mode){
-    std::string tstFile = "validateFiles/testUnion."+std::to_string(i)+".tst";
-    std::cout << "generating: " << tstFile << std::endl;
-    std::ofstream ostream;
-    ostream.open(tstFile);
-    ostream << mode + " " << input << " " << args << "\nembedded" << std::endl;
-    ostream.close();
-#ifdef _WIN32
-    std::string cmd = "\"\""+exePath+"\" " + mode + " " + input + " " + args + " >> " + tstFile + "\"";
-#else
-    std::string cmd = "\""+exePath+"\" " + mode + " " + input + " "+ args + " >> " + tstFile;
+    std::string cmd = "\""+executable+"\" " + mode + " " + input + " "+ args + " >> " + tstFile;
 #endif
     int exit = system(cmd.c_str());
     if (exit == EXIT_SUCCESS) {

@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-13
+          - os: macos-latest-large
             command: ".github/workflows/val.sh"
           - os: ubuntu-latest
             command: ".github/workflows/val.sh"

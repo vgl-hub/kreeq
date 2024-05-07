@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 #ifdef _WIN32
         std::string exe = line.substr(0, line.find_first_of(" "));
         line = line.substr(line.find_first_of(" "));
-        std::string cmd = "\"\""+exePath+exe+"\""+" "+line+" > "+tmp+" 2>"+err+"\"";
+        std::string cmd = "\"\""+exePath+exe+".exe\""+" "+line+" > "+tmp+" 2>"+err+"\"";
 #else
         std::string cmd = exePath+line+" > "+tmp+" 2>"+err;
 #endif

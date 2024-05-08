@@ -325,6 +325,7 @@ bool DBG::processBuffers(uint16_t m) {
         }
         
         parallelMap& map = *maps[m]; // the map associated to this buffer
+        parallelMap32& map32 = *maps32[m];
         uint64_t map_size = mapSize(map);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
@@ -342,17 +343,52 @@ bool DBG::processBuffers(uint16_t m) {
             memcpy(&edges, &buf->seq[c+8], 1);
             
             DBGkmer &dbgkmer = map[hash];
+            bool overflow = (dbgkmer.cov == 255 ? true : false);
             
-            for (uint64_t w = 0; w<4; ++w) { // update weights
+            if (!overflow) {
                 
-                if (255 - dbgkmer.fw[w] >= edges.read(w))
-                    dbgkmer.fw[w] += edges.read(w);
-                if (255 - dbgkmer.bw[w] >= edges.read(4+w))
-                    dbgkmer.bw[w] += edges.read(4+w);
+                for (uint64_t w = 0; w<4; ++w) { // update weights
+                    
+                    if (255 - dbgkmer.fw[w] >= edges.read(w)) {
+                        dbgkmer.fw[w] += edges.read(w);
+                    }else{
+                        overflow = true;
+                        break;
+                    }
+                    if (255 - dbgkmer.bw[w] >= edges.read(4+w)) {
+                        dbgkmer.bw[w] += edges.read(4+w);
+                    }else{
+                        overflow = true;
+                        break;
+                    }
+                }
+                if (dbgkmer.cov < 255)
+                    ++dbgkmer.cov; // increase kmer coverage
+                else
+                    overflow = true;
+                
             }
-            if (dbgkmer.cov < 255)
-                ++dbgkmer.cov; // increase kmer coverage
             
+            if (overflow) {
+                
+                std::lock_guard<std::mutex> lck(mtx);
+                DBGkmer32 &dbgkmer32 = map32[hash];
+                
+                if (dbgkmer32.cov == 0)
+                    dbgkmer32 = dbgkmer;
+                
+                dbgkmer.cov = 255;
+                
+                for (uint64_t w = 0; w<4; ++w) { // update weights
+                    
+                    if (LARGEST - dbgkmer32.fw[w] >= edges.read(w))
+                        dbgkmer32.fw[w] += edges.read(w);
+                    if (LARGEST - dbgkmer32.bw[w] >= edges.read(4+w))
+                        dbgkmer32.bw[w] += edges.read(4+w);
+                }
+                if (dbgkmer32.cov < LARGEST)
+                    ++dbgkmer32.cov; // increase kmer coverage
+            }
         }
         
         delete[] buf->seq;
@@ -509,8 +545,21 @@ bool DBG::summary(uint16_t m) {
     
     for (auto pair : *maps[m]) {
         
+        if (pair.second.cov == 255) // check the large table
+            continue;
+        
         if (pair.second.cov == 1)
             ++kmersUnique;
+        
+        for (uint64_t w = 0; w<4; ++w) // update weights
+            edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
+        
+        ++kmersDistinct;
+        ++hist[pair.second.cov];
+        
+    }
+    
+    for (auto pair : *maps32[m]) {
         
         for (uint64_t w = 0; w<4; ++w) // update weights
             edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;

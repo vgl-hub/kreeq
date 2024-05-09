@@ -364,7 +364,7 @@ bool DBG::processBuffers(uint16_t m) {
                 }
                 if (dbgkmer.cov < 255)
                     ++dbgkmer.cov; // increase kmer coverage
-                else
+                if (dbgkmer.cov == 255)
                     overflow = true;
                 
             }

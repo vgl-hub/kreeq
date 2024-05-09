@@ -151,9 +151,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
         if (i >= mapRange[0] && i < mapRange[1]) {
             
             map = maps[i];
-            
             auto it = map->find(key);
-            
             DBGkmer32 khmer;
             
             if (it != map->end()) {
@@ -162,7 +160,8 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
                 if (khmer.cov == 255) {
                     map32 = maps32[i];
                     auto it = map32->find(key);
-                    khmer = it->second;
+                    if (it != map32->end())
+                        khmer = it->second;
                 }
                 
                 DBGsequence[c].cov = khmer.cov;

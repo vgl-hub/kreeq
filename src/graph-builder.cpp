@@ -371,7 +371,6 @@ bool DBG::processBuffers(uint16_t m) {
             
             if (overflow) {
                 
-                std::lock_guard<std::mutex> lck(mtx);
                 DBGkmer32 &dbgkmer32 = map32[hash];
                 
                 if (dbgkmer32.cov == 0)

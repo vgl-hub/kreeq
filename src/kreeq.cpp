@@ -160,7 +160,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
                 if (khmer.cov == 255) {
                     map32 = maps32[i];
                     auto it = map32->find(key);
-                    if (it != map32->end()) {
+                    if (it == map32->end()) {
                         std::cerr<<"Error: int32 map missing 255 value from int8 map"<<std::endl;
                         exit(EXIT_FAILURE);
                     }

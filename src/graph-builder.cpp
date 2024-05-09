@@ -396,8 +396,10 @@ bool DBG::processBuffers(uint16_t m) {
         delete buf;
         alloc += mapSize(*maps[m]) - map_size;
         
-        if (freeMemory || !bufFile || bufFile.peek() == EOF)
+        if (freeMemory || !bufFile || bufFile.peek() == EOF) {
             dumpTmpMap(userInput.prefix, m);
+            reloadMap32(m);
+        }
     }
 
     bufFile.close();
@@ -484,6 +486,23 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     return true;
 
+}
+
+bool DBG::reloadMap32(uint16_t m) {
+    
+    parallelMap& map = *maps[m]; // the map associated to this buffer
+    parallelMap32& map32 = *maps32[m];
+    
+    for (auto pair : map32) {
+        
+        DBGkmer dbgkmer;
+        dbgkmer.cov = 255;
+        auto newPair = std::make_pair(pair.first, dbgkmer);
+        map.insert(newPair);
+    }
+    
+    return true;
+    
 }
 
 bool DBG::dumpMap(std::string prefix, uint16_t m) {

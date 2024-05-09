@@ -345,38 +345,36 @@ bool DBG::processBuffers(uint16_t m) {
             DBGkmer &dbgkmer = map[hash];
             bool overflow = (dbgkmer.cov == 255 ? true : false);
             
+            if (dbgkmer.cov + 1 == 255)
+                overflow = true;
+            
+            for (uint64_t w = 0; w<4; ++w) { // check weights
+            
+                if (dbgkmer.fw[w] + 1 == 255 || dbgkmer.bw[w] + 1 == 255) {
+                    overflow = true;
+                    break;
+                }
+            }
+            
             if (!overflow) {
                 
                 for (uint64_t w = 0; w<4; ++w) { // update weights
-                    
-                    if (255 - dbgkmer.fw[w] >= edges.read(w)) {
                         dbgkmer.fw[w] += edges.read(w);
-                    }else{
-                        overflow = true;
-                        break;
-                    }
-                    if (255 - dbgkmer.bw[w] >= edges.read(4+w)) {
                         dbgkmer.bw[w] += edges.read(4+w);
-                    }else{
-                        overflow = true;
-                        break;
-                    }
                 }
-                if (dbgkmer.cov < 255)
-                    ++dbgkmer.cov; // increase kmer coverage
-                if (dbgkmer.cov == 255)
-                    overflow = true;
                 
+                ++dbgkmer.cov; // increase kmer coverage
             }
             
             if (overflow) {
                 
                 DBGkmer32 &dbgkmer32 = map32[hash];
                 
-                if (dbgkmer32.cov == 0)
+                if (dbgkmer32.cov == 0) { // first time we add the kmer
+                    
                     dbgkmer32 = dbgkmer;
-                
-                dbgkmer.cov = 255;
+                    dbgkmer.cov = 255; // invalidates int8 kmer
+                }
                 
                 for (uint64_t w = 0; w<4; ++w) { // update weights
                     

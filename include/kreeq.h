@@ -155,9 +155,9 @@ public:
     
     bool mergeMaps(uint16_t m);
     
-    bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex);
+    bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m);
     
-    bool unionSum(parallelMap* map1, parallelMap* map2);
+    bool unionSum(parallelMap* map1, parallelMap* map2, uint16_t m);
     
     void report();
     

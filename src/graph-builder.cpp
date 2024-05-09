@@ -470,7 +470,7 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
         alloc += map_size1;
         
         uint64_t map_size2 = mapSize(*maps[m]);
-        unionSum(nextMap, maps[m]); // unionSum operation between the existing map and the next map
+        unionSum(nextMap, maps[m], m); // unionSum operation between the existing map and the next map
         
         alloc += mapSize(*maps[m]) - map_size2;
         remove(nextFile.c_str());
@@ -725,7 +725,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         alloc += map_size1;
         
         uint64_t map_size2 = mapSize(*maps[m]);
-        unionSum(maps[m], nextMap); // merges the current map and the existing map
+        unionSum(maps[m], nextMap, m); // merges the current map and the existing map
         alloc += mapSize(*nextMap) - map_size1;
         delete maps[m];
         freed += map_size2;
@@ -773,7 +773,7 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         nextMap->phmap_load(ar_in);
         
-        unionSum(nextMap, maps[m]); // unionSum operation between the existing map and the next map
+        unionSum(nextMap, maps[m], m); // unionSum operation between the existing map and the next map
         delete nextMap;
         
     }
@@ -787,50 +787,91 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
 
 }
 
-bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex) {
+bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m) {
     
     auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
     auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
     auto& inner2 = map2->get_inner(subMapIndex);
     auto& submap2 = inner2.set_;
+    parallelMap32& map32 = *maps32[m];
     
     for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
         
+        bool overflow = false;
+        
         auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
-        if (got == submap2.end()){
+        if (got == submap2.end()) {
             submap2.insert(pair);
         }else{
-
+            
             DBGkmer& dbgkmerMap = got->second;
+            auto got2 = map32.find(pair.first); // check if this is already a high-copy kmer
+            
+            if (got2 == map32.end()) {
+                
+                if (255 - dbgkmerMap.cov < pair.second.cov)
+                    overflow = true;
+                
+                for (uint8_t w = 0; w<4; ++w) { // check weights
+                    
+                    if (255 - dbgkmerMap.fw[w] < pair.second.fw[w] || 255 - dbgkmerMap.bw[w] < pair.second.bw[w]) {
+                        overflow = true;
+                        break;
+                    }
+                }
+                
+                if (!overflow) {
+                    
+                    for (uint64_t w = 0; w<4; ++w) { // update weights
+                        dbgkmerMap.fw[w] += pair.second.fw[w];
+                        dbgkmerMap.bw[w] += pair.second.bw[w];
+                    }
+                    dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+                }
+                
+            }else{
+                overflow = true;
+            }
+        }
         
+        if (overflow) {
+            
+            if (pair.second.cov == 255) // already added to int32 map
+                continue;
+            
+            DBGkmer32& dbgkmerMap32 = map32[pair.first];
+            auto got = submap2.find(pair.first);
+            DBGkmer& dbgkmerMap = got->second;
+            
+            if (dbgkmerMap32.cov == 0) { // first time we add the kmer
+                dbgkmerMap32 = dbgkmerMap;
+                dbgkmerMap.cov = 255; // invalidates int8 kmer
+            }
+            
             for (uint64_t w = 0; w<4; ++w) { // update weights
                 
-                if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
-                    dbgkmerMap.fw[w] += pair.second.fw[w];
+                if (LARGEST - dbgkmerMap32.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap32.fw[w] += pair.second.fw[w];
                 else
-                    dbgkmerMap.fw[w] = 255;
-                if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
-                    dbgkmerMap.bw[w] += pair.second.bw[w];
+                    dbgkmerMap32.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap32.bw[w] += pair.second.bw[w];
                 else
-                    dbgkmerMap.bw[w] = 255;
+                    dbgkmerMap32.bw[w] = LARGEST;
                 
             }
             
-            if (255 - dbgkmerMap.cov >= pair.second.cov)
-                dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+            if (LARGEST - dbgkmerMap32.cov >= pair.second.cov)
+                dbgkmerMap32.cov += pair.second.cov; // increase kmer coverage
             else
-                dbgkmerMap.cov = 255;
-            
-        };
-        
+                dbgkmerMap32.cov = LARGEST;
+        }
     }
-    
     return true;
-    
 }
 
 
-bool DBG::unionSum(parallelMap* map1, parallelMap* map2) {
+bool DBG::unionSum(parallelMap* map1, parallelMap* map2, uint16_t m) {
     
     std::vector<std::function<bool()>> jobs;
     
@@ -840,10 +881,9 @@ bool DBG::unionSum(parallelMap* map1, parallelMap* map2) {
     }
     
     for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
-        jobs.push_back([this, map1, map2, subMapIndex] { return mergeSubMaps(map1, map2, subMapIndex); });
+        jobs.push_back([this, map1, map2, subMapIndex, m] { return mergeSubMaps(map1, map2, subMapIndex, m); });
     
     threadPool.queueJobs(jobs);
-    
     jobWait(threadPool);
     
     return true;

@@ -802,12 +802,15 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
         auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
         if (got == submap2.end()) {
             submap2.insert(pair);
+            auto got = map32.find(pair.first); // check if this is already a high-copy kmer
+            if (got != map32.end())
+                overflow = true;
         }else{
             
             DBGkmer& dbgkmerMap = got->second;
-            auto got2 = map32.find(pair.first); // check if this is already a high-copy kmer
+            auto got = map32.find(pair.first); // check if this is already a high-copy kmer
             
-            if (got2 == map32.end()) {
+            if (got == map32.end()) {
                 
                 if (255 - dbgkmerMap.cov < pair.second.cov)
                     overflow = true;

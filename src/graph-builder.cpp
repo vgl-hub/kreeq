@@ -807,10 +807,11 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
                 overflow = true;
         }else{
             
-            DBGkmer& dbgkmerMap = got->second;
             auto got = map32.find(pair.first); // check if this is already a high-copy kmer
             
             if (got == map32.end()) {
+                
+                DBGkmer& dbgkmerMap = got->second;
                 
                 if (255 - dbgkmerMap.cov < pair.second.cov)
                     overflow = true;
@@ -839,8 +840,8 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
         
         if (overflow) {
             
-            if (pair.second.cov == 255) // already added to int32 map
-                continue;
+//            if (pair.second.cov == 255) // already added to int32 map
+//                continue;
             
             DBGkmer32& dbgkmerMap32 = map32[pair.first];
             auto got = submap2.find(pair.first);
@@ -861,7 +862,6 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
                     dbgkmerMap32.bw[w] += pair.second.bw[w];
                 else
                     dbgkmerMap32.bw[w] = LARGEST;
-                
             }
             
             if (LARGEST - dbgkmerMap32.cov >= pair.second.cov)

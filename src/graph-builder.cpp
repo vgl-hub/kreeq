@@ -809,13 +809,13 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
             
             auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
             if (got == submap2.end()) {
-//                submap2.insert(pair);
+                submap2.insert(pair);
             }else{
                 
                 DBGkmer& dbgkmerMap = got->second;
                     
                 if (255 - dbgkmerMap.cov <= pair.second.cov)
-                    overflow = true;
+                    dbgkmerMap.cov = 255;
                 
                 for (uint8_t w = 0; w<4; ++w) { // check weights
                     
@@ -825,14 +825,14 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
                     }
                 }
                 
-//                if (!overflow) {
-//                    
-//                    for (uint8_t w = 0; w<4; ++w) { // update weights
-//                        dbgkmerMap.fw[w] += pair.second.fw[w];
-//                        dbgkmerMap.bw[w] += pair.second.bw[w];
-//                    }
-//                    dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
-//                }
+                if (!overflow) {
+                    
+                    for (uint8_t w = 0; w<4; ++w) { // update weights
+                        dbgkmerMap.fw[w] += pair.second.fw[w];
+                        dbgkmerMap.bw[w] += pair.second.bw[w];
+                    }
+                    dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+                }
             }
         }
         

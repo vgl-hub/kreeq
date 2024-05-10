@@ -797,7 +797,7 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
     
     for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
         
-        bool overflow = (pair.second.cov == 255 ? true : false);
+        bool overflow = false;
         
         auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
         if (got == submap2.end()) {

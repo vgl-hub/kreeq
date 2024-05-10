@@ -797,7 +797,7 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
     
     for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
         
-        bool overflow = false;
+        bool overflow = (pair.second.cov == 255 ? true : false);
         
         auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
         if (got == submap2.end()) {
@@ -825,7 +825,7 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
                 
                 if (!overflow) {
                     
-                    for (uint64_t w = 0; w<4; ++w) { // update weights
+                    for (uint8_t w = 0; w<4; ++w) { // update weights
                         dbgkmerMap.fw[w] += pair.second.fw[w];
                         dbgkmerMap.bw[w] += pair.second.bw[w];
                     }
@@ -839,8 +839,8 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
         
         if (overflow) {
             
-//            if (pair.second.cov == 255) // already added to int32 map
-//                continue;
+            if (pair.second.cov == 255) // already added to int32 map
+                continue;
             
             DBGkmer32& dbgkmerMap32 = map32[pair.first];
             auto got = submap2.find(pair.first);
@@ -851,13 +851,13 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
                 dbgkmerMap.cov = 255; // invalidates int8 kmer
             }
             
-            for (uint64_t w = 0; w<4; ++w) { // update weights
+            for (uint8_t w = 0; w<4; ++w) { // update weights
                 
                 if (LARGEST - dbgkmerMap32.fw[w] >= pair.second.fw[w])
                     dbgkmerMap32.fw[w] += pair.second.fw[w];
                 else
                     dbgkmerMap32.fw[w] = LARGEST;
-                if (LARGEST - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                if (LARGEST - dbgkmerMap32.bw[w] >= pair.second.bw[w])
                     dbgkmerMap32.bw[w] += pair.second.bw[w];
                 else
                     dbgkmerMap32.bw[w] = LARGEST;

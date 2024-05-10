@@ -817,7 +817,7 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
                 
                 for (uint8_t w = 0; w<4; ++w) { // check weights
                     
-                    if (255 - dbgkmerMap.fw[w] < pair.second.fw[w] || 255 - dbgkmerMap.bw[w] < pair.second.bw[w]) {
+                    if (255 - dbgkmerMap.fw[w] <= pair.second.fw[w] || 255 - dbgkmerMap.bw[w] <= pair.second.bw[w]) {
                         overflow = true;
                         break;
                     }

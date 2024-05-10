@@ -809,7 +809,7 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
             
             auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
             if (got == submap2.end()) {
-                submap2.insert(pair);
+//                submap2.insert(pair);
             }else{
                 
                 DBGkmer& dbgkmerMap = got->second;

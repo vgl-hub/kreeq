@@ -794,32 +794,32 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
     auto& inner2 = map2->get_inner(subMapIndex);
     auto& submap2 = inner2.set_;
     parallelMap32& map32 = *maps32[m];
-    auto& inner32 = map32.get_inner(subMapIndex);
-    auto& submap32 = inner32.set_;
     
     for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
         
         bool overflow = false;
         
-        auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
-        if (got == submap2.end()) {
-            submap2.insert(pair);
-            auto got = submap32.find(pair.first); // check if this is already a high-copy kmer
-            if (got != submap32.end())
-                overflow = true;
+        if (pair.second.cov == 255) // already added to int32 map
+            continue;
+        
+        auto got = map32.find(pair.first); // check if this is already a high-copy kmer
+        if (got != map32.end()) {
+            overflow = true;
         }else{
             
-            DBGkmer& dbgkmerMap = got->second;
-            auto got = submap32.find(pair.first); // check if this is already a high-copy kmer
-            
-            if (got == submap32.end()) {
+            auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
+            if (got == submap2.end()) {
+                submap2.insert(pair);
+            }else{
                 
-                if (255 - dbgkmerMap.cov <= pair.second.cov)
+                DBGkmer& dbgkmerMap = got->second;
+                    
+                if (255 - dbgkmerMap.cov < pair.second.cov)
                     overflow = true;
                 
                 for (uint8_t w = 0; w<4; ++w) { // check weights
                     
-                    if (255 - dbgkmerMap.fw[w] <= pair.second.fw[w] || 255 - dbgkmerMap.bw[w] <= pair.second.bw[w]) {
+                    if (255 - dbgkmerMap.fw[w] < pair.second.fw[w] || 255 - dbgkmerMap.bw[w] < pair.second.bw[w]) {
                         overflow = true;
                         break;
                     }
@@ -833,26 +833,14 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
                     }
                     dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
                 }
-                
-            }else{
-                overflow = true;
             }
         }
         
         if (overflow) {
             
-            if (pair.second.cov == 255) // already added to int32 map
-                continue;
-            
-            auto got = submap32.find(pair.first); // insert or find this kmer in the hash table
-            if (got == submap32.end())
-                submap32.insert(pair);
-                
-            got = submap32.find(pair.first);
-            
-            DBGkmer32& dbgkmerMap32 = got->second;
-            auto got2 = submap2.find(pair.first);
-            DBGkmer& dbgkmerMap = got2->second;
+            DBGkmer32& dbgkmerMap32 = map32[pair.first];
+            auto got = submap2.find(pair.first);
+            DBGkmer& dbgkmerMap = got->second;
             
             if (dbgkmerMap32.cov == 0) { // first time we add the kmer
                 dbgkmerMap32 = dbgkmerMap;

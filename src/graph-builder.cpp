@@ -452,15 +452,9 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
         
     }
     
-    phmap::BinaryInputArchive ar_in(firstFile.c_str());
-    maps[m]->phmap_load(ar_in);
-    alloc += mapSize(*maps[m]);
-    
-    remove(firstFile.c_str());
-    
     uint8_t fileNum = 0;
     
-    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) + ".tmp.bin")) { // for additional map loads the map and merges it
+    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) + ".tmp.bin")) { // for additional map loads the map and merges it
         
         std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) + ".tmp.bin"; // loads the next map
         parallelMap* nextMap = new parallelMap;
@@ -575,15 +569,15 @@ bool DBG::summary(uint16_t m) {
         
     }
     
-//    for (auto pair : *maps32[m]) {
-//        
-//        for (uint8_t w = 0; w<4; ++w) // update weights
-//            edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
-//        
-//        ++kmersDistinct;
-//        ++hist[pair.second.cov];
-//        
-//    }
+    for (auto pair : *maps32[m]) {
+        
+        for (uint8_t w = 0; w<4; ++w) // update weights
+            edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
+        
+        ++kmersDistinct;
+        ++hist[pair.second.cov];
+        
+    }
  
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;

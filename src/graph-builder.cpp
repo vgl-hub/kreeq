@@ -574,7 +574,7 @@ bool DBG::summary(uint16_t m) {
         ++hist[pair.second.cov];
         
     }
-//    
+    
 //    for (auto pair : *maps32[m]) {
 //        
 //        for (uint8_t w = 0; w<4; ++w) // update weights
@@ -797,33 +797,73 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
     
     for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
         
-        auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
-        if (got == submap2.end()){
-            submap2.insert(pair);
-        }else{
-
-            DBGkmer& dbgkmerMap = got->second;
+        bool overflow = false;
         
-            for (uint64_t w = 0; w<4; ++w) { // update weights
+        if (pair.second.cov == 255) // already added to int32 map
+            continue;
+        
+        auto got = map32.find(pair.first); // check if this is already a high-copy kmer
+        if (got != map32.end()) {
+            overflow = true;
+        }else{
+            
+            auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
+            if (got == submap2.end()) {
+                submap2.insert(pair);
+            }else{
                 
-                if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
-                    dbgkmerMap.fw[w] += pair.second.fw[w];
-                else
-                    dbgkmerMap.fw[w] = 255;
-                if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
-                    dbgkmerMap.bw[w] += pair.second.bw[w];
-                else
-                    dbgkmerMap.bw[w] = 255;
+                DBGkmer& dbgkmerMap = got->second;
+                    
+                if (255 - dbgkmerMap.cov <= pair.second.cov)
+                    overflow = true;
                 
+                for (uint8_t w = 0; w<4; ++w) { // check weights
+                    
+                    if (255 - dbgkmerMap.fw[w] <= pair.second.fw[w] || 255 - dbgkmerMap.bw[w] <= pair.second.bw[w]) {
+                        overflow = true;
+                        break;
+                    }
+                }
+                
+                if (!overflow) {
+                    
+                    for (uint8_t w = 0; w<4; ++w) { // update weights
+                        dbgkmerMap.fw[w] += pair.second.fw[w];
+                        dbgkmerMap.bw[w] += pair.second.bw[w];
+                    }
+                    dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+                }
+            }
+        }
+        
+        if (overflow) {
+            
+            DBGkmer32& dbgkmerMap32 = map32[pair.first];
+            
+            if (dbgkmerMap32.cov == 0) { // first time we add the kmer
+                auto got = submap2.find(pair.first);
+                DBGkmer& dbgkmerMap = got->second;
+                dbgkmerMap32 = dbgkmerMap;
+                dbgkmerMap.cov = 255; // invalidates int8 kmer
             }
             
-            if (255 - dbgkmerMap.cov >= pair.second.cov)
-                dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
-            else
-                dbgkmerMap.cov = 255;
+            for (uint8_t w = 0; w<4; ++w) { // update weights
+                
+                if (LARGEST - dbgkmerMap32.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap32.fw[w] += pair.second.fw[w];
+                else
+                    dbgkmerMap32.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap32.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap32.bw[w] += pair.second.bw[w];
+                else
+                    dbgkmerMap32.bw[w] = LARGEST;
+            }
             
-        };
-        
+            if (LARGEST - dbgkmerMap32.cov >= pair.second.cov)
+                dbgkmerMap32.cov += pair.second.cov; // increase kmer coverage
+            else
+                dbgkmerMap32.cov = LARGEST;
+        }
     }
     return true;
 }

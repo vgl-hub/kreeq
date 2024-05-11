@@ -93,7 +93,7 @@ void Input::read(uint8_t mode) {
             }
 
             if (userInput.inDBG.size() > 0)
-                userInput.prefix = userInput.inDBG[0];
+                knav.load();
             
             InSequencesDBG genome; // initialize sequence collection object
             

@@ -766,33 +766,9 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
 
 void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
-    std::vector<std::function<bool()>> jobs;
-    
-    std::vector<uint64_t> fileSizes;
-    
-    for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
-        fileSizes.push_back(fileSize(userInput.inDBG[0] + "/.map." + std::to_string(m) + ".bin"));
-    
-    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
-    
-    for(uint32_t i : idx)
-        mergeMaps(i);
-    
-}
-
-bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same hashes
-    
-    std::string prefix = userInput.inDBG[0]; // loads the first map
-    prefix.append("/.map." + std::to_string(m) + ".bin");
-    
-    phmap::BinaryInputArchive ar_in(prefix.c_str());
-    maps[m]->phmap_load(ar_in);
-    
-    unsigned int numFiles = userInput.inDBG.size();
-    
     parallelMap32 map32Total; // first merge high-copy kmers
     
-    for (unsigned int i = 0; i < numFiles; ++i) { // for each kmerdb loads the map and merges it
+    for (unsigned int i = 0; i < userInput.inDBG.size(); ++i) { // for each kmerdb loads the map and merges it
         
         std::string prefix = userInput.inDBG[i]; // loads the next map
         prefix.append("/.map.hc.bin");
@@ -828,8 +804,32 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
         uint64_t i = pair.first % mapCount;
         maps32[i]->insert(pair);
     }
+    
+    std::vector<std::function<bool()>> jobs;
+    
+    std::vector<uint64_t> fileSizes;
+    
+    for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
+        fileSizes.push_back(fileSize(userInput.inDBG[0] + "/.map." + std::to_string(m) + ".bin"));
+    
+    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
+    
+    for(uint32_t i : idx)
+        mergeMaps(i);
+    
+    dumpHighCopyKmers();
+    
+}
 
-    for (unsigned int i = 1; i < numFiles; ++i) { // for each kmerdb loads the map and merges it
+bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same hashes
+    
+    std::string prefix = userInput.inDBG[0]; // loads the first map
+    prefix.append("/.map." + std::to_string(m) + ".bin");
+    
+    phmap::BinaryInputArchive ar_in(prefix.c_str());
+    maps[m]->phmap_load(ar_in);
+
+    for (unsigned int i = 1; i < userInput.inDBG.size(); ++i) { // for each kmerdb loads the map and merges it
         
         std::string prefix = userInput.inDBG[i]; // loads the next map
         prefix.append("/.map." + std::to_string(m) + ".bin");

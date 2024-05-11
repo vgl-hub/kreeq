@@ -79,6 +79,7 @@ public:
             while (fileExists(userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) +  ".tmp.bin"))
                 threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin").c_str()); });
             remove((userInput.prefix + "/.index").c_str());
+            remove((userInput.prefix + "/.map.hc.bin").c_str());
         }
             
         jobWait(threadPool);

@@ -454,9 +454,9 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     uint8_t fileNum = 0;
     
-    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) + ".tmp.bin")) { // for additional map loads the map and merges it
+    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) + ".tmp.bin")) { // for additional map loads the map and merges it
         
-        std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) + ".tmp.bin"; // loads the next map
+        std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) + ".tmp.bin"; // loads the next map
         parallelMap* nextMap = new parallelMap;
         phmap::BinaryInputArchive ar_in(nextFile.c_str());
         nextMap->phmap_load(ar_in);

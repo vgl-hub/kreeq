@@ -152,6 +152,8 @@ public:
     
     bool loadMap(std::string prefix, uint16_t m);
     
+    bool loadHighCopyKmers();
+    
     bool deleteMap(uint16_t m);
     
     void load();

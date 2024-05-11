@@ -541,6 +541,8 @@ void DBG::finalize() {
         
         buffersToMaps();
         
+        loadHighCopyKmers(); // reload high copy kmers for computation steps
+        
     }
 
 }
@@ -693,16 +695,7 @@ void DBG::load() {
     
     if (userInput.inDBG.size() == 1){
         userInput.prefix = userInput.inDBG[0];
-        
-        parallelMap32 map32Total;
-        phmap::BinaryInputArchive ar_in((userInput.prefix + "/.map.hc.bin").c_str());
-        map32Total.phmap_load(ar_in);
-        
-        for (auto pair : map32Total) {
-            uint64_t i = pair.first % mapCount;
-            maps32[i]->insert(pair);
-        }
-        
+        loadHighCopyKmers();
     }else if (userInput.inDBG.size() > 1) {
         fprintf(stderr, "More than one DBG database provided. Merge them first. Exiting.\n");
         exit(EXIT_FAILURE);
@@ -723,6 +716,21 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     
     return true;
 
+}
+
+bool DBG::loadHighCopyKmers() {
+    
+    parallelMap32 map32Total;
+    phmap::BinaryInputArchive ar_in((userInput.prefix + "/.map.hc.bin").c_str());
+    map32Total.phmap_load(ar_in);
+    
+    for (auto pair : map32Total) {
+        uint64_t i = pair.first % mapCount;
+        maps32[i]->insert(pair);
+    }
+    
+    return true;
+    
 }
 
 bool DBG::deleteMap(uint16_t m) {

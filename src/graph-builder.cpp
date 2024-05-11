@@ -789,6 +789,45 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
     maps[m]->phmap_load(ar_in);
     
     unsigned int numFiles = userInput.inDBG.size();
+    
+    parallelMap32 map32Total; // first merge high-copy kmers
+    
+    for (unsigned int i = 0; i < numFiles; ++i) { // for each kmerdb loads the map and merges it
+        
+        std::string prefix = userInput.inDBG[i]; // loads the next map
+        prefix.append("/.map.hc.bin");
+        
+        parallelMap32 nextMap;
+        phmap::BinaryInputArchive ar_in(prefix.c_str());
+        nextMap.phmap_load(ar_in);
+        
+        for (auto pair : nextMap) {
+            
+            DBGkmer32& dbgkmerMap32 = map32Total[pair.first];
+            
+            for (uint8_t w = 0; w<4; ++w) { // update weights
+                
+                if (LARGEST - dbgkmerMap32.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap32.fw[w] += pair.second.fw[w];
+                else
+                    dbgkmerMap32.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap32.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap32.bw[w] += pair.second.bw[w];
+                else
+                    dbgkmerMap32.bw[w] = LARGEST;
+            }
+            
+            if (LARGEST - dbgkmerMap32.cov >= pair.second.cov)
+                dbgkmerMap32.cov += pair.second.cov; // increase kmer coverage
+            else
+                dbgkmerMap32.cov = LARGEST;
+        }
+    }
+    
+    for (auto pair : map32Total) {
+        uint64_t i = pair.first % mapCount;
+        maps32[i]->insert(pair);
+    }
 
     for (unsigned int i = 1; i < numFiles; ++i) { // for each kmerdb loads the map and merges it
         

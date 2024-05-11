@@ -574,16 +574,16 @@ bool DBG::summary(uint16_t m) {
         ++hist[pair.second.cov];
         
     }
-    
-    for (auto pair : *maps32[m]) {
-        
-        for (uint8_t w = 0; w<4; ++w) // update weights
-            edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
-        
-        ++kmersDistinct;
-        ++hist[pair.second.cov];
-        
-    }
+//    
+//    for (auto pair : *maps32[m]) {
+//        
+//        for (uint8_t w = 0; w<4; ++w) // update weights
+//            edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
+//        
+//        ++kmersDistinct;
+//        ++hist[pair.second.cov];
+//        
+//    }
  
     std::lock_guard<std::mutex> lck(mtx);
     totKmersUnique += kmersUnique;

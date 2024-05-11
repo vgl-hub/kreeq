@@ -300,6 +300,8 @@ bool DBG::buffersToMaps() {
     
     consolidateTmpMaps();
     
+    dumpHighCopyKmers();
+    
     return true;
 
 }
@@ -496,6 +498,24 @@ bool DBG::reloadMap32(uint16_t m) {
     
 }
 
+bool DBG::dumpHighCopyKmers() {
+    
+    parallelMap32 map32Total;
+    
+    for (uint16_t m = 0; m<mapCount; ++m) {
+        for (auto pair : *maps32[m])
+            map32Total.insert(pair);
+        delete maps32[m];
+        maps32[m] = new parallelMap32;
+    }
+
+    phmap::BinaryOutputArchive ar_out((userInput.prefix + "/.map.hc.bin").c_str());
+    map32Total.phmap_dump(ar_out);
+    
+    return true;
+    
+}
+
 bool DBG::dumpMap(std::string prefix, uint16_t m) {
     
     prefix.append("/.map." + std::to_string(m) + ".bin");
@@ -658,6 +678,8 @@ void DBG::cleanup() {
         
         threadPool.queueJobs(jobs);
         
+        remove((userInput.prefix + "/.map.hc.bin").c_str());
+        
         if (userInput.prefix != ".")
             rm_dir(userInput.prefix.c_str());
         
@@ -671,6 +693,16 @@ void DBG::load() {
     
     if (userInput.inDBG.size() == 1){
         userInput.prefix = userInput.inDBG[0];
+        
+        parallelMap32 map32Total;
+        phmap::BinaryInputArchive ar_in((userInput.prefix + "/.map.hc.bin").c_str());
+        map32Total.phmap_load(ar_in);
+        
+        for (auto pair : map32Total) {
+            uint64_t i = pair.first % mapCount;
+            maps32[i]->insert(pair);
+        }
+        
     }else if (userInput.inDBG.size() > 1) {
         fprintf(stderr, "More than one DBG database provided. Merge them first. Exiting.\n");
         exit(EXIT_FAILURE);

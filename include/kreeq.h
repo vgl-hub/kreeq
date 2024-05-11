@@ -91,6 +91,11 @@ public:
         
     };
     
+    ~DBG(){ // always need to call the destructor and delete for any object called with new to avoid memory leaks
+        for (parallelMap32* map : maps32)
+            delete map;
+    }
+    
     void status();
     
     void joinThreads();
@@ -140,6 +145,8 @@ public:
     bool mergeTmpMaps(uint16_t m);
     
     bool reloadMap32(uint16_t m);
+    
+    bool dumpHighCopyKmers();
     
     bool dumpMap(std::string prefix, uint16_t m);
     

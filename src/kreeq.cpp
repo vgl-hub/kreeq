@@ -143,7 +143,6 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     for (uint64_t c = 0; c<kcount; ++c){
         
         key = hash(str+c, &isFw);
-        
         i = key % mapCount;
         
 //        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;

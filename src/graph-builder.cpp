@@ -588,7 +588,6 @@ bool DBG::summary(uint16_t m) {
         
         ++kmersDistinct;
         ++hist[pair.second.cov];
-        
     }
     
     for (auto pair : *maps32[m]) {
@@ -598,7 +597,6 @@ bool DBG::summary(uint16_t m) {
         
         ++kmersDistinct;
         ++hist[pair.second.cov];
-        
     }
  
     std::lock_guard<std::mutex> lck(mtx);
@@ -610,7 +608,6 @@ bool DBG::summary(uint16_t m) {
         
         finalHistogram[pair.first] += pair.second;
         totKmers += pair.first * pair.second;
-        
     }
     
     return true;

@@ -142,7 +142,6 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     for (uint64_t c = 0; c<kcount; ++c){
         
         key = hash(str+c, &isFw);
-        
         i = key % mapCount;
         
 //        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
@@ -150,9 +149,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
         if (i >= mapRange[0] && i < mapRange[1]) {
             
             map = maps[i];
-            
             auto it = map->find(key);
-            
             DBGkmer khmer;
             
             if (it != map->end()) {
@@ -482,14 +479,14 @@ void DBG::printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadL
     }
 }
 
-bool DBG::loadAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies) {
+bool DBG::loadSegmentCoordinates(InSegment *inSegment, std::vector<uint64_t> &segmentCoordinates) {
     
     auto coordinates = userInput.bedIncludeList.getCoordinates();
     auto got = coordinates.find(inSegment->getSeqHeader());
     if (got != coordinates.end()) {
         for (auto coordinate : got->second) {
             for (uint64_t i = coordinate.first; i < coordinate.second; ++i)
-                anomalies.push_back(i);
+                segmentCoordinates.push_back(i);
         }
     }
     return true;
@@ -609,7 +606,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     bool isFw = false;
     std::vector<std::deque<DBGpath>> variants;
     std::vector<uint64_t> anomalies;
-    userInput.inBedInclude == "" ? detectAnomalies(inSegment, anomalies) : loadAnomalies(inSegment, anomalies);
+    userInput.inBedInclude == "" ? detectAnomalies(inSegment, anomalies) : loadSegmentCoordinates(inSegment, anomalies);
     uint64_t len = inSegment->getSegmentLen();
     
     if (len<k || anomalies.size() == 0)
@@ -854,4 +851,111 @@ bool DBG::variantsToGFA(InSegment *inSegment, Log &threadLog) {
     
     return true;
     
+}
+
+void DBG::subgraph() {
+    
+    if (userInput.inSequence.empty())
+        return;
+    
+    lg.verbose("Subsetting graph");
+    
+    if (!userInput.inBedInclude.empty() || userInput.pipeType == 'i') {
+        
+        StreamObj streamObj;
+        std::shared_ptr<std::istream> stream = streamObj.openStream(userInput, 'i');
+        std::string line, bedHeader;
+        
+        while (getline(*stream, line)) {
+            
+            uint64_t begin = 0, end = 0;
+            std::istringstream iss(line);
+            iss >> bedHeader >> begin >> end;
+            userInput.bedIncludeList.pushCoordinates(bedHeader, begin, end);
+        }
+        lg.verbose("Finished reading BED include list");
+        userInput.bedIncludeList = BEDPathsToSegments();
+    }
+    
+    std::vector<std::function<bool()>> jobs;
+    std::array<uint16_t, 2> mapRange = {0,0};
+    while (mapRange[1] < mapCount) {
+
+        mapRange = computeMapRange(mapRange);
+        loadMapRange(mapRange);
+        
+        std::vector<InSegment*> inSegments = *genome->getInSegments();
+        for (InSegment *inSegment : inSegments)
+            jobs.push_back([this, inSegment, mapRange] { return DBGsubgraphFromSegment(inSegment, mapRange); });
+        
+        threadPool.queueJobs(jobs);
+        jobWait(threadPool);
+        jobs.clear();
+        
+        deleteMapRange(mapRange);
+
+    }
+}
+
+bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> mapRange) {
+    
+    Log threadLog;
+    threadLog.setId(inSegment->getuId());
+        
+    std::string sHeader = inSegment->getSeqHeader();
+    parallelMap *map;
+    parallelMap segmentSubmap;
+    uint64_t key, i;
+    bool isFw = false;
+    std::vector<uint64_t> segmentCoordinates;
+    
+    uint64_t len = inSegment->getSegmentLen();
+    if (len<k)
+        return true;
+
+    uint64_t kcount = len-k+1;
+    
+    unsigned char* first = (unsigned char*)inSegment->getInSequencePtr()->c_str();
+    uint8_t* str = new uint8_t[len];
+    
+    for (uint64_t i = 0; i<len; ++i)
+        str[i] = ctoi[*(first+i)];
+    
+    std::vector<std::pair<uint64_t,uint64_t>> span = {std::make_pair(0, kcount)};
+    
+    if (userInput.inBedInclude != "") {
+        
+        auto coordinates = userInput.bedIncludeList.getCoordinates();
+        auto got = coordinates.find(inSegment->getSeqHeader());
+        if (got != coordinates.end())
+            span = got->second;
+        else
+            span.clear();
+    }
+    
+    for (auto coordinate : span) {
+        for (uint64_t p = coordinate.first; p < coordinate.second; ++p) {
+            
+            key = hash(str+p, &isFw);
+            i = key % mapCount;
+            
+            if (i >= mapRange[0] && i < mapRange[1]) {
+                
+                map = maps[i];
+                auto got = map->find(key);
+                
+                if (got != map->end()) {
+                    segmentSubmap.insert(*got);
+                }
+            }
+        }
+    }
+    delete[] str;
+    
+    std::cout<<inSegment->getSeqHeader()<<std::endl;
+    
+    std::unique_lock<std::mutex> lck (mtx);
+    logs.push_back(threadLog);
+    
+    return true;
 }

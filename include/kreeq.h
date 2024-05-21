@@ -42,6 +42,7 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     
     UserInputKreeq &userInput;
     InSequencesDBG *genome;
+    InSequences DBGsubgraph;
     
     std::queue<std::string*> readBatches;
     
@@ -144,8 +145,6 @@ public:
     
     void printTableCompressedBinary();
     
-    void printGFA();
-    
     void printVCF();
     
     bool searchGraph(std::array<uint16_t, 2> mapRange);
@@ -160,7 +159,7 @@ public:
     
     void printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadLog);
     
-    bool loadAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies);
+    bool loadSegmentCoordinates(InSegment *inSegment, std::vector<uint64_t> &segmentCoordinates);
     
     BedCoordinates BEDPathsToSegments();
     
@@ -169,6 +168,12 @@ public:
     bool DBGtoVariants(InSegment *inSegment);
     
     bool variantsToGFA(InSegment *inSegment, Log &threadLog);
+    
+    bool DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> mapRange);
+    
+    void subgraph();
+    
+    bool DBGgraphToGFA(DBG graph);
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

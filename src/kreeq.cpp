@@ -895,6 +895,10 @@ void DBG::subgraph() {
         deleteMapRange(mapRange);
 
     }
+    
+    mergeSubgraphs();
+    DBGgraphToGFA();
+    
 }
 
 bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> mapRange) {
@@ -904,7 +908,7 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
         
     std::string sHeader = inSegment->getSeqHeader();
     parallelMap *map;
-    parallelMap segmentSubmap;
+    parallelMap *segmentSubmap = new parallelMap;
     uint64_t key, i;
     bool isFw = false;
     std::vector<uint64_t> segmentCoordinates;
@@ -945,17 +949,44 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
                 auto got = map->find(key);
                 
                 if (got != map->end()) {
-                    segmentSubmap.insert(*got);
+                    segmentSubmap->insert(*got);
                 }
             }
         }
     }
     delete[] str;
     
-    std::cout<<inSegment->getSeqHeader()<<std::endl;
-    
     std::unique_lock<std::mutex> lck (mtx);
+    DBGTmpSubgraphs.push_back(segmentSubmap);
     logs.push_back(threadLog);
     
     return true;
+}
+
+void DBG::mergeSubgraphs() {
+    
+    for (parallelMap *map1 : DBGTmpSubgraphs) {
+        unionSum(map1, DBGsubgraph);
+        delete map1;
+    }
+    
+}
+
+void DBG::DBGgraphToGFA() {
+    
+    for (auto pair : *DBGsubgraph) {
+        
+        std::cout<<reverseHash(pair.first)<<" "<<std::to_string(pair.second.cov)<<" "<<std::to_string(pair.second.fw[0])
+                                                                                  <<" "<<std::to_string(pair.second.fw[1])
+                                                                                  <<" "<<std::to_string(pair.second.fw[2])
+                                                                                  <<" "<<std::to_string(pair.second.fw[3])
+                                                                                  <<" "<<std::to_string(pair.second.bw[0])
+                                                                                  <<" "<<std::to_string(pair.second.bw[1])
+                                                                                  <<" "<<std::to_string(pair.second.bw[2])
+                                                                                  <<" "<<std::to_string(pair.second.bw[3])<<std::endl;
+        
+        //GFAsubgraph.append
+    }
+    
+    
 }

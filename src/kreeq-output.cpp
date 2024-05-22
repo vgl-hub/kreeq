@@ -112,7 +112,7 @@ void DBG::report() { // generates the output from the program
                     report.outFile(*genome, userInput.outFile, userInput, 0);
                     break;
                 case 2:
-                    report.outFile(DBGsubgraph, userInput.outFile, userInput, 0);
+                    report.outFile(GFAsubgraph, userInput.outFile, userInput, 0);
                     break;
             }
             break;

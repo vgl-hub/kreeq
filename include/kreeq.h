@@ -42,7 +42,12 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     
     UserInputKreeq &userInput;
     InSequencesDBG *genome;
-    InSequences DBGsubgraph;
+    
+    // subgraph objects
+    parallelMap *DBGsubgraph = new parallelMap;
+    std::vector<parallelMap*> DBGTmpSubgraphs;
+    InSequences GFAsubgraph;
+    
     
     std::queue<std::string*> readBatches;
     
@@ -67,6 +72,10 @@ public:
         if (userInput.inDBG.size() == 0) // start parallel hashing
             initHashing();
         
+    };
+    
+    ~DBG() {
+        delete DBGsubgraph;
     };
     
     void status();
@@ -173,7 +182,9 @@ public:
     
     void subgraph();
     
-    bool DBGgraphToGFA(DBG graph);
+    void mergeSubgraphs();
+    
+    void DBGgraphToGFA();
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

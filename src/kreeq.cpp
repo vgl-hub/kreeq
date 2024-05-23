@@ -974,19 +974,70 @@ void DBG::mergeSubgraphs() {
 
 void DBG::DBGgraphToGFA() {
     
-    for (auto pair : *DBGsubgraph) {
-        
-        std::cout<<reverseHash(pair.first)<<" "<<std::to_string(pair.second.cov)<<" "<<std::to_string(pair.second.fw[0])
-                                                                                  <<" "<<std::to_string(pair.second.fw[1])
-                                                                                  <<" "<<std::to_string(pair.second.fw[2])
-                                                                                  <<" "<<std::to_string(pair.second.fw[3])
-                                                                                  <<" "<<std::to_string(pair.second.bw[0])
-                                                                                  <<" "<<std::to_string(pair.second.bw[1])
-                                                                                  <<" "<<std::to_string(pair.second.bw[2])
-                                                                                  <<" "<<std::to_string(pair.second.bw[3])<<std::endl;
-        
-        //GFAsubgraph.append
+    phmap::parallel_flat_hash_map<uint64_t, uint32_t> idLookupTable;
+    uint32_t idCounter = 0, seqPos = 0, edgeCounter = 0;
+    
+    for (auto pair : *DBGsubgraph) { // first create all nodes
+        idLookupTable[pair.first] = idCounter; // keep track of node ids and hashes
+        std::string* inSequence = new std::string(reverseHash(pair.first));
+        Sequence* sequence = new Sequence {std::to_string(idCounter++), "", inSequence};
+        sequence->seqPos = seqPos; // remember the order
+        std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(pair.second.cov)}};
+        GFAsubgraph.appendSegment(sequence, inTags);
+        seqPos++;
     }
     
+    for (auto pair : *DBGsubgraph) { // next create all edges
     
+        uint32_t thisSegmentId = idLookupTable[pair.first];
+        
+        for (uint8_t i = 0; i<4; ++i) { // forward edges
+            if (pair.second.fw[i] != 0) {
+                
+                uint8_t nextKmer[k];
+                std::string firstKmer = reverseHash(pair.first);
+                firstKmer.push_back(itoc[i]);
+                for (uint8_t e = 0; e<k; ++e)
+                    nextKmer[e] = ctoi[(unsigned char)firstKmer[e+1]];
+
+                bool isFw = false;
+                uint64_t hashValue = hash(nextKmer, &isFw);
+                auto got = idLookupTable.find(hashValue);
+                if (got == idLookupTable.end())
+                    continue;
+                uint32_t nextSegmentId = got->second;
+                std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(pair.second.fw[i])}};
+                InEdge edge(idCounter++, edgeCounter, thisSegmentId, nextSegmentId, '+', isFw ? '+' : '-', "1N"+std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+                ++edgeCounter;
+                GFAsubgraph.appendEdge(edge);
+            }
+        }
+        for (uint8_t i = 0; i<4; ++i) { // reverse edges
+            if (pair.second.bw[i] != 0) {
+                
+                uint8_t nextKmer[k];
+                std::string firstKmer;
+                firstKmer.push_back(itoc[i]);
+                firstKmer.append(reverseHash(pair.first));
+                
+                for (uint8_t e = 0; e<k; ++e)
+                    nextKmer[e] = ctoi[(unsigned char)firstKmer[e]];
+                
+                bool isFw = false;
+                uint64_t hashValue = hash(nextKmer, &isFw);
+                auto got = idLookupTable.find(hashValue);
+                if (got == idLookupTable.end())
+                    continue;
+                uint32_t prevSegmentId = got->second;
+                std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(pair.second.bw[i])}};
+                InEdge edge(idCounter++, edgeCounter, prevSegmentId, thisSegmentId, isFw ? '+' : '-', '+', "1N"+std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+                ++edgeCounter;
+                GFAsubgraph.appendEdge(edge);
+            }
+        }
+    }
+    jobWait(threadPool);
+    GFAsubgraph.updateStats(); // compute summary statistics
+    Report report;
+    report.reportStats(GFAsubgraph, 0, 0);
 }

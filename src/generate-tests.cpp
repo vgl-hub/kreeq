@@ -80,6 +80,20 @@ int main(void) {
         }
     }
     
+    // test union
+    file_args = {
+        {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta -ogfa -j1"}, {""}}
+    //  {{set of test inputs}, {list of command line args to run with}}
+    };
+    
+    for(const auto &pair : file_args) {
+        for(const std::string &input : pair.first) {
+            for(const std::string &args : pair.second) {
+                genTest("kreeq", "subgraph", input, args);
+            }
+        }
+    }
+    
     // test decompressor
     file_args = {
         {{"-i testFiles/decompressor1.bkwig -c testFiles/decompressor1.bed"}, {""}}

@@ -112,6 +112,8 @@ void DBG::report() { // generates the output from the program
                     report.outFile(*genome, userInput.outFile, userInput, 0);
                     break;
                 case 2:
+                    GFAsubgraph.sortSegmentsByOriginal();
+                    GFAsubgraph.sortEdgesByOriginal();
                     report.outFile(GFAsubgraph, userInput.outFile, userInput, 0);
                     break;
             }

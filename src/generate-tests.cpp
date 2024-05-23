@@ -80,7 +80,7 @@ int main(void) {
     }
     // test subgraph
     file_args = {
-        {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta -ogfa -j1"}, {""}}
+        {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
     };
     for(const auto &pair : file_args) {

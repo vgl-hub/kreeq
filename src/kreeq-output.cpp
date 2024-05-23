@@ -63,7 +63,11 @@ void DBG::report() { // generates the output from the program
         case 2:
         case 3:
         case 4: { // .bed .csv .kwig .bkwig
-            validateSequences(); // validate the input sequence
+            switch (userInput.mode) {
+                case 0:
+                    validateSequences();
+                    break;
+            }
             break;
         }
         case 5:
@@ -71,9 +75,6 @@ void DBG::report() { // generates the output from the program
             switch (userInput.mode) {
                 case 0:
                     correctSequences();
-                    break;
-                case 2:
-                    subgraph();
                     break;
             }
             break;

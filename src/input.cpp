@@ -144,6 +144,7 @@ void Input::read() {
                 }
                 knav.loadGenome(&genome);
             }
+            knav.subgraph();
             knav.report(); // output
             knav.cleanup(); // delete tmp files
             break;

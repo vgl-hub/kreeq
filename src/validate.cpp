@@ -109,16 +109,13 @@ int main(int argc, char **argv) {
             std::getline(*expOutput, l2);
             if(l1 != l2) diffs.push_back(std::pair<std::string, std::string>(l1, l2));
         }
-
         actOutput.close();
         exp.close();
         istream.close();
-
         if(diffs.size() > 0) {
             printFAIL(input_file.c_str(), "expected output did not match actual output");
-            for(const auto &pair : diffs) {
+            for(const auto &pair : diffs)
                 std::cout << "    expected: " << pair.second.c_str() << std::endl << "      actual: " << pair.first.c_str() << std::endl;
-            }
             continue;
         }
         printPASS(input_file.c_str());

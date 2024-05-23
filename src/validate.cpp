@@ -104,10 +104,6 @@ int main(int argc, char **argv) {
         actOutput.open(tmp);
         std::vector<std::pair<std::string, std::string>> diffs;
         std::string l1, l2;
-        std::getline(actOutput, l1);
-        std::getline(*expOutput, l2);
-        if(l1 != l2) diffs.push_back(std::pair<std::string, std::string>(l1, l2));
-
         while(!actOutput.eof() || !expOutput->eof()) {
             std::getline(actOutput, l1);
             std::getline(*expOutput, l2);

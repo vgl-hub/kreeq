@@ -45,6 +45,8 @@ public:
     
     void loadGenome(InSequencesDBG& inSequences);
     
+    void loadGraph();
+    
     void read();
     
 };

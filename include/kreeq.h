@@ -57,20 +57,19 @@ public:
     
     DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
         
-        lg.verbose("Deleting any tmp file");
-        for(uint16_t m = 0; m<mapCount; ++m) {// remove tmp buffers and maps if any
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str()); });
-            uint8_t fileNum = 0;
-            while (fileExists(userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) +  ".tmp.bin"))
-                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin").c_str()); });
-            remove((userInput.prefix + "/.index").c_str());
+        if (userInput.inDBG.size() == 0) { // if we are not reading an existing db
+            lg.verbose("Deleting any tmp file");
+            for(uint16_t m = 0; m<mapCount; ++m) {// remove tmp buffers and maps if any
+                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
+                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str()); });
+                uint8_t fileNum = 0;
+                while (fileExists(userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) +  ".tmp.bin"))
+                    threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin").c_str()); });
+                remove((userInput.prefix + "/.index").c_str());
+            }
+            jobWait(threadPool);
+            initHashing(); // start parallel hashing
         }
-            
-        jobWait(threadPool);
-        
-        if (userInput.inDBG.size() == 0) // start parallel hashing
-            initHashing();
         
     };
     
@@ -131,8 +130,6 @@ public:
     bool loadMap(std::string prefix, uint16_t m);
     
     bool deleteMap(uint16_t m);
-    
-    void load();
     
     bool updateMap(std::string prefix, uint16_t m);
     

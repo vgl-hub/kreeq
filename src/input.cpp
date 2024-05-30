@@ -52,6 +52,27 @@ void Input::loadInput(UserInputKreeq userInput) {
     this->userInput = userInput;
 }
 
+
+void Input::loadGraph() {
+    
+    if (userInput.inDBG.size() == 1){
+        userInput.prefix = userInput.inDBG[0]; // access database
+        std::ifstream file;
+        file.open(userInput.prefix + "/.index"); // update kmer length
+        std::string line;
+        getline(file, line);
+        file.close();
+        userInput.kmerLen = stoi(line);
+    }else if (userInput.inDBG.size() > 1) {
+        fprintf(stderr, "More than one DBG database provided. Merge them first. Exiting.\n");
+        exit(EXIT_FAILURE);
+    }else{
+        fprintf(stderr, "Cannot load DBG input. Exiting.\n");
+        exit(EXIT_FAILURE);
+    }
+    
+}
+
 void Input::read() {
     
     if (userInput.outFile.find(".kreeq") != std::string::npos)
@@ -129,10 +150,9 @@ void Input::read() {
             break;
         }
         case 2: { // subgraph
-
+            
+            loadGraph();
             DBG knav(userInput); // navigational kmerdb
-            if (userInput.inDBG.size() > 0)
-                userInput.prefix = userInput.inDBG[0];
 
             InSequencesDBG genome; // initialize sequence collection object
             if (!userInput.inSequence.empty()) {

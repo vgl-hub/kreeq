@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
             }
             break;
         }
-        case 1: {
+        case 1: { // union
             
             static struct option long_options[] = { // struct mapping long options
                 {"databases", required_argument, 0, 'd'},
@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
             }
             break;
         }
-        case 2: {
+        case 2: { // subgraph
             
             static struct option long_options[] = { // struct mapping long options
                 {"database", required_argument, 0, 'd'},

@@ -143,8 +143,13 @@ int main(int argc, char **argv) {
                         
                     }else{ // input is a regular file
                         
-                        ifFileExists(optarg);
-                        userInput.inDBG.push_back(optarg);
+                        optind--;
+                        for( ;optind < argc && *argv[optind] != '-' && !isInt(argv[optind]); optind++){
+                            
+                            ifFileExists(argv[optind]);
+                            userInput.inDBG.push_back(argv[optind]);
+                            
+                        }
                         
                     }
                     

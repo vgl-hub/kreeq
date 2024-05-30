@@ -33,7 +33,7 @@ int main(void) {
     };
     
     const std::set<std::string> excludeExt {};
-    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta"};
+    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta", "repeat1.fasta", "repeat1.fastq"};
 
     std::map<std::set<std::string>, std::vector<std::string>> file_args = {
         {{"-f testFiles/random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},
@@ -80,7 +80,7 @@ int main(void) {
         }
     }
     
-    // test decompressor
+    // test decompressor lookup
     file_args = {
         {{"-i testFiles/decompressor1.bkwig -c testFiles/decompressor1.bed"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
@@ -90,6 +90,20 @@ int main(void) {
         for(const std::string &input : pair.first) {
             for(const std::string &args : pair.second) {
                 genTest("kreeq-decompressor", "lookup", input, args);
+            }
+        }
+    }
+    
+    // test decompressor inflate
+    file_args = {
+        {{"-i testFiles/decompressor2.bkwig"}, {""}}
+    //  {{set of test inputs}, {list of command line args to run with}}
+    };
+    
+    for(const auto &pair : file_args) {
+        for(const std::string &input : pair.first) {
+            for(const std::string &args : pair.second) {
+                genTest("kreeq-decompressor", "inflate", input, args);
             }
         }
     }

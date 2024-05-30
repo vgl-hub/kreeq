@@ -18,8 +18,20 @@ struct edgeBit {
 };
 
 struct DBGkmer {
-    
     uint8_t fw[4] = {0}, bw[4] = {0}, cov = 0;
+};
+
+#define LARGEST 4294967295 // 2^32-1
+struct DBGkmer32 {
+    uint32_t fw[4] = {0}, bw[4] = {0}, cov = 0;
+    
+    DBGkmer32() {}
+    
+    DBGkmer32(const DBGkmer& dbgkmer) {
+        std::copy(std::begin(dbgkmer.fw), std::end(dbgkmer.fw), std::begin(fw));
+        std::copy(std::begin(dbgkmer.bw), std::end(dbgkmer.bw), std::begin(bw));
+        cov = dbgkmer.cov;
+    }
     
 };
 
@@ -29,7 +41,6 @@ using parallelMap = phmap::parallel_flat_hash_map<uint64_t, DBGkmer,
                                           std::allocator<std::pair<const uint64_t, DBGkmer>>,
                                           8,
                                           phmap::NullMutex>;
-
 
 class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     
@@ -46,6 +57,15 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     std::queue<std::string*> readBatches;
     
     uint64_t totEdgeCount = 0;
+    
+    using parallelMap32 = phmap::parallel_flat_hash_map<uint64_t, DBGkmer32,
+                                              std::hash<uint64_t>,
+                                              std::equal_to<uint64_t>,
+                                              std::allocator<std::pair<const uint64_t, DBGkmer32>>,
+                                              8,
+                                              phmap::NullMutex>;
+    
+    std::vector<parallelMap32*> maps32;
 
 public:
     
@@ -59,6 +79,7 @@ public:
             while (fileExists(userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) +  ".tmp.bin"))
                 threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin").c_str()); });
             remove((userInput.prefix + "/.index").c_str());
+            remove((userInput.prefix + "/.map.hc.bin").c_str());
         }
             
         jobWait(threadPool);
@@ -66,7 +87,15 @@ public:
         if (userInput.inDBG.size() == 0) // start parallel hashing
             initHashing();
         
+        for(uint16_t m = 0; m<mapCount; ++m)
+            maps32.push_back(new parallelMap32);
+        
     };
+    
+    ~DBG(){ // always need to call the destructor and delete for any object called with new to avoid memory leaks
+        for (parallelMap32* map : maps32)
+            delete map;
+    }
     
     void status();
     
@@ -116,9 +145,15 @@ public:
     
     bool mergeTmpMaps(uint16_t m);
     
+    bool reloadMap32(uint16_t m);
+    
+    bool dumpHighCopyKmers();
+    
     bool dumpMap(std::string prefix, uint16_t m);
     
     bool loadMap(std::string prefix, uint16_t m);
+    
+    bool loadHighCopyKmers();
     
     bool deleteMap(uint16_t m);
     
@@ -130,9 +165,9 @@ public:
     
     bool mergeMaps(uint16_t m);
     
-    bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex);
+    bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m);
     
-    bool unionSum(parallelMap* map1, parallelMap* map2);
+    bool unionSum(parallelMap* map1, parallelMap* map2, uint16_t m);
     
     void report();
     

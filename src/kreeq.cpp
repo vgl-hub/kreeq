@@ -134,6 +134,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     uint64_t key, i;
     
     parallelMap *map;
+    parallelMap32 *map32;
     
     // kreeq QV
     bool isFw = false;
@@ -142,7 +143,6 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     for (uint64_t c = 0; c<kcount; ++c){
         
         key = hash(str+c, &isFw);
-        
         i = key % mapCount;
         
 //        std::cout<<"\n"<<itoc[*(str+c)]<<"\t"<<c<<"\t"<<isFw<<std::endl;
@@ -150,13 +150,22 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
         if (i >= mapRange[0] && i < mapRange[1]) {
             
             map = maps[i];
-            
             auto it = map->find(key);
-            
-            DBGkmer khmer;
+            DBGkmer32 khmer;
             
             if (it != map->end()) {
                 khmer = it->second;
+                
+                if (khmer.cov == 255) {
+                    map32 = maps32[i];
+                    auto it = map32->find(key);
+                    if (it == map32->end()) {
+                        std::cerr<<"Error: int32 map missing 255 value from int8 map"<<std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                    khmer = it->second;
+                }
+                
                 DBGsequence[c].cov = khmer.cov;
                 DBGsequence[c].isFw = isFw;
             }

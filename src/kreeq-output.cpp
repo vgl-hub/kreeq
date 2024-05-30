@@ -64,12 +64,20 @@ void DBG::report() { // generates the output from the program
         case 2:
         case 3:
         case 4: { // .bed .csv .kwig .bkwig
-            validateSequences(); // validate the input sequence
+            switch (userInput.mode) {
+                case 0:
+                    validateSequences();
+                    break;
+            }
             break;
         }
         case 5:
         case 6: { // .gfa*, .vcf
-            correctSequences();
+            switch (userInput.mode) {
+                case 0:
+                    correctSequences();
+                    break;
+            }
             break;
         }
     }
@@ -97,7 +105,20 @@ void DBG::report() { // generates the output from the program
             break;
         }
         case 5: { // .gfa
-            printGFA();
+            Report report;
+            switch (userInput.mode) {
+                case 0:
+                    genome->sortSegmentsByOriginal();
+                    genome->sortEdgesByOriginal();
+                    genome->sortPathsByOriginal();
+                    report.outFile(*genome, userInput.outFile, userInput, 0);
+                    break;
+                case 2:
+                    GFAsubgraph.sortSegmentsByOriginal();
+                    GFAsubgraph.sortEdgesByOriginal();
+                    report.outFile(GFAsubgraph, userInput.outFile, userInput, 0);
+                    break;
+            }
             break;
         }
         case 6: { // .vcf
@@ -375,17 +396,6 @@ void DBG::printTableCompressedBinary() {
         }
     }
     ofs.close();
-}
-
-void DBG::printGFA() {
-    
-    genome->sortSegmentsByOriginal();
-    genome->sortEdgesByOriginal();
-    genome->sortPathsByOriginal();
-
-    Report report;
-    report.outFile(*genome, userInput.outFile, userInput, 0);
-    
 }
 
 void DBG::printVCF() {

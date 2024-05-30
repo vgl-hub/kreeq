@@ -688,21 +688,6 @@ void DBG::cleanup() {
     
 }
 
-void DBG::load() {
-    
-    if (userInput.inDBG.size() == 1){
-        userInput.prefix = userInput.inDBG[0];
-        loadHighCopyKmers();
-    }else if (userInput.inDBG.size() > 1) {
-        fprintf(stderr, "More than one DBG database provided. Merge them first. Exiting.\n");
-        exit(EXIT_FAILURE);
-    }else{
-        fprintf(stderr, "Cannot load DBG input. Exiting.\n");
-        exit(EXIT_FAILURE);
-    }
-    
-}
-
 bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     
     prefix.append("/.map." + std::to_string(m) + ".bin");

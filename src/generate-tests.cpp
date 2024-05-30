@@ -71,7 +71,6 @@ int main(void) {
         {{"-d testFiles/test1.kreeq testFiles/test2.kreeq"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
     };
-    
     for(const auto &pair : file_args) {
         for(const std::string &input : pair.first) {
             for(const std::string &args : pair.second) {
@@ -79,13 +78,23 @@ int main(void) {
             }
         }
     }
-    
+    // test subgraph
+    file_args = {
+        {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta"}, {""}}
+    //  {{set of test inputs}, {list of command line args to run with}}
+    };
+    for(const auto &pair : file_args) {
+        for(const std::string &input : pair.first) {
+            for(const std::string &args : pair.second) {
+                genTest("kreeq", "subgraph", input, args);
+            }
+        }
+    }
     // test decompressor lookup
     file_args = {
         {{"-i testFiles/decompressor1.bkwig -c testFiles/decompressor1.bed"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
     };
-    
     for(const auto &pair : file_args) {
         for(const std::string &input : pair.first) {
             for(const std::string &args : pair.second) {
@@ -93,7 +102,6 @@ int main(void) {
             }
         }
     }
-    
     // test decompressor inflate
     file_args = {
         {{"-i testFiles/decompressor2.bkwig"}, {""}}
@@ -107,6 +115,5 @@ int main(void) {
             }
         }
     }
-
     std::exit(EXIT_SUCCESS);
 }

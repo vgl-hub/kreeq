@@ -31,37 +31,49 @@
 #include "kreeq.h"
 
 InSequencesDBG::~InSequencesDBG() {
-    
     for (DBGbase *p : dbgbases)
         delete p;
-    
 }
 
 void InSequencesDBG::generateValidationVector() {
 
     for (InSegment* segment : inSegments) {
-        
         alloc += segment->getSegmentLen() * sizeof(DBGbase);
         DBGbase *dbgbase = new DBGbase[segment->getSegmentLen()];
         dbgbases.push_back(dbgbase);
-        
+    }
+}
+
+std::vector<DBGbase*>* InSequencesDBG::getInSegmentsDBG() {
+    return &dbgbases;
+}
+
+void Input::loadInput(UserInputKreeq userInput) {
+    this->userInput = userInput;
+}
+
+
+void Input::loadGraph() {
+    
+    if (userInput.inDBG.size() == 1){
+        userInput.prefix = userInput.inDBG[0]; // access database
+        std::ifstream file;
+        file.open(userInput.prefix + "/.index"); // update kmer length
+        std::string line;
+        getline(file, line);
+        file.close();
+        userInput.kmerLen = stoi(line);
+    }else if (userInput.inDBG.size() > 1) {
+        fprintf(stderr, "More than one DBG database provided. Merge them first. Exiting.\n");
+        exit(EXIT_FAILURE);
+    }else{
+        fprintf(stderr, "Cannot load DBG input. Exiting.\n");
+        exit(EXIT_FAILURE);
     }
     
 }
 
-std::vector<DBGbase*>* InSequencesDBG::getInSegmentsDBG() {
-    
-    return &dbgbases;
-    
-}
-
-void Input::loadInput(UserInputKreeq userInput) {
-    
-    this->userInput = userInput;
-    
-}
-
-void Input::read(uint8_t mode) {
+void Input::read() {
     
     if (userInput.outFile.find(".kreeq") != std::string::npos)
         userInput.prefix = userInput.outFile;
@@ -69,34 +81,26 @@ void Input::read(uint8_t mode) {
     if (userInput.prefix != ".")
         make_dir(userInput.prefix.c_str());
     
-    switch (mode) {
+    switch (userInput.mode) {
             
-        case 0: // sequence validation
-        
-        {
-            
+        case 0: { // sequence validation
+
             DBG knav(userInput); // navigational kmerdb
-            
             if (userInput.inReads.size() > 0) {
                 
                 lg.verbose("Loading input reads.");
-                
                 unsigned int numFiles = userInput.inReads.size(); // number of input files
                 
                 for (unsigned int i = 0; i < numFiles; i++) // load each input file in the kmerdb
                     loadKmers(userInput, &knav, 'r', &i);
                 
                 lg.verbose("Reads loaded.");
-                
                 knav.finalize();
-                
             }
 
             if (userInput.inDBG.size() > 0)
-                knav.load();
-            
+                userInput.prefix = userInput.inDBG[0];
             InSequencesDBG genome; // initialize sequence collection object
-            
             if (!userInput.inSequence.empty()) {
                 
                 if (!userInput.inSequence.empty()) {
@@ -104,27 +108,17 @@ void Input::read(uint8_t mode) {
                     loadGenome(genome); // read input genome
                     lg.verbose("Sequences loaded");
                 }
-                
                 knav.loadGenome(&genome);
-                
             }
-            
             knav.report(); // output
-            
             knav.cleanup(); // delete tmp files
-            
             break;
-            
         }
+        case 1: { // union of multiple kmerdbs
         
-        case 1: // union of multiple kmerdbs
-        
-        {
             std::ifstream file;
-            
             lg.verbose("Merging input databases.");
             unsigned int numFiles = userInput.inDBG.size(); // number of input kmerdbs
-            
             short unsigned int k = 0;
             
             for (unsigned int i = 0; i < numFiles; i++) {  // reads the kmer length from the index files checking consistency between kmerdbs
@@ -142,34 +136,42 @@ void Input::read(uint8_t mode) {
                     fprintf(stderr, "Cannot merge databases with different kmer length.\n");
                     exit(1);
                 }
-                
             }
-            
             if (k == 0 || k > 32) {
                 fprintf(stderr, "Invalid kmer length.\n");
                 exit(1);
             }
-            
             DBG knav(userInput); // a new empty kmerdb with the specified kmer length
-            
             lg.verbose("DBG object generated. Merging.");
-            
             knav.kunion(); // union set
-            
             knav.report(); // output
-            
             knav.cleanup(); // delete tmp files
-            
             break;
         }
-        
-        default:
+        case 2: { // subgraph
             
+            loadGraph();
+            DBG knav(userInput); // navigational kmerdb
+
+            InSequencesDBG genome; // initialize sequence collection object
+            if (!userInput.inSequence.empty()) {
+                
+                if (!userInput.inSequence.empty()) {
+                    lg.verbose("Loading input sequences");
+                    loadGenome(genome); // read input genome
+                    lg.verbose("Sequences loaded");
+                }
+                knav.loadGenome(&genome);
+            }
+            knav.subgraph();
+            knav.report(); // output
+            knav.cleanup(); // delete tmp files
+            break;
+        }
+        default:
             fprintf(stderr, "Invalid mode.\n");
             exit(1);
-        
     }
-    
 }
 
 void Input::loadGenome(InSequencesDBG& inSequences) {

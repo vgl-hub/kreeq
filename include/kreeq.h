@@ -54,6 +54,12 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     UserInputKreeq &userInput;
     InSequencesDBG *genome;
     
+    // subgraph objects
+    parallelMap *DBGsubgraph = new parallelMap;
+    std::vector<parallelMap*> DBGTmpSubgraphs;
+    InSequences GFAsubgraph;
+    
+    
     std::queue<std::string*> readBatches;
     
     uint64_t totEdgeCount = 0;
@@ -71,31 +77,28 @@ public:
     
     DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
         
-        lg.verbose("Deleting any tmp file");
-        for(uint16_t m = 0; m<mapCount; ++m) {// remove tmp buffers and maps if any
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
-            threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str()); });
-            uint8_t fileNum = 0;
-            while (fileExists(userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) +  ".tmp.bin"))
-                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin").c_str()); });
-            remove((userInput.prefix + "/.index").c_str());
-            remove((userInput.prefix + "/.map.hc.bin").c_str());
-        }
-            
-        jobWait(threadPool);
-        
-        if (userInput.inDBG.size() == 0) // start parallel hashing
-            initHashing();
-        
-        for(uint16_t m = 0; m<mapCount; ++m)
-            maps32.push_back(new parallelMap32);
-        
+        if (userInput.inDBG.size() == 0) { // if we are not reading an existing db
+            lg.verbose("Deleting any tmp file");
+            for(uint16_t m = 0; m<mapCount; ++m) {// remove tmp buffers and maps if any
+                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
+                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str()); });
+                uint8_t fileNum = 0;
+                while (fileExists(userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) +  ".tmp.bin"))
+                    threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin").c_str()); });
+                remove((userInput.prefix + "/.index").c_str());
+            }
+            jobWait(threadPool);
+            for(uint16_t m = 0; m<mapCount; ++m)
+                maps32.push_back(new parallelMap32);
+            initHashing(); // start parallel hashing
+        }        
     };
-    
+
     ~DBG(){ // always need to call the destructor and delete for any object called with new to avoid memory leaks
         for (parallelMap32* map : maps32)
             delete map;
-    }
+        delete DBGsubgraph;
+    };
     
     void status();
     
@@ -157,8 +160,6 @@ public:
     
     bool deleteMap(uint16_t m);
     
-    void load();
-    
     bool updateMap(std::string prefix, uint16_t m);
     
     void kunion();
@@ -179,8 +180,6 @@ public:
     
     void printTableCompressedBinary();
     
-    void printGFA();
-    
     void printVCF();
     
     bool searchGraph(std::array<uint16_t, 2> mapRange);
@@ -195,7 +194,7 @@ public:
     
     void printAltPaths(std::vector<std::vector<uint8_t>> altPaths, Log &threadLog);
     
-    bool loadAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies);
+    bool loadSegmentCoordinates(InSegment *inSegment, std::vector<uint64_t> &segmentCoordinates);
     
     BedCoordinates BEDPathsToSegments();
     
@@ -204,6 +203,14 @@ public:
     bool DBGtoVariants(InSegment *inSegment);
     
     bool variantsToGFA(InSegment *inSegment, Log &threadLog);
+    
+    bool DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> mapRange);
+    
+    void subgraph();
+    
+    void mergeSubgraphs();
+    
+    void DBGgraphToGFA();
     
     std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
     

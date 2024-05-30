@@ -48,7 +48,6 @@ int main(int argc, char **argv) {
 
     std::string exePath = getExePath(argv[0]);
 
-    std::string line;
     std::ifstream istream, exp, actOutput, *expOutput;
     for(const auto &input_file : input_files) {
 #ifdef _WIN32
@@ -60,6 +59,7 @@ int main(int argc, char **argv) {
             printFAIL(input_file.c_str(), "couldn't open test file");
             continue;
         }
+        std::string line;
         std::getline(istream, line);
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
         line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
@@ -91,8 +91,6 @@ int main(int argc, char **argv) {
             errfstream.close();
             continue;
         }
-
-
         std::getline(istream, line);
         exp.open(line);
         if(exp) {
@@ -103,84 +101,27 @@ int main(int argc, char **argv) {
             printFAIL("couldn't open expected output");
             continue;
         }
-
         actOutput.open(tmp);
-        std::string line;
-        std::getline(*expOutput, line);
-        if(line == "+++Summary+++: ") {
-            std::getline(actOutput, line);
-            std::set<std::string> exp_summary, act_summary;
-            while(!actOutput.eof()) {
-                std::getline(actOutput, line);
-                act_summary.insert(line);
-            }
-            while(!expOutput->eof()) {
-                std::getline(*expOutput, line);
-                exp_summary.insert(line);
-            }
-            std::set<std::string> additions, missings;
-            for(const auto &entry : exp_summary) {
-                if(act_summary.count(entry) == 0) {
-                    missings.insert(entry);
-                }
-            }
-            for(const auto &entry : act_summary) {
-                if(exp_summary.count(entry) == 0) {
-                    additions.insert(entry);
-                }
-            }
-
-            actOutput.close();
-            exp.close();
-            istream.close();
-
-            if(additions.size() > 0 || missings.size() > 0) {
-                printFAIL(input_file.c_str(), "expected output did not match actual output");
-                std::cout << "additions:" << std::endl;
-                for(const auto &addition : additions) {
-                    std::cout << addition << std::endl;
-                }
-                std::cout << "missing:" << std::endl;
-                for(const auto &missing : missings) {
-                    std::cout << missing << std::endl;
-                }
-
-                continue; // to next validate file
-            }
-        }
-        else {
-            std::vector<std::pair<std::string, std::string>> diffs;
-
-            std::string l1, l2;
+        std::vector<std::pair<std::string, std::string>> diffs;
+        std::string l1, l2;
+        while(!actOutput.eof() || !expOutput->eof()) {
             std::getline(actOutput, l1);
-            l2 = line;
+            std::getline(*expOutput, l2);
             if(l1 != l2) diffs.push_back(std::pair<std::string, std::string>(l1, l2));
-
-            while(!actOutput.eof() || !expOutput->eof()) {
-                std::getline(actOutput, l1);
-                std::getline(*expOutput, l2);
-                if(l1 != l2) diffs.push_back(std::pair<std::string, std::string>(l1, l2));
-            }
-
-            actOutput.close();
-            exp.close();
-            istream.close();
-
-            if(diffs.size() > 0) {
-                printFAIL(input_file.c_str(), "expected output did not match actual output");
-                for(const auto &pair : diffs) {
-                    std::cout << "    expected: " << pair.second.c_str() << std::endl << "      actual: " << pair.first.c_str() << std::endl;
-                }
-                continue;
-            }
         }
-
+        actOutput.close();
+        exp.close();
+        istream.close();
+        if(diffs.size() > 0) {
+            printFAIL(input_file.c_str(), "expected output did not match actual output");
+            for(const auto &pair : diffs)
+                std::cout << "    expected: " << pair.second.c_str() << std::endl << "      actual: " << pair.first.c_str() << std::endl;
+            continue;
+        }
         printPASS(input_file.c_str());
     }
 
-    if(input_files.size() != 0 && std::remove(tmp.c_str()) != 0) {
+    if(input_files.size() != 0 && std::remove(tmp.c_str()) != 0)
         std::cerr << "error deleting temp file " << tmp.c_str() << std::endl;
-    }
-
     exit(pass ? EXIT_SUCCESS : EXIT_FAILURE);
 }

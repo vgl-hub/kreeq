@@ -295,11 +295,9 @@ bool DBG::buffersToMaps() {
         jobs.push_back([this, i] { return processBuffers(i); });
         
     threadPool.queueJobs(jobs);
-    
     jobWait(threadPool);
     
     consolidateTmpMaps();
-    
     dumpHighCopyKmers();
     
     return true;
@@ -534,17 +532,10 @@ void DBG::finalize() {
     if (userInput.inDBG.size() == 0) {
         
         readingDone = true;
-        
         joinThreads();
-                
         lg.verbose("Converting buffers to maps");
-        
         buffersToMaps();
-        
-        loadHighCopyKmers(); // reload high copy kmers for computation steps
-        
     }
-
 }
 
 void DBG::stats() {
@@ -640,9 +631,7 @@ std::array<uint16_t, 2> DBG::computeMapRange(std::array<uint16_t, 2> mapRange) {
         mapRange[1] = m + 1;
         
     }
-    
     return mapRange;
-    
 }
 
 void DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
@@ -654,14 +643,12 @@ void DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
     
     threadPool.queueJobs(jobs);
     jobWait(threadPool);
-    
 }
 
 void DBG::deleteMapRange(std::array<uint16_t, 2> mapRange) {
     
     for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
         deleteMap(m);
-    
 }
 
 void DBG::cleanup() {
@@ -796,7 +783,6 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     }
     
     std::vector<std::function<bool()>> jobs;
-    
     std::vector<uint64_t> fileSizes;
     
     for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
@@ -937,6 +923,71 @@ bool DBG::unionSum(parallelMap* map1, parallelMap* map2, uint16_t m) {
         jobs.push_back([this, map1, map2, subMapIndex, m] { return mergeSubMaps(map1, map2, subMapIndex, m); });
     
     threadPool.queueJobs(jobs);
+    jobWait(threadPool);
+    
+    return true;
+    
+}
+
+// subgraph functions
+
+bool DBG::mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapIndex) {
+    
+    auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
+    auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
+    auto& inner2 = map2->get_inner(subMapIndex);
+    auto& submap2 = inner2.set_;
+    
+    for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
+        
+        auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
+        if (got == submap2.end()){
+            submap2.insert(pair);
+        }else{
+
+            DBGkmer32& dbgkmerMap = got->second;
+        
+            for (uint64_t w = 0; w<4; ++w) { // update weights
+                
+                if (LARGEST - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap.fw[w] += pair.second.fw[w];
+                else
+                    dbgkmerMap.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap.bw[w] += pair.second.bw[w];
+                else
+                    dbgkmerMap.bw[w] = LARGEST;
+                
+            }
+            
+            if (LARGEST - dbgkmerMap.cov >= pair.second.cov)
+                dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+            else
+                dbgkmerMap.cov = LARGEST;
+            
+        };
+        
+    }
+    
+    return true;
+    
+}
+
+
+bool DBG::unionSum(parallelMap32* map1, parallelMap32* map2) {
+    
+    std::vector<std::function<bool()>> jobs;
+    
+    if (map1->subcnt() != map2->subcnt()) {
+        fprintf(stderr, "Maps don't have the same numbers of submaps (%zu != %zu). Terminating.\n", map1->subcnt(), map2->subcnt());
+        exit(EXIT_FAILURE);
+    }
+    
+    for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
+        jobs.push_back([this, map1, map2, subMapIndex] { return mergeSubMaps(map1, map2, subMapIndex); });
+    
+    threadPool.queueJobs(jobs);
+    
     jobWait(threadPool);
     
     return true;

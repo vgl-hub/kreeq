@@ -919,7 +919,8 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
         
     std::string sHeader = inSegment->getSeqHeader();
     parallelMap *map;
-    parallelMap *segmentSubmap = new parallelMap;
+    parallelMap32 *map32;
+    parallelMap32 *segmentSubmap = new parallelMap32;
     uint64_t key, i;
     bool isFw = false;
     std::vector<uint64_t> segmentCoordinates;
@@ -960,7 +961,13 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
                 auto got = map->find(key);
                 
                 if (got != map->end()) {
-                    segmentSubmap->insert(*got);
+                    if (got->second.cov != 255) {
+                        segmentSubmap->insert(*got);
+                    }else{
+                        map32 = maps32[i];
+                        auto got = map32->find(key);
+                        segmentSubmap->insert(*got);
+                    }
                 }
             }
         }
@@ -976,7 +983,7 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
 
 void DBG::mergeSubgraphs() {
     
-    for (parallelMap *map1 : DBGTmpSubgraphs) {
+    for (parallelMap32 *map1 : DBGTmpSubgraphs) {
         unionSum(map1, DBGsubgraph);
         delete map1;
     }
@@ -993,7 +1000,7 @@ void DBG::DBGgraphToGFA() {
         std::string* inSequence = new std::string(reverseHash(pair.first));
         Sequence* sequence = new Sequence {std::to_string(idCounter++), "", inSequence};
         sequence->seqPos = seqPos; // remember the order
-        std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(pair.second.cov)}};
+        std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair.second.cov)}};
         GFAsubgraph.appendSegment(sequence, inTags);
         seqPos++;
     }

@@ -42,6 +42,13 @@ using parallelMap = phmap::parallel_flat_hash_map<uint64_t, DBGkmer,
                                           8,
                                           phmap::NullMutex>;
 
+using parallelMap32 = phmap::parallel_flat_hash_map<uint64_t, DBGkmer32,
+                                          std::hash<uint64_t>,
+                                          std::equal_to<uint64_t>,
+                                          std::allocator<std::pair<const uint64_t, DBGkmer32>>,
+                                          8,
+                                          phmap::NullMutex>;
+
 class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     
     std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0}, buffers{0};
@@ -55,27 +62,20 @@ class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
     InSequencesDBG *genome;
     
     // subgraph objects
-    parallelMap *DBGsubgraph = new parallelMap;
-    std::vector<parallelMap*> DBGTmpSubgraphs;
+    parallelMap32 *DBGsubgraph = new parallelMap32;
+    std::vector<parallelMap32*> DBGTmpSubgraphs;
     InSequences GFAsubgraph;
     
-    
     std::queue<std::string*> readBatches;
-    
     uint64_t totEdgeCount = 0;
-    
-    using parallelMap32 = phmap::parallel_flat_hash_map<uint64_t, DBGkmer32,
-                                              std::hash<uint64_t>,
-                                              std::equal_to<uint64_t>,
-                                              std::allocator<std::pair<const uint64_t, DBGkmer32>>,
-                                              8,
-                                              phmap::NullMutex>;
-    
     std::vector<parallelMap32*> maps32;
 
 public:
     
     DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
+        
+        for(uint16_t m = 0; m<mapCount; ++m)
+            maps32.push_back(new parallelMap32);
         
         if (userInput.inDBG.size() == 0) { // if we are not reading an existing db
             lg.verbose("Deleting any tmp file");
@@ -88,8 +88,6 @@ public:
                 remove((userInput.prefix + "/.index").c_str());
             }
             jobWait(threadPool);
-            for(uint16_t m = 0; m<mapCount; ++m)
-                maps32.push_back(new parallelMap32);
             initHashing(); // start parallel hashing
         }        
     };
@@ -169,6 +167,10 @@ public:
     bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m);
     
     bool unionSum(parallelMap* map1, parallelMap* map2, uint16_t m);
+    
+    bool mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapIndex);
+    
+    bool unionSum(parallelMap32* map1, parallelMap32* map2);
     
     void report();
     

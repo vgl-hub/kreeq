@@ -109,7 +109,7 @@ void readIndex(std::ifstream &ifs, BkwigIndex &bkwigIndex) { // reads: nPaths, a
             ifs.read(reinterpret_cast<char *>(&step), sizeof(uint8_t));
             bkwigIndex.indexByteSize += sizeof(uint8_t);
             componentsVec.push_back({bytePos, absPos, len, step});
-            bytePos += sizeof(uint8_t)*len*3;
+            bytePos += sizeof(uint32_t)*len*3;
         }
         bkwigIndex.paths[pHeader] = componentsVec;
         bkwigIndex.sortOrder.push_back(pHeader);
@@ -145,12 +145,12 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
             if (end > comp.absPos+comp.len) { // shrink span to fit
                 end = comp.absPos+comp.len;
             }else if (comp.absPos+comp.len > end) {
-                offset += comp.bytePos + (start-comp.absPos)*3;
+                offset += comp.bytePos + (start-comp.absPos)*sizeof(uint32_t)*3;
                 break;
             }
         }
 
-        std::array<uint8_t, 3> values;
+        std::array<uint32_t, 3> values;
         char entrySep = ',', colSep = ',';
         uint64_t absPos = start, len = end-start;
         
@@ -158,8 +158,8 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
             
             ifs.seekg(offset);
             
-            uint8_t *values = new uint8_t[len*3];
-            ifs.read(reinterpret_cast<char *>(values), sizeof(uint8_t)*len*3);
+            uint32_t *values = new uint32_t[len*3];
+            ifs.read(reinterpret_cast<char *>(values), len*sizeof(uint32_t)*3);
             std::ostringstream os;
             uint8_t comma = 0;
             
@@ -182,7 +182,7 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
         }else{
             
             uint8_t k = userInput.bkwigIndex.k, p = k;
-            offset -= k*sizeof(uint8_t)*3;
+            offset -= k*sizeof(uint32_t)*3;
             if (offset < initOffset) {
                 offset = initOffset;
                 p = k - absPos; // this is wrong
@@ -190,12 +190,12 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
             
             ifs.seekg(offset);
             
-            std::vector<uint8_t> kmerCov(k-1,0);
-            std::vector<uint8_t> edgeCovFw(k-1,0);
-            std::vector<uint8_t> edgeCovBw(k-1,0);
+            std::vector<uint32_t> kmerCov(k-1,0);
+            std::vector<uint32_t> edgeCovFw(k-1,0);
+            std::vector<uint32_t> edgeCovBw(k-1,0);
             
             for (uint8_t i = 0; i < p; ++i) { // prefill vector
-                ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
+                ifs.read(reinterpret_cast<char *>(&values), sizeof(uint32_t)*3);
                 kmerCov.push_back(values[0]);
                 edgeCovFw.push_back(values[1]);
                 edgeCovBw.push_back(values[2]);
@@ -205,7 +205,7 @@ void lookup(std::ifstream &ifs, std::pair<std::string,std::vector<std::pair<uint
             }
             
             for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
-                ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
+                ifs.read(reinterpret_cast<char *>(&values), sizeof(uint32_t)*3);
                 std::cout<<coordinateSet.first<<colSep<<absPos<<colSep;
                 kmerCov.push_back(values[0]);
                 
@@ -476,7 +476,7 @@ int main(int argc, char *argv[]) {
     
     std::ifstream ifs(userInput.inputFile, std::ios::in | std::ios::binary);
     
-    std::array<uint8_t, 3> values;
+    std::array<uint32_t, 3> values;
     char entrySep = ',', colSep = ',';
     uint64_t absPos = 0;
     
@@ -509,8 +509,8 @@ int main(int argc, char *argv[]) {
                         
                         std::cout<<"fixedStep chrom="<<pHeader<<" start="<<std::to_string(component.absPos)<<" step="<<std::to_string(component.step)<<std::endl;
                         
-                        uint8_t *values = new uint8_t[len*3];
-                        ifs.read(reinterpret_cast<char *>(values), sizeof(uint8_t)*len*3);
+                        uint32_t *values = new uint32_t[len*3];
+                        ifs.read(reinterpret_cast<char *>(values), sizeof(uint32_t)*len*3);
                         std::ostringstream os;
                         uint8_t comma = 0;
                         
@@ -531,14 +531,14 @@ int main(int argc, char *argv[]) {
                         
                     }else{
                         
-                        std::vector<uint8_t> kmerCov(k-1,0);
-                        std::vector<uint8_t> edgeCovFw(k-1,0);
-                        std::vector<uint8_t> edgeCovBw(k-1,0);
+                        std::vector<uint32_t> kmerCov(k-1,0);
+                        std::vector<uint32_t> edgeCovFw(k-1,0);
+                        std::vector<uint32_t> edgeCovBw(k-1,0);
                         
                         absPos = component.absPos;
                         
                         for (uint64_t i = 0; i < len; ++i) { // loop through all position for this record
-                            ifs.read(reinterpret_cast<char *>(&values), sizeof(uint8_t)*3);
+                            ifs.read(reinterpret_cast<char *>(&values), sizeof(uint32_t)*3);
                             
                             std::cout<<pHeader<<colSep<<absPos<<colSep;
                             

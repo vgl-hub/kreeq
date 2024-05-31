@@ -58,7 +58,6 @@ int main(int argc, char **argv) {
     
     if (argc == 1 || argc == 2) // kreeq with no arguments
         printHelp();
-    
     const static phmap::parallel_flat_hash_map<std::string,int> string_to_case{ // different outputs available
         {"validate",0},
         {"union",1},

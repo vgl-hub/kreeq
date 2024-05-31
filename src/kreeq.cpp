@@ -134,6 +134,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     uint64_t key, i;
     
     parallelMap *map;
+    parallelMap32 *map32;
     
     // kreeq QV
     bool isFw = false;
@@ -150,10 +151,20 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
             
             map = maps[i];
             auto it = map->find(key);
-            DBGkmer khmer;
-            
+            DBGkmer32 khmer;            
             if (it != map->end()) {
                 khmer = it->second;
+                
+                if (khmer.cov == 255) {
+                    map32 = maps32[i];
+                    auto it = map32->find(key);
+                    if (it == map32->end()) {
+                        std::cerr<<"Error: int32 map missing 255 value from int8 map"<<std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                    khmer = it->second;
+                }
+                
                 DBGsequence[c].cov = khmer.cov;
                 DBGsequence[c].isFw = isFw;
             }
@@ -908,7 +919,8 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
         
     std::string sHeader = inSegment->getSeqHeader();
     parallelMap *map;
-    parallelMap *segmentSubmap = new parallelMap;
+    parallelMap32 *map32;
+    parallelMap32 *segmentSubmap = new parallelMap32;
     uint64_t key, i;
     bool isFw = false;
     std::vector<uint64_t> segmentCoordinates;
@@ -949,7 +961,13 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
                 auto got = map->find(key);
                 
                 if (got != map->end()) {
-                    segmentSubmap->insert(*got);
+                    if (got->second.cov != 255) {
+                        segmentSubmap->insert(*got);
+                    }else{
+                        map32 = maps32[i];
+                        auto got = map32->find(key);
+                        segmentSubmap->insert(*got);
+                    }
                 }
             }
         }
@@ -965,7 +983,7 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
 
 void DBG::mergeSubgraphs() {
     
-    for (parallelMap *map1 : DBGTmpSubgraphs) {
+    for (parallelMap32 *map1 : DBGTmpSubgraphs) {
         unionSum(map1, DBGsubgraph);
         delete map1;
     }
@@ -982,7 +1000,7 @@ void DBG::DBGgraphToGFA() {
         std::string* inSequence = new std::string(reverseHash(pair.first));
         Sequence* sequence = new Sequence {std::to_string(idCounter++), "", inSequence};
         sequence->seqPos = seqPos; // remember the order
-        std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(pair.second.cov)}};
+        std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair.second.cov)}};
         GFAsubgraph.appendSegment(sequence, inTags);
         seqPos++;
     }

@@ -96,11 +96,11 @@ void Input::read() {
                 
                 lg.verbose("Reads loaded.");
                 knav.finalize();
+            }else{
+                loadGraph();
             }
-
-            if (userInput.inDBG.size() > 0)
-                userInput.prefix = userInput.inDBG[0];
-
+            knav.loadHighCopyKmers(); // reload high copy kmers for computation steps
+            
             InSequencesDBG genome; // initialize sequence collection object
             if (!userInput.inSequence.empty()) {
                 
@@ -153,6 +153,7 @@ void Input::read() {
             
             loadGraph();
             DBG knav(userInput); // navigational kmerdb
+            knav.loadHighCopyKmers(); // reload high copy kmers for computation steps
 
             InSequencesDBG genome; // initialize sequence collection object
             if (!userInput.inSequence.empty()) {

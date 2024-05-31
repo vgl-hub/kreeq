@@ -295,10 +295,10 @@ bool DBG::buffersToMaps() {
         jobs.push_back([this, i] { return processBuffers(i); });
         
     threadPool.queueJobs(jobs);
-    
     jobWait(threadPool);
     
     consolidateTmpMaps();
+    dumpHighCopyKmers();
     
     return true;
 
@@ -325,6 +325,7 @@ bool DBG::processBuffers(uint16_t m) {
         }
         
         parallelMap& map = *maps[m]; // the map associated to this buffer
+        parallelMap32& map32 = *maps32[m];
         uint64_t map_size = mapSize(map);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
@@ -342,17 +343,49 @@ bool DBG::processBuffers(uint16_t m) {
             memcpy(&edges, &buf->seq[c+8], 1);
             
             DBGkmer &dbgkmer = map[hash];
+            bool overflow = (dbgkmer.cov == 255 ? true : false);
             
-            for (uint64_t w = 0; w<4; ++w) { // update weights
-                
-                if (255 - dbgkmer.fw[w] >= edges.read(w))
-                    dbgkmer.fw[w] += edges.read(w);
-                if (255 - dbgkmer.bw[w] >= edges.read(4+w))
-                    dbgkmer.bw[w] += edges.read(4+w);
+            if (dbgkmer.cov + 1 == 255)
+                overflow = true;
+            
+            for (uint64_t w = 0; w<4; ++w) { // check weights
+            
+                if (dbgkmer.fw[w] + 1 == 255 || dbgkmer.bw[w] + 1 == 255) {
+                    overflow = true;
+                    break;
+                }
             }
-            if (dbgkmer.cov < 255)
-                ++dbgkmer.cov; // increase kmer coverage
             
+            if (!overflow) {
+                
+                for (uint64_t w = 0; w<4; ++w) { // update weights
+                        dbgkmer.fw[w] += edges.read(w);
+                        dbgkmer.bw[w] += edges.read(4+w);
+                }
+                
+                ++dbgkmer.cov; // increase kmer coverage
+            }
+            
+            if (overflow) {
+                
+                DBGkmer32 &dbgkmer32 = map32[hash];
+                
+                if (dbgkmer32.cov == 0) { // first time we add the kmer
+                    
+                    dbgkmer32 = dbgkmer;
+                    dbgkmer.cov = 255; // invalidates int8 kmer
+                }
+                
+                for (uint64_t w = 0; w<4; ++w) { // update weights
+                    
+                    if (LARGEST - dbgkmer32.fw[w] >= edges.read(w))
+                        dbgkmer32.fw[w] += edges.read(w);
+                    if (LARGEST - dbgkmer32.bw[w] >= edges.read(4+w))
+                        dbgkmer32.bw[w] += edges.read(4+w);
+                }
+                if (dbgkmer32.cov < LARGEST)
+                    ++dbgkmer32.cov; // increase kmer coverage
+            }
         }
         
         delete[] buf->seq;
@@ -360,8 +393,10 @@ bool DBG::processBuffers(uint16_t m) {
         delete buf;
         alloc += mapSize(*maps[m]) - map_size;
         
-        if (freeMemory || !bufFile || bufFile.peek() == EOF)
+        if (freeMemory || !bufFile || bufFile.peek() == EOF) {
             dumpTmpMap(userInput.prefix, m);
+            reloadMap32(m);
+        }
     }
 
     bufFile.close();
@@ -417,17 +452,11 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
         
     }
     
-    phmap::BinaryInputArchive ar_in(firstFile.c_str());
-    maps[m]->phmap_load(ar_in);
-    alloc += mapSize(*maps[m]);
-    
-    remove(firstFile.c_str());
-    
     uint8_t fileNum = 0;
     
-    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(++fileNum) + ".tmp.bin")) { // for additional map loads the map and merges it
+    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) + ".tmp.bin")) { // for additional map loads the map and merges it
         
-        std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) + ".tmp.bin"; // loads the next map
+        std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) + ".tmp.bin"; // loads the next map
         parallelMap* nextMap = new parallelMap;
         phmap::BinaryInputArchive ar_in(nextFile.c_str());
         nextMap->phmap_load(ar_in);
@@ -435,7 +464,7 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
         alloc += map_size1;
         
         uint64_t map_size2 = mapSize(*maps[m]);
-        unionSum(nextMap, maps[m]); // unionSum operation between the existing map and the next map
+        unionSum(nextMap, maps[m], m); // unionSum operation between the existing map and the next map
         
         alloc += mapSize(*maps[m]) - map_size2;
         remove(nextFile.c_str());
@@ -448,6 +477,41 @@ bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same 
     
     return true;
 
+}
+
+bool DBG::reloadMap32(uint16_t m) {
+    
+    parallelMap& map = *maps[m]; // the map associated to this buffer
+    parallelMap32& map32 = *maps32[m];
+    
+    for (auto pair : map32) {
+        
+        DBGkmer dbgkmer;
+        dbgkmer.cov = 255;
+        auto newPair = std::make_pair(pair.first, dbgkmer);
+        map.insert(newPair);
+    }
+    
+    return true;
+    
+}
+
+bool DBG::dumpHighCopyKmers() {
+    
+    parallelMap32 map32Total;
+    
+    for (uint16_t m = 0; m<mapCount; ++m) {
+        for (auto pair : *maps32[m])
+            map32Total.insert(pair);
+        delete maps32[m];
+        maps32[m] = new parallelMap32;
+    }
+
+    phmap::BinaryOutputArchive ar_out((userInput.prefix + "/.map.hc.bin").c_str());
+    map32Total.phmap_dump(ar_out);
+    
+    return true;
+    
 }
 
 bool DBG::dumpMap(std::string prefix, uint16_t m) {
@@ -468,15 +532,10 @@ void DBG::finalize() {
     if (userInput.inDBG.size() == 0) {
         
         readingDone = true;
-        
         joinThreads();
-                
         lg.verbose("Converting buffers to maps");
-        
         buffersToMaps();
-        
     }
-
 }
 
 void DBG::stats() {
@@ -509,6 +568,9 @@ bool DBG::summary(uint16_t m) {
     
     for (auto pair : *maps[m]) {
         
+        if (pair.second.cov == 255) // check the large table
+            continue;
+        
         if (pair.second.cov == 1)
             ++kmersUnique;
         
@@ -517,7 +579,15 @@ bool DBG::summary(uint16_t m) {
         
         ++kmersDistinct;
         ++hist[pair.second.cov];
+    }
+    
+    for (auto pair : *maps32[m]) {
         
+        for (uint8_t w = 0; w<4; ++w) // update weights
+            edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
+        
+        ++kmersDistinct;
+        ++hist[pair.second.cov];
     }
  
     std::lock_guard<std::mutex> lck(mtx);
@@ -529,7 +599,6 @@ bool DBG::summary(uint16_t m) {
         
         finalHistogram[pair.first] += pair.second;
         totKmers += pair.first * pair.second;
-        
     }
     
     return true;
@@ -562,9 +631,7 @@ std::array<uint16_t, 2> DBG::computeMapRange(std::array<uint16_t, 2> mapRange) {
         mapRange[1] = m + 1;
         
     }
-    
     return mapRange;
-    
 }
 
 void DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
@@ -576,14 +643,12 @@ void DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
     
     threadPool.queueJobs(jobs);
     jobWait(threadPool);
-    
 }
 
 void DBG::deleteMapRange(std::array<uint16_t, 2> mapRange) {
     
     for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
         deleteMap(m);
-    
 }
 
 void DBG::cleanup() {
@@ -598,6 +663,8 @@ void DBG::cleanup() {
             jobs.push_back([this, m] { return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
         
         threadPool.queueJobs(jobs);
+        
+        remove((userInput.prefix + "/.map.hc.bin").c_str());
         
         if (userInput.prefix != ".")
             rm_dir(userInput.prefix.c_str());
@@ -618,6 +685,21 @@ bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
     
     return true;
 
+}
+
+bool DBG::loadHighCopyKmers() {
+    
+    parallelMap32 map32Total;
+    phmap::BinaryInputArchive ar_in((userInput.prefix + "/.map.hc.bin").c_str());
+    map32Total.phmap_load(ar_in);
+    
+    for (auto pair : map32Total) {
+        uint64_t i = pair.first % mapCount;
+        maps32[i]->insert(pair);
+    }
+    
+    return true;
+    
 }
 
 bool DBG::deleteMap(uint16_t m) {
@@ -646,7 +728,7 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
         alloc += map_size1;
         
         uint64_t map_size2 = mapSize(*maps[m]);
-        unionSum(maps[m], nextMap); // merges the current map and the existing map
+        unionSum(maps[m], nextMap, m); // merges the current map and the existing map
         alloc += mapSize(*nextMap) - map_size1;
         delete maps[m];
         freed += map_size2;
@@ -661,8 +743,46 @@ bool DBG::updateMap(std::string prefix, uint16_t m) {
 
 void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
-    std::vector<std::function<bool()>> jobs;
+    parallelMap32 map32Total; // first merge high-copy kmers
     
+    for (unsigned int i = 0; i < userInput.inDBG.size(); ++i) { // for each kmerdb loads the map and merges it
+        
+        std::string prefix = userInput.inDBG[i]; // loads the next map
+        prefix.append("/.map.hc.bin");
+        
+        parallelMap32 nextMap;
+        phmap::BinaryInputArchive ar_in(prefix.c_str());
+        nextMap.phmap_load(ar_in);
+        
+        for (auto pair : nextMap) {
+            
+            DBGkmer32& dbgkmerMap32 = map32Total[pair.first];
+            
+            for (uint8_t w = 0; w<4; ++w) { // update weights
+                
+                if (LARGEST - dbgkmerMap32.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap32.fw[w] += pair.second.fw[w];
+                else
+                    dbgkmerMap32.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap32.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap32.bw[w] += pair.second.bw[w];
+                else
+                    dbgkmerMap32.bw[w] = LARGEST;
+            }
+            
+            if (LARGEST - dbgkmerMap32.cov >= pair.second.cov)
+                dbgkmerMap32.cov += pair.second.cov; // increase kmer coverage
+            else
+                dbgkmerMap32.cov = LARGEST;
+        }
+    }
+    
+    for (auto pair : map32Total) {
+        uint64_t i = pair.first % mapCount;
+        maps32[i]->insert(pair);
+    }
+    
+    std::vector<std::function<bool()>> jobs;
     std::vector<uint64_t> fileSizes;
     
     for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
@@ -673,6 +793,8 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     for(uint32_t i : idx)
         mergeMaps(i);
     
+    dumpHighCopyKmers();
+    
 }
 
 bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same hashes
@@ -682,10 +804,8 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
     
     phmap::BinaryInputArchive ar_in(prefix.c_str());
     maps[m]->phmap_load(ar_in);
-    
-    unsigned int numFiles = userInput.inDBG.size();
 
-    for (unsigned int i = 1; i < numFiles; ++i) { // for each kmerdb loads the map and merges it
+    for (unsigned int i = 1; i < userInput.inDBG.size(); ++i) { // for each kmerdb loads the map and merges it
         
         std::string prefix = userInput.inDBG[i]; // loads the next map
         prefix.append("/.map." + std::to_string(m) + ".bin");
@@ -694,7 +814,7 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         nextMap->phmap_load(ar_in);
         
-        unionSum(nextMap, maps[m]); // unionSum operation between the existing map and the next map
+        unionSum(nextMap, maps[m], m); // unionSum operation between the existing map and the next map
         delete nextMap;
         
     }
@@ -708,7 +828,110 @@ bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same has
 
 }
 
-bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex) {
+bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m) {
+    
+    auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
+    auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
+    auto& inner2 = map2->get_inner(subMapIndex);
+    auto& submap2 = inner2.set_;
+    parallelMap32& map32 = *maps32[m];
+    
+    for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
+        
+        bool overflow = false;
+        
+        if (pair.second.cov == 255) // already added to int32 map
+            continue;
+        
+        auto got = map32.find(pair.first); // check if this is already a high-copy kmer
+        if (got != map32.end()) {
+            overflow = true;
+        }else{
+            
+            auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
+            if (got == submap2.end()) {
+                submap2.insert(pair);
+            }else{
+                
+                DBGkmer& dbgkmerMap = got->second;
+                    
+                if (255 - dbgkmerMap.cov <= pair.second.cov)
+                    overflow = true;
+                
+                for (uint8_t w = 0; w<4; ++w) { // check weights
+                    
+                    if (255 - dbgkmerMap.fw[w] <= pair.second.fw[w] || 255 - dbgkmerMap.bw[w] <= pair.second.bw[w]) {
+                        overflow = true;
+                        break;
+                    }
+                }
+                
+                if (!overflow) {
+                    
+                    for (uint8_t w = 0; w<4; ++w) { // update weights
+                        dbgkmerMap.fw[w] += pair.second.fw[w];
+                        dbgkmerMap.bw[w] += pair.second.bw[w];
+                    }
+                    dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+                }
+            }
+        }
+        
+        if (overflow) {
+            
+            DBGkmer32& dbgkmerMap32 = map32[pair.first];
+            
+            if (dbgkmerMap32.cov == 0) { // first time we add the kmer
+                auto got = submap2.find(pair.first);
+                DBGkmer& dbgkmerMap = got->second;
+                dbgkmerMap32 = dbgkmerMap;
+                dbgkmerMap.cov = 255; // invalidates int8 kmer
+            }
+            
+            for (uint8_t w = 0; w<4; ++w) { // update weights
+                
+                if (LARGEST - dbgkmerMap32.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap32.fw[w] += pair.second.fw[w];
+                else
+                    dbgkmerMap32.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap32.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap32.bw[w] += pair.second.bw[w];
+                else
+                    dbgkmerMap32.bw[w] = LARGEST;
+            }
+            
+            if (LARGEST - dbgkmerMap32.cov >= pair.second.cov)
+                dbgkmerMap32.cov += pair.second.cov; // increase kmer coverage
+            else
+                dbgkmerMap32.cov = LARGEST;
+        }
+    }
+    return true;
+}
+
+
+bool DBG::unionSum(parallelMap* map1, parallelMap* map2, uint16_t m) {
+    
+    std::vector<std::function<bool()>> jobs;
+    
+    if (map1->subcnt() != map2->subcnt()) {
+        fprintf(stderr, "Maps don't have the same numbers of submaps (%zu != %zu). Terminating.\n", map1->subcnt(), map2->subcnt());
+        exit(EXIT_FAILURE);
+    }
+    
+    for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
+        jobs.push_back([this, map1, map2, subMapIndex, m] { return mergeSubMaps(map1, map2, subMapIndex, m); });
+    
+    threadPool.queueJobs(jobs);
+    jobWait(threadPool);
+    
+    return true;
+    
+}
+
+// subgraph functions
+
+bool DBG::mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapIndex) {
     
     auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
     auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
@@ -722,25 +945,25 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
             submap2.insert(pair);
         }else{
 
-            DBGkmer& dbgkmerMap = got->second;
+            DBGkmer32& dbgkmerMap = got->second;
         
             for (uint64_t w = 0; w<4; ++w) { // update weights
                 
-                if (255 - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                if (LARGEST - dbgkmerMap.fw[w] >= pair.second.fw[w])
                     dbgkmerMap.fw[w] += pair.second.fw[w];
                 else
-                    dbgkmerMap.fw[w] = 255;
-                if (255 - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap.bw[w] >= pair.second.bw[w])
                     dbgkmerMap.bw[w] += pair.second.bw[w];
                 else
-                    dbgkmerMap.bw[w] = 255;
+                    dbgkmerMap.bw[w] = LARGEST;
                 
             }
             
-            if (255 - dbgkmerMap.cov >= pair.second.cov)
+            if (LARGEST - dbgkmerMap.cov >= pair.second.cov)
                 dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
             else
-                dbgkmerMap.cov = 255;
+                dbgkmerMap.cov = LARGEST;
             
         };
         
@@ -751,7 +974,7 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
 }
 
 
-bool DBG::unionSum(parallelMap* map1, parallelMap* map2) {
+bool DBG::unionSum(parallelMap32* map1, parallelMap32* map2) {
     
     std::vector<std::function<bool()>> jobs;
     

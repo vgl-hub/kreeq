@@ -43,7 +43,8 @@ void DBG::report() { // generates the output from the program
         {"gfa2",5},
         {"gfa.gz",5},
         {"gfa2.gz",5},
-        {"vcf",6}
+        {"vcf",6},
+        {"hist",7}
     };
     
     std::string ext = "stdout";
@@ -124,6 +125,13 @@ void DBG::report() { // generates the output from the program
             printVCF();
             break;
         }
+        case 7: {
+            std::ofstream ofs(userInput.outFile);
+            ostream = std::make_unique<std::ostream>(ofs.rdbuf());
+            printHist(ostream);
+            ofs.close();
+            break;
+        }
     }
 }
 
@@ -165,9 +173,9 @@ void DBG::printTable(std::string ext) {
                 
                 DBGbase *dbgbase = (*dbgbases)[sIdx];
                 
-                std::vector<uint8_t> kmerCov(k-1,0);
-                std::vector<uint8_t> edgeCovFw(k-1,0);
-                std::vector<uint8_t> edgeCovBw(k-1,0);
+                std::vector<uint32_t> kmerCov(k-1,0);
+                std::vector<uint32_t> edgeCovFw(k-1,0);
+                std::vector<uint32_t> edgeCovBw(k-1,0);
                 
                 if (component->orientation == '+') {
                     
@@ -379,9 +387,9 @@ void DBG::printTableCompressedBinary() {
                     
                     for (uint64_t i = 0; i < len; ++i) {
                         
-                        ofs.write(reinterpret_cast<const char *>(&dbgbase[i].cov), sizeof(uint8_t));
-                        ofs.write(reinterpret_cast<const char *>(dbgbase[i].isFw ? &dbgbase[i].fw : &dbgbase[i].bw), sizeof(uint8_t));
-                        ofs.write(reinterpret_cast<const char *>(dbgbase[i].isFw ? &dbgbase[i].bw : &dbgbase[i].fw), sizeof(uint8_t));
+                        ofs.write(reinterpret_cast<const char *>(&dbgbase[i].cov), sizeof(uint32_t));
+                        ofs.write(reinterpret_cast<const char *>(dbgbase[i].isFw ? &dbgbase[i].fw : &dbgbase[i].bw), sizeof(uint32_t));
+                        ofs.write(reinterpret_cast<const char *>(dbgbase[i].isFw ? &dbgbase[i].bw : &dbgbase[i].fw), sizeof(uint32_t));
                     }
                 }else{} // GFA not handled yet
             }

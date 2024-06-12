@@ -116,64 +116,64 @@ void Input::read() {
             knav.cleanup(); // delete tmp files
             break;
         }
-//        case 1: { // union of multiple kmerdbs
-//        
-//            std::ifstream file;
-//            lg.verbose("Merging input databases.");
-//            unsigned int numFiles = userInput.kmerDB.size(); // number of input kmerdbs
-//            short unsigned int k = 0;
-//            
-//            for (unsigned int i = 0; i < numFiles; i++) {  // reads the kmer length from the index files checking consistency between kmerdbs
-//                
-//                file.open(userInput.kmerDB[i] + "/.index");
-//                std::string line;
-//                
-//                getline(file, line);
-//                file.close();
-//                
-//                if (k == 0)
-//                    k = stoi(line);
-//                
-//                if (k != stoi(line)) {
-//                    fprintf(stderr, "Cannot merge databases with different kmer length.\n");
-//                    exit(1);
-//                }
-//            }
-//            if (k == 0 || k > 32) {
-//                fprintf(stderr, "Invalid kmer length.\n");
-//                exit(1);
-//            }
-//            DBG knav(userInput); // a new empty kmerdb with the specified kmer length
-//            lg.verbose("DBG object generated. Merging.");
-//            knav.kunion(); // union set
-//            knav.report(); // output
-//            knav.cleanup(); // delete tmp files
-//            break;
-//        }
-//        case 2: { // subgraph
-//            
-//            loadGraph();
-//            DBG knav(userInput); // navigational kmerdb
-//            knav.loadHighCopyKmers(); // reload high copy kmers for computation steps
-//
-//            InSequencesDBG genome; // initialize sequence collection object
-//            if (!userInput.inSequence.empty()) {
-//                
-//                if (!userInput.inSequence.empty()) {
-//                    lg.verbose("Loading input sequences");
-//                    loadGenome(genome); // read input genome
-//                    lg.verbose("Sequences loaded");
-//                }
-//                knav.loadGenome(&genome);
-//            }
-//            knav.subgraph();
-//            knav.report(); // output
-//            knav.cleanup(); // delete tmp files
-//            break;
-//        }
-//        default:
-//            fprintf(stderr, "Invalid mode.\n");
-//            exit(1);
+        case 1: { // union of multiple kmerdbs
+        
+            std::ifstream file;
+            lg.verbose("Merging input databases.");
+            unsigned int numFiles = userInput.kmerDB.size(); // number of input kmerdbs
+            short unsigned int k = 0;
+            
+            for (unsigned int i = 0; i < numFiles; i++) {  // reads the kmer length from the index files checking consistency between kmerdbs
+                
+                file.open(userInput.kmerDB[i] + "/.index");
+                std::string line;
+                
+                getline(file, line);
+                file.close();
+                
+                if (k == 0)
+                    k = stoi(line);
+                
+                if (k != stoi(line)) {
+                    fprintf(stderr, "Cannot merge databases with different kmer length.\n");
+                    exit(1);
+                }
+            }
+            if (k == 0 || k > 32) {
+                fprintf(stderr, "Invalid kmer length.\n");
+                exit(1);
+            }
+            DBG knav(userInput); // a new empty kmerdb with the specified kmer length
+            lg.verbose("DBG object generated. Merging.");
+            knav.kunion(); // union set
+            knav.report(); // output
+            knav.cleanup(); // delete tmp files
+            break;
+        }
+        case 2: { // subgraph
+            
+            loadGraph();
+            DBG knav(userInput); // navigational kmerdb
+            knav.loadHighCopyKmers(); // reload high copy kmers for computation steps
+
+            InSequencesDBG genome; // initialize sequence collection object
+            if (!userInput.inSequence.empty()) {
+                
+                if (!userInput.inSequence.empty()) {
+                    lg.verbose("Loading input sequences");
+                    loadGenome(genome); // read input genome
+                    lg.verbose("Sequences loaded");
+                }
+                knav.loadGenome(&genome);
+            }
+            knav.subgraph();
+            knav.report(); // output
+            knav.cleanup(); // delete tmp files
+            break;
+        }
+        default:
+            fprintf(stderr, "Invalid mode.\n");
+            exit(1);
     }
 }
 

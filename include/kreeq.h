@@ -99,8 +99,6 @@ public:
     
     bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m);
     
-    bool unionSum(parallelMap* map1, parallelMap* map2, uint16_t m);
-    
     bool mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapIndex);
     
     bool unionSum(parallelMap32* map1, parallelMap32* map2);

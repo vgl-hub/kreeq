@@ -246,9 +246,7 @@ bool DBG::reloadMap32(uint16_t m) {
         auto newPair = std::make_pair(pair.first, dbgkmer);
         map.insert(newPair);
     }
-    
     return true;
-    
 }
 
 bool DBG::summary(uint16_t m) {

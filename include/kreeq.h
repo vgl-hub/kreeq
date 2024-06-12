@@ -51,10 +51,7 @@ using parallelMap32 = phmap::parallel_flat_hash_map<uint64_t, DBGkmer32,
 
 class DBG : public Kmap<DBG, UserInputKreeq, DBGkmer, DBGkmer32> { // CRTP
     
-    std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0}, buffers{0};
-    std::atomic<bool> readingDone{false};
-    std::vector<std::thread> threads;
-    std::vector<std::future<bool>> futures;
+    std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0};
     UserInputKreeq userInput;
     
     InSequencesDBG *genome;
@@ -63,8 +60,7 @@ class DBG : public Kmap<DBG, UserInputKreeq, DBGkmer, DBGkmer32> { // CRTP
     parallelMap32 *DBGsubgraph = new parallelMap32;
     std::vector<parallelMap32*> DBGTmpSubgraphs;
     InSequences GFAsubgraph;
-    
-    std::queue<std::string*> readBatches;
+
     uint64_t totEdgeCount = 0;
 
 public:

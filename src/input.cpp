@@ -93,7 +93,7 @@ void Input::read() {
                 unsigned int numFiles = userInput.inReads.size(); // number of input files
                 
                 for (unsigned int i = 0; i < numFiles; ++i) // load each input file in the kmerdb
-                    loadKmers(userInput, &knav, 'r', i);
+                    loadKmers(userInput, knav, 'r', i);
                 
                 lg.verbose("Reads loaded.");
                 knav.finalize();

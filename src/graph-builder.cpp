@@ -39,7 +39,6 @@ bool DBG::hashSequences() {
     while (true) {
             
         {
-            
             std::unique_lock<std::mutex> lck(readMtx);
             
             if (readingDone && readBatches.size() == 0)
@@ -56,7 +55,6 @@ bool DBG::hashSequences() {
             readBatch = readBatches.front();
             readBatches.pop();
             len = readBatch->size();
-            
         }
         
         if (len<k) {
@@ -222,7 +220,6 @@ bool DBG::processBuffers(uint16_t m) {
     remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
     
     return true;
-    
 }
 
 bool DBG::reloadMap32(uint16_t m) {
@@ -346,8 +343,8 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
     std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
     
-//    for(uint32_t i : idx)
-//        mergeMaps(i);
+    for(uint32_t i : idx)
+        mergeMaps(i);
     
     dumpHighCopyKmers();
     

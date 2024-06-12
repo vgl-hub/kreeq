@@ -171,10 +171,7 @@ bool DBG::processBuffers(uint16_t m) {
             memcpy(&edges, &buf->seq[c+8], 1);
             
             DBGkmer &dbgkmer = map[hash];
-            bool overflow = (dbgkmer.cov == 255 ? true : false);
-            
-            if (dbgkmer.cov + 1 == 255)
-                overflow = true;
+            bool overflow = (dbgkmer.cov >= 254 ? true : false);
             
             for (uint64_t w = 0; w<4; ++w) { // check weights
             

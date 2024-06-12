@@ -112,9 +112,7 @@ bool DBG::hashSequences() {
             }
             
             memcpy(&buffer->seq[pos-1], &edges, 1);
-            
         }
-        
         delete[] str;
         delete readBatch;
         
@@ -125,11 +123,8 @@ bool DBG::hashSequences() {
         std::lock_guard<std::mutex> lck(hashMtx);
         freed += len * sizeof(char) * 2;
         buffersVec.push_back(buffers);
-        
     }
-    
     return true;
-    
 }
 
 bool DBG::processBuffers(uint16_t m) {
@@ -140,7 +135,6 @@ bool DBG::processBuffers(uint16_t m) {
     
     std::string fl = userInput.prefix + "/.buf." + std::to_string(m) + ".bin";
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
-//    map.reserve(flSize / 17); // 8 + 8 + 1
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         

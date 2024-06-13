@@ -31,99 +31,6 @@
 #include "kmer.h"
 #include "kreeq.h"
 
-uint64_t mapSize(parallelMap& m) {
-    
-   return m.capacity() * (sizeof(parallelMap::value_type) + 1) + sizeof(parallelMap);
-    
-}
-
-void DBG::status() {
-    
-    std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - past;
-    
-    if (elapsed.count() > 0.1) {
-        lg.verbose("Read batches: " + std::to_string(readBatches.size()) + ". Hash buffers: " + std::to_string(buffersVec.size()) + ". Memory in use/allocated/total: " + std::to_string(get_mem_inuse(3)) + "/" + std::to_string(get_mem_usage(3)) + "/" + std::to_string(get_mem_total(3)) + " " + memUnit[3], true);
-    
-        past = std::chrono::high_resolution_clock::now();
-    }
-    
-}
-
-void DBG::joinThreads() {
-    
-    uint8_t threadsDone = 0;
-    bool done = false;
-    
-    while (!done) {
-        for (uint8_t i = 0; i < futures.size(); ++i) {
-            if (futures[i].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-                if (threads[i].joinable()) {
-                    threads[i].join();
-                    ++threadsDone;
-                }
-            }else{
-                status();
-            }
-        }
-        if (threadsDone == futures.size())
-            done = true;
-    }
-    
-    futures.clear();
-    threads.clear();
-    
-}
-
-bool DBG::memoryOk() {
-    
-    return get_mem_inuse(3) < maxMem;
-    
-}
-
-bool DBG::memoryOk(int64_t delta) {
-    
-    return get_mem_inuse(3) + convert_memory(delta, 3) < maxMem;
-    
-}
-
-bool DBG::traverseInReads(std::string* readBatch) { // specialized for string objects
-    
-    while(freeMemory) {status();}
-    
-    {
-        std::lock_guard<std::mutex> lck(readMtx);
-        readBatches.push(readBatch);
-    }
-    
-    return true;
-    
-}
-
-void DBG::consolidate() {
-    
-    status();
-
-}
-
-void DBG::initHashing(){
-    
-    std::packaged_task<bool()> task([this] { return dumpBuffers(); });
-    futures.push_back(task.get_future());
-    threads.push_back(std::thread(std::move(task)));
-    
-    int16_t threadN = threadPool.totalThreads() - 1; // substract the writing thread
-    
-    if (threadN == 0)
-        threadN = 1;
-    
-    for (uint8_t t = 0; t < threadN; t++) {
-        std::packaged_task<bool()> task([this] { return hashSequences(); });
-        futures.push_back(task.get_future());
-        threads.push_back(std::thread(std::move(task)));
-    }
-    
-}
-
 bool DBG::hashSequences() {
     //   Log threadLog;
     std::string *readBatch;
@@ -132,7 +39,6 @@ bool DBG::hashSequences() {
     while (true) {
             
         {
-            
             std::unique_lock<std::mutex> lck(readMtx);
             
             if (readingDone && readBatches.size() == 0)
@@ -149,7 +55,6 @@ bool DBG::hashSequences() {
             readBatch = readBatches.front();
             readBatches.pop();
             len = readBatch->size();
-            
         }
         
         if (len<k) {
@@ -188,7 +93,7 @@ bool DBG::hashSequences() {
             key = hash(str+p, &isFw);
 
             buffer = &buffers[key % mapCount];
-            pos = buffer->newPos(9);;
+            pos = buffer->newPos(9);
             memcpy(&buffer->seq[pos-9], &key, 8);
             edgeBit edges;
             
@@ -205,9 +110,7 @@ bool DBG::hashSequences() {
             }
             
             memcpy(&buffer->seq[pos-1], &edges, 1);
-            
         }
-        
         delete[] str;
         delete readBatch;
         
@@ -218,90 +121,8 @@ bool DBG::hashSequences() {
         std::lock_guard<std::mutex> lck(hashMtx);
         freed += len * sizeof(char) * 2;
         buffersVec.push_back(buffers);
-        
     }
-    
     return true;
-    
-}
-
-bool DBG::dumpBuffers() {
-    
-    bool hashing = true;
-    std::vector<Buf<uint8_t>*> buffersVecCpy;
-    std::ofstream bufFile[mapCount];
-    
-    for (uint16_t b = 0; b<mapCount; ++b) // we open all files at once
-        bufFile[b] = std::ofstream(userInput.prefix + "/.buf." + std::to_string(b) + ".bin", std::fstream::app | std::ios::out | std::ios::binary);
-    
-    while (hashing) {
-        
-        if (readingDone) { // if we have finished reading the input
-            
-            uint8_t hashingDone = 0;
-        
-            for (uint8_t i = 1; i < futures.size(); ++i) { // we check how many hashing threads are still running
-                if (futures[i].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-                    ++hashingDone;
-            }
-            
-            if (hashingDone == futures.size() - 1) // if all hashing threads are done we exit the loop after one more iteration
-                hashing = false;
-                    
-        }
-        
-        {
-            std::unique_lock<std::mutex> lck(hashMtx); // we safely collect the new buffers
-            buffersVecCpy = buffersVec;
-            buffersVec.clear();
-        }
-        
-        for (Buf<uint8_t>* buffers : buffersVecCpy) { // for each array of buffers
-            
-            for (uint16_t b = 0; b<mapCount; ++b) { // for each buffer file
-                
-                Buf<uint8_t>* buffer = &buffers[b];
-                bufFile[b].write(reinterpret_cast<const char *>(&buffer->pos), sizeof(uint64_t));
-                bufFile[b].write(reinterpret_cast<const char *>(buffer->seq), sizeof(uint8_t) * buffer->pos);
-                delete[] buffers[b].seq;
-                freed += buffers[b].size * sizeof(uint8_t);
-                
-            }
-            
-            delete[] buffers;
-            
-        }
-        
-    }
-    
-    for (uint16_t b = 0; b<mapCount; ++b) // we close all files
-        bufFile[b].close();
-    
-    return true;
-    
-}
-
-bool DBG::buffersToMaps() {
-    
-    std::vector<std::function<bool()>> jobs;
-    std::vector<uint64_t> fileSizes;
-    
-    for (uint16_t m = 0; m<mapCount; ++m) // compute size of buf files
-        fileSizes.push_back(fileSize(userInput.prefix + "/.buf." + std::to_string(m) + ".bin"));
-    
-    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
-    
-    for(uint32_t i : idx)
-        jobs.push_back([this, i] { return processBuffers(i); });
-        
-    threadPool.queueJobs(jobs);
-    jobWait(threadPool);
-    
-    consolidateTmpMaps();
-    dumpHighCopyKmers();
-    
-    return true;
-
 }
 
 bool DBG::processBuffers(uint16_t m) {
@@ -312,7 +133,6 @@ bool DBG::processBuffers(uint16_t m) {
     
     std::string fl = userInput.prefix + "/.buf." + std::to_string(m) + ".bin";
     std::ifstream bufFile(fl, std::ios::in | std::ios::binary);
-//    map.reserve(flSize / 17); // 8 + 8 + 1
     
     while(bufFile && !(bufFile.peek() == EOF)) {
         
@@ -343,10 +163,7 @@ bool DBG::processBuffers(uint16_t m) {
             memcpy(&edges, &buf->seq[c+8], 1);
             
             DBGkmer &dbgkmer = map[hash];
-            bool overflow = (dbgkmer.cov == 255 ? true : false);
-            
-            if (dbgkmer.cov + 1 == 255)
-                overflow = true;
+            bool overflow = (dbgkmer.cov >= 254 ? true : false);
             
             for (uint64_t w = 0; w<4; ++w) { // check weights
             
@@ -403,80 +220,6 @@ bool DBG::processBuffers(uint16_t m) {
     remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str());
     
     return true;
-    
-}
-
-bool DBG::dumpTmpMap(std::string prefix, uint16_t m) {
-    
-    uint8_t fileNum = 0;
-    
-    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin"))
-        ++fileNum;
-        
-    prefix.append("/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin");
-    
-    phmap::BinaryOutputArchive ar_out(prefix.c_str());
-    maps[m]->phmap_dump(ar_out);
-    
-    deleteMap(m);
-    
-    return true;
-    
-}
-
-void DBG::consolidateTmpMaps(){ // concurrent merging of the maps that store the same hashes
-    
-    lg.verbose("Consolidating temporary maps");
-    
-    std::vector<uint64_t> fileSizes;
-    
-    for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
-        fileSizes.push_back(fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".0.tmp.bin"));
-    
-    std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
-    
-    for(uint32_t i : idx)
-        mergeTmpMaps(i);
-    
-}
-
-bool DBG::mergeTmpMaps(uint16_t m) { // a single job merging maps with the same hashes
-    
-    std::string prefix = userInput.prefix; // loads the first map
-    std::string firstFile = prefix + "/.map." + std::to_string(m) + ".0.tmp.bin";
-    
-    if (!fileExists(prefix + "/.map." + std::to_string(m) + ".1.tmp.bin")) {
-        
-        std::rename(firstFile.c_str(), (prefix + "/.map." + std::to_string(m) + ".bin").c_str());
-        return true;
-        
-    }
-    
-    uint8_t fileNum = 0;
-    
-    while (fileExists(prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) + ".tmp.bin")) { // for additional map loads the map and merges it
-        
-        std::string nextFile = prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) + ".tmp.bin"; // loads the next map
-        parallelMap* nextMap = new parallelMap;
-        phmap::BinaryInputArchive ar_in(nextFile.c_str());
-        nextMap->phmap_load(ar_in);
-        uint64_t map_size1 = mapSize(*nextMap);
-        alloc += map_size1;
-        
-        uint64_t map_size2 = mapSize(*maps[m]);
-        unionSum(nextMap, maps[m], m); // unionSum operation between the existing map and the next map
-        
-        alloc += mapSize(*maps[m]) - map_size2;
-        remove(nextFile.c_str());
-        delete nextMap;
-        freed += map_size1;
-        
-    }
-    
-    dumpMap(userInput.prefix, m);
-    
-    return true;
-
 }
 
 bool DBG::reloadMap32(uint16_t m) {
@@ -491,74 +234,7 @@ bool DBG::reloadMap32(uint16_t m) {
         auto newPair = std::make_pair(pair.first, dbgkmer);
         map.insert(newPair);
     }
-    
     return true;
-    
-}
-
-bool DBG::dumpHighCopyKmers() {
-    
-    parallelMap32 map32Total;
-    
-    for (uint16_t m = 0; m<mapCount; ++m) {
-        for (auto pair : *maps32[m])
-            map32Total.insert(pair);
-        delete maps32[m];
-        maps32[m] = new parallelMap32;
-    }
-
-    phmap::BinaryOutputArchive ar_out((userInput.prefix + "/.map.hc.bin").c_str());
-    map32Total.phmap_dump(ar_out);
-    
-    return true;
-    
-}
-
-bool DBG::dumpMap(std::string prefix, uint16_t m) {
-    
-    prefix.append("/.map." + std::to_string(m) + ".bin");
-    
-    phmap::BinaryOutputArchive ar_out(prefix.c_str());
-    maps[m]->phmap_dump(ar_out);
-    
-    deleteMap(m);
-    
-    return true;
-    
-}
-
-void DBG::finalize() {
-    
-    if (userInput.inDBG.size() == 0) {
-        
-        readingDone = true;
-        joinThreads();
-        lg.verbose("Converting buffers to maps");
-        buffersToMaps();
-    }
-}
-
-void DBG::stats() {
-    
-    lg.verbose("Computing summary statistics");
-    
-    std::vector<std::function<bool()>> jobs;
-    std::array<uint16_t, 2> mapRange = {0,0};
-    
-    while (mapRange[1] < mapCount) {
-        
-        mapRange = computeMapRange(mapRange);
-        loadMapRange(mapRange);
-        
-        for (uint32_t i = mapRange[0]; i < mapRange[1]; ++i)
-            jobs.push_back([this, i] { return summary(i); });
-        
-        threadPool.queueJobs(jobs);
-        jobWait(threadPool);
-        jobs.clear();
-        deleteMapRange(mapRange);
-    }
-    DBGstats();
 }
 
 bool DBG::summary(uint16_t m) {
@@ -605,7 +281,7 @@ bool DBG::summary(uint16_t m) {
     
 }
 
-void DBG::DBGstats() {
+void DBG::DBstats() {
     
     uint64_t missing = pow(4,k)-totKmersDistinct;
     
@@ -618,136 +294,13 @@ void DBG::DBGstats() {
     
 }
 
-std::array<uint16_t, 2> DBG::computeMapRange(std::array<uint16_t, 2> mapRange) {
-    
-    uint64_t max = 0;
-    mapRange[0] = mapRange[1];
-    
-    for (uint16_t m = mapRange[0]; m<mapCount; ++m) {
-        
-        max += fileSize(userInput.prefix + "/.map." + std::to_string(m) + ".bin");
-        if(!memoryOk(max))
-            break;
-        mapRange[1] = m + 1;
-        
-    }
-    return mapRange;
-}
-
-void DBG::loadMapRange(std::array<uint16_t, 2> mapRange) {
-    
-    std::vector<std::function<bool()>> jobs;
-    
-    for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-        jobs.push_back([this, m] { return loadMap(userInput.prefix, m); });
-    
-    threadPool.queueJobs(jobs);
-    jobWait(threadPool);
-}
-
-void DBG::deleteMapRange(std::array<uint16_t, 2> mapRange) {
-    
-    for(uint16_t m = mapRange[0]; m<mapRange[1]; ++m)
-        deleteMap(m);
-}
-
-void DBG::cleanup() {
-    
-    if(!(userInput.inDBG.size() == 1) && userInput.outFile.find(".kreeq") == std::string::npos) {
-        
-        lg.verbose("Deleting tmp files");
-        
-        std::vector<std::function<bool()>> jobs;
-        
-        for(uint16_t m = 0; m<mapCount; ++m) // remove tmp files
-            jobs.push_back([this, m] { return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
-        
-        threadPool.queueJobs(jobs);
-        
-        remove((userInput.prefix + "/.map.hc.bin").c_str());
-        
-        if (userInput.prefix != ".")
-            rm_dir(userInput.prefix.c_str());
-        
-    }
-    
-    jobWait(threadPool);
-    
-}
-
-bool DBG::loadMap(std::string prefix, uint16_t m) { // loads a specific map
-    
-    prefix.append("/.map." + std::to_string(m) + ".bin");
-    phmap::BinaryInputArchive ar_in(prefix.c_str());
-//    allocMemory(fileSize(prefix));
-    maps[m]->phmap_load(ar_in);
-    alloc += mapSize(*maps[m]);
-    
-    return true;
-
-}
-
-bool DBG::loadHighCopyKmers() {
-    
-    parallelMap32 map32Total;
-    phmap::BinaryInputArchive ar_in((userInput.prefix + "/.map.hc.bin").c_str());
-    map32Total.phmap_load(ar_in);
-    
-    for (auto pair : map32Total) {
-        uint64_t i = pair.first % mapCount;
-        maps32[i]->insert(pair);
-    }
-    
-    return true;
-    
-}
-
-bool DBG::deleteMap(uint16_t m) {
-    
-    uint64_t map_size = mapSize(*maps[m]);
-    delete maps[m];
-    freed += map_size;
-    
-    maps[m] = new parallelMap;
-    alloc += mapSize(*maps[m]);
-    
-    return true;
-    
-}
-
-bool DBG::updateMap(std::string prefix, uint16_t m) {
-    
-    prefix.append("/.map." + std::to_string(m) + ".bin");
-
-    if (fileExists(prefix)) {
-        
-        parallelMap* nextMap = new parallelMap;
-        phmap::BinaryInputArchive ar_in(prefix.c_str());
-        nextMap->phmap_load(ar_in);
-        uint64_t map_size1 = mapSize(*nextMap);
-        alloc += map_size1;
-        
-        uint64_t map_size2 = mapSize(*maps[m]);
-        unionSum(maps[m], nextMap, m); // merges the current map and the existing map
-        alloc += mapSize(*nextMap) - map_size1;
-        delete maps[m];
-        freed += map_size2;
-        maps[m] = nextMap;
-    
-    }
-
-    dumpMap(userInput.prefix, m);
-    return true;
-    
-}
-
 void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
     parallelMap32 map32Total; // first merge high-copy kmers
     
-    for (unsigned int i = 0; i < userInput.inDBG.size(); ++i) { // for each kmerdb loads the map and merges it
+    for (unsigned int i = 0; i < userInput.kmerDB.size(); ++i) { // for each kmerdb loads the map and merges it
         
-        std::string prefix = userInput.inDBG[i]; // loads the next map
+        std::string prefix = userInput.kmerDB[i]; // loads the next map
         prefix.append("/.map.hc.bin");
         
         parallelMap32 nextMap;
@@ -786,7 +339,7 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     std::vector<uint64_t> fileSizes;
     
     for (uint16_t m = 0; m<mapCount; ++m) // compute size of map files
-        fileSizes.push_back(fileSize(userInput.inDBG[0] + "/.map." + std::to_string(m) + ".bin"));
+        fileSizes.push_back(fileSize(userInput.kmerDB[0] + "/.map." + std::to_string(m) + ".bin"));
     
     std::vector<uint32_t> idx = sortedIndex(fileSizes, true); // sort by largest
     
@@ -795,37 +348,6 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
     dumpHighCopyKmers();
     
-}
-
-bool DBG::mergeMaps(uint16_t m) { // a single job merging maps with the same hashes
-    
-    std::string prefix = userInput.inDBG[0]; // loads the first map
-    prefix.append("/.map." + std::to_string(m) + ".bin");
-    
-    phmap::BinaryInputArchive ar_in(prefix.c_str());
-    maps[m]->phmap_load(ar_in);
-
-    for (unsigned int i = 1; i < userInput.inDBG.size(); ++i) { // for each kmerdb loads the map and merges it
-        
-        std::string prefix = userInput.inDBG[i]; // loads the next map
-        prefix.append("/.map." + std::to_string(m) + ".bin");
-        
-        parallelMap* nextMap = new parallelMap;
-        phmap::BinaryInputArchive ar_in(prefix.c_str());
-        nextMap->phmap_load(ar_in);
-        
-        unionSum(nextMap, maps[m], m); // unionSum operation between the existing map and the next map
-        delete nextMap;
-        
-    }
-    
-    dumpMap(userInput.prefix, m);
-    deleteMap(m);
-    
-    summary(m);
-    
-    return true;
-
 }
 
 bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m) {
@@ -909,26 +431,6 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
     return true;
 }
 
-
-bool DBG::unionSum(parallelMap* map1, parallelMap* map2, uint16_t m) {
-    
-    std::vector<std::function<bool()>> jobs;
-    
-    if (map1->subcnt() != map2->subcnt()) {
-        fprintf(stderr, "Maps don't have the same numbers of submaps (%zu != %zu). Terminating.\n", map1->subcnt(), map2->subcnt());
-        exit(EXIT_FAILURE);
-    }
-    
-    for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
-        jobs.push_back([this, map1, map2, subMapIndex, m] { return mergeSubMaps(map1, map2, subMapIndex, m); });
-    
-    threadPool.queueJobs(jobs);
-    jobWait(threadPool);
-    
-    return true;
-    
-}
-
 // subgraph functions
 
 bool DBG::mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapIndex) {
@@ -984,7 +486,7 @@ bool DBG::unionSum(parallelMap32* map1, parallelMap32* map2) {
     }
     
     for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
-        jobs.push_back([this, map1, map2, subMapIndex] { return mergeSubMaps(map1, map2, subMapIndex); });
+        jobs.push_back([this, map1, map2, subMapIndex] { return this->mergeSubMaps(map1, map2, subMapIndex); });
     
     threadPool.queueJobs(jobs);
     

@@ -1000,7 +1000,7 @@ void DBG::DBGgraphToGFA() {
         std::string* inSequence = new std::string(reverseHash(pair.first));
         Sequence* sequence = new Sequence {std::to_string(idCounter++), "", inSequence};
         sequence->seqPos = seqPos; // remember the order
-        std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair.second.cov)}};
+        std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair.second.cov*k)}};
         GFAsubgraph.appendSegment(sequence, inTags);
         seqPos++;
     }

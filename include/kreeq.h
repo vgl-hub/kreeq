@@ -49,88 +49,37 @@ using parallelMap32 = phmap::parallel_flat_hash_map<uint64_t, DBGkmer32,
                                           8,
                                           phmap::NullMutex>;
 
-class DBG : public Kmap<UserInputKreeq, DBGkmer, uint8_t> {
+class DBG : public Kmap<DBG, UserInputKreeq, DBGkmer, DBGkmer32> { // CRTP
     
-    std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0}, buffers{0};
-    std::atomic<bool> readingDone{false};
-    std::vector<std::thread> threads;
-    std::vector<std::future<bool>> futures;
-    std::mutex readMtx, hashMtx;
-    std::chrono::high_resolution_clock::time_point past;
+    std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0};
+    UserInputKreeq userInput;
     
-    UserInputKreeq &userInput;
     InSequencesDBG *genome;
     
     // subgraph objects
     parallelMap32 *DBGsubgraph = new parallelMap32;
     std::vector<parallelMap32*> DBGTmpSubgraphs;
     InSequences GFAsubgraph;
-    
-    std::queue<std::string*> readBatches;
+
     uint64_t totEdgeCount = 0;
-    std::vector<parallelMap32*> maps32;
 
 public:
     
-    DBG(UserInputKreeq& userInput) : Kmap{userInput.kmerLen} , userInput(userInput) {
-        
-        for(uint16_t m = 0; m<mapCount; ++m)
-            maps32.push_back(new parallelMap32);
-        
-        if (userInput.inDBG.size() == 0) { // if we are not reading an existing db
-            lg.verbose("Deleting any tmp file");
-            for(uint16_t m = 0; m<mapCount; ++m) {// remove tmp buffers and maps if any
-                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + ".bin").c_str()); });
-                threadPool.queueJob([=]{ return remove((userInput.prefix + "/.buf." + std::to_string(m) + ".bin").c_str()); });
-                uint8_t fileNum = 0;
-                while (fileExists(userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum++) +  ".tmp.bin"))
-                    threadPool.queueJob([=]{ return remove((userInput.prefix + "/.map." + std::to_string(m) + "." + std::to_string(fileNum) +  ".tmp.bin").c_str()); });
-                remove((userInput.prefix + "/.index").c_str());
-            }
-            jobWait(threadPool);
-            initHashing(); // start parallel hashing
-        }        
-    };
+    DBG(UserInputKreeq& userInput) : Kmap{userInput}, userInput(userInput) {
+        DBextension = "kreeq";
+    }
 
-    ~DBG(){ // always need to call the destructor and delete for any object called with new to avoid memory leaks
-        for (parallelMap32* map : maps32)
-            delete map;
+    ~DBG(){
         delete DBGsubgraph;
     };
     
-    void status();
-    
-    void joinThreads();
-    
-    bool memoryOk();
-    
-    bool memoryOk(int64_t delta);
-    
-    bool traverseInReads(std::string *readBatch);
-    
-    void consolidate();
-    
-    void initHashing();
-    
     bool hashSequences();
-    
-    bool dumpBuffers();
-    
-    bool buffersToMaps();
     
     bool processBuffers(uint16_t m);
     
-    void cleanup();
-    
-    bool joinBuff(uint16_t m);
-    
-    void finalize();
-    
-    void stats();
-    
     bool summary(uint16_t m);
     
-    void DBGstats();
+    void DBstats();
     
     void loadGenome(InSequencesDBG *genome);
     
@@ -140,37 +89,17 @@ public:
     
     void validateSequences();
     
-    bool dumpTmpMap(std::string prefix, uint16_t m);
-    
-    void consolidateTmpMaps();
-    
-    bool mergeTmpMaps(uint16_t m);
-    
     bool reloadMap32(uint16_t m);
-    
-    bool dumpHighCopyKmers();
-    
-    bool dumpMap(std::string prefix, uint16_t m);
-    
-    bool loadMap(std::string prefix, uint16_t m);
-    
-    bool loadHighCopyKmers();
     
     bool deleteMap(uint16_t m);
     
-    bool updateMap(std::string prefix, uint16_t m);
-    
-    void kunion();
-    
-    bool mergeMaps(uint16_t m);
-    
     bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m);
-    
-    bool unionSum(parallelMap* map1, parallelMap* map2, uint16_t m);
     
     bool mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapIndex);
     
     bool unionSum(parallelMap32* map1, parallelMap32* map2);
+    
+    void kunion();
     
     void report();
     
@@ -213,12 +142,6 @@ public:
     void mergeSubgraphs();
     
     void DBGgraphToGFA();
-    
-    std::array<uint16_t, 2> computeMapRange(std::array<uint16_t, 2> mapRange);
-    
-    void loadMapRange(std::array<uint16_t, 2> mapRange);
-    
-    void deleteMapRange(std::array<uint16_t, 2> mapRange);
     
 };
 

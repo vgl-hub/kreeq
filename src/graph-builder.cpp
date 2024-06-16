@@ -144,8 +144,8 @@ bool DBG::processBuffers(uint16_t m) {
             });
         }
         
-        parallelMap& map = *maps[m]; // the map associated to this buffer
-        parallelMap32& map32 = *maps32[m];
+        ParallelMap& map = *maps[m]; // the map associated to this buffer
+        ParallelMap32& map32 = *maps32[m];
         uint64_t map_size = mapSize(map);
         
         bufFile.read(reinterpret_cast<char *>(&pos), sizeof(uint64_t));
@@ -224,8 +224,8 @@ bool DBG::processBuffers(uint16_t m) {
 
 bool DBG::reloadMap32(uint16_t m) {
     
-    parallelMap& map = *maps[m]; // the map associated to this buffer
-    parallelMap32& map32 = *maps32[m];
+    ParallelMap& map = *maps[m]; // the map associated to this buffer
+    ParallelMap32& map32 = *maps32[m];
     
     for (auto pair : map32) {
         
@@ -267,14 +267,14 @@ bool DBG::summary(uint16_t m) {
     }
  
     std::lock_guard<std::mutex> lck(mtx);
-    totKmersUnique += kmersUnique;
-    totKmersDistinct += kmersDistinct;
+    totUnique += kmersUnique;
+    totDistinct += kmersDistinct;
     totEdgeCount += edgeCount;
     
     for (auto pair : hist) {
         
         finalHistogram[pair.first] += pair.second;
-        totKmers += pair.first * pair.second;
+        tot += pair.first * pair.second;
     }
     
     return true;
@@ -283,12 +283,12 @@ bool DBG::summary(uint16_t m) {
 
 void DBG::DBstats() {
     
-    uint64_t missing = pow(4,k)-totKmersDistinct;
+    uint64_t missing = pow(4,k)-totDistinct;
     
     std::cout<<"DBG Summary statistics:\n"
-             <<"Total kmers: "<<totKmers<<"\n"
-             <<"Unique kmers: "<<totKmersUnique<<"\n"
-             <<"Distinct kmers: "<<totKmersDistinct<<"\n"
+             <<"Total kmers: "<<tot<<"\n"
+             <<"Unique kmers: "<<totUnique<<"\n"
+             <<"Distinct kmers: "<<totDistinct<<"\n"
              <<"Missing kmers: "<<missing<<"\n"
              <<"Total edges: "<<totEdgeCount<<"\n";
     
@@ -296,14 +296,14 @@ void DBG::DBstats() {
 
 void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
-    parallelMap32 map32Total; // first merge high-copy kmers
+    ParallelMap32 map32Total; // first merge high-copy kmers
     
     for (unsigned int i = 0; i < userInput.kmerDB.size(); ++i) { // for each kmerdb loads the map and merges it
         
         std::string prefix = userInput.kmerDB[i]; // loads the next map
         prefix.append("/.map.hc.bin");
         
-        parallelMap32 nextMap;
+        ParallelMap32 nextMap;
         phmap::BinaryInputArchive ar_in(prefix.c_str());
         nextMap.phmap_load(ar_in);
         
@@ -350,13 +350,13 @@ void DBG::kunion(){ // concurrent merging of the maps that store the same hashes
     
 }
 
-bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m) {
+bool DBG::mergeSubMaps(ParallelMap* map1, ParallelMap* map2, uint8_t subMapIndex, uint16_t m) {
     
     auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
     auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
     auto& inner2 = map2->get_inner(subMapIndex);
     auto& submap2 = inner2.set_;
-    parallelMap32& map32 = *maps32[m];
+    ParallelMap32& map32 = *maps32[m];
     
     for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
         
@@ -433,7 +433,7 @@ bool DBG::mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex
 
 // subgraph functions
 
-bool DBG::mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapIndex) {
+bool DBG::mergeSubMaps(ParallelMap32* map1, ParallelMap32* map2, uint8_t subMapIndex) {
     
     auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
     auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
@@ -476,7 +476,7 @@ bool DBG::mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapI
 }
 
 
-bool DBG::unionSum(parallelMap32* map1, parallelMap32* map2) {
+bool DBG::unionSum(ParallelMap32* map1, ParallelMap32* map2) {
     
     std::vector<std::function<bool()>> jobs;
     

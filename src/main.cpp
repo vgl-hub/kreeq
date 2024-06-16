@@ -80,8 +80,8 @@ int main(int argc, char **argv) {
                 {"input-reads", required_argument, 0, 'r'},
                 {"tmp-prefix", required_argument, 0, 't'},
                 {"max-memory", required_argument, 0, 'm'},
-                {"threads", required_argument, 0, 'j'},
                 
+                {"threads", required_argument, 0, 'j'},
                 {"verbose", no_argument, &verbose_flag, 1},
                 {"cmd", no_argument, &cmd_flag, 1},
                 {"version", no_argument, 0, 'v'},
@@ -173,9 +173,8 @@ int main(int argc, char **argv) {
                         break;
                     case 't': // prefix for temporary files
                         userInput.prefix = optarg;
-                        break;
-                        
-                    case 'm': // prefix for temporary files
+                        break;                        
+                    case 'm': // max memory
                         userInput.maxMem = atof(optarg);
                         break;
                     case 'v': // software version
@@ -185,6 +184,7 @@ int main(int argc, char **argv) {
                     case 'h': // help
                         printf("kreeq [command]\n");
                         printf("\nOptions:\n");
+                        printf("\t-c --coverage-cutoff coverage cutoff.\n");
                         printf("\t-d --database kreeq database to load.\n");
                         printf("\t-f --input-sequence sequence input file (fasta,gfa1/2).\n");
                         printf("\t-r --input-reads read input files (fastq).\n");

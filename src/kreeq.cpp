@@ -133,8 +133,8 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
     
     uint64_t key, i;
     
-    parallelMap *map;
-    parallelMap32 *map32;
+    ParallelMap *map;
+    ParallelMap32 *map32;
     
     // kreeq QV
     bool isFw = false;
@@ -289,7 +289,7 @@ void DBG::correctSequences() {
 
 bool DBG::searchGraph(std::array<uint16_t, 2> mapRange) { // stub
     
-    parallelMap* genomeDBG = new parallelMap;
+    ParallelMap* genomeDBG = new ParallelMap;
     
     std::vector<InSegment*> *inSegments = genome->getInSegments();
     
@@ -310,7 +310,7 @@ bool DBG::searchGraph(std::array<uint16_t, 2> mapRange) { // stub
         
         uint64_t key, i;
         bool isFw = false;
-        parallelMap *map;
+        ParallelMap *map;
         
         for(uint64_t c = 0; c<kcount; ++c){
             
@@ -341,7 +341,7 @@ std::pair<DBGkmer*,bool> DBG::findDBGkmer(uint8_t *origin) {
     bool isFw = false;
     key = hash(origin, &isFw);
     i = key % mapCount;
-    parallelMap *map = maps[i];
+    ParallelMap *map = maps[i];
     auto got = map->find(key);
     if (got != map->end())
         return std::make_pair(&(got->second), isFw);
@@ -560,7 +560,7 @@ bool DBG::detectAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies
     threadLog.setId(inSegment->getuId());
         
     std::string sHeader = inSegment->getSeqHeader();
-    parallelMap *map;
+    ParallelMap *map;
     uint64_t key, i;
     bool isFw = false, anomaly = false;
         
@@ -612,7 +612,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     threadLog.setId(inSegment->getuId());
         
     std::string sHeader = inSegment->getSeqHeader();
-    parallelMap *map;
+    ParallelMap *map;
     uint64_t key, i;
     bool isFw = false;
     std::vector<std::deque<DBGpath>> variants;
@@ -918,9 +918,9 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
     threadLog.setId(inSegment->getuId());
         
     std::string sHeader = inSegment->getSeqHeader();
-    parallelMap *map;
-    parallelMap32 *map32;
-    parallelMap32 *segmentSubmap = new parallelMap32;
+    ParallelMap *map;
+    ParallelMap32 *map32;
+    ParallelMap32 *segmentSubmap = new ParallelMap32;
     uint64_t key, i;
     bool isFw = false;
     std::vector<uint64_t> segmentCoordinates;
@@ -983,7 +983,7 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
 
 void DBG::mergeSubgraphs() {
     
-    for (parallelMap32 *map1 : DBGTmpSubgraphs) {
+    for (ParallelMap32 *map1 : DBGTmpSubgraphs) {
         unionSum(map1, DBGsubgraph);
         delete map1;
     }

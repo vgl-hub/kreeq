@@ -35,21 +35,21 @@ struct DBGkmer32 {
     
 };
 
-using parallelMap = phmap::parallel_flat_hash_map<uint64_t, DBGkmer,
+using ParallelMap = phmap::parallel_flat_hash_map<uint64_t, DBGkmer,
                                           std::hash<uint64_t>,
                                           std::equal_to<uint64_t>,
                                           std::allocator<std::pair<const uint64_t, DBGkmer>>,
                                           8,
                                           phmap::NullMutex>;
 
-using parallelMap32 = phmap::parallel_flat_hash_map<uint64_t, DBGkmer32,
-                                          std::hash<uint64_t>,
+using ParallelMap32 = phmap::parallel_flat_hash_map<uint64_t, DBGkmer32,
+std::hash<uint64_t>,
                                           std::equal_to<uint64_t>,
                                           std::allocator<std::pair<const uint64_t, DBGkmer32>>,
                                           8,
                                           phmap::NullMutex>;
 
-class DBG : public Kmap<DBG, UserInputKreeq, DBGkmer, DBGkmer32> { // CRTP
+class DBG : public Kmap<DBG, UserInputKreeq, uint64_t, DBGkmer, DBGkmer32> { // CRTP
     
     std::atomic<uint64_t> totMissingKmers{0}, totKcount{0}, totEdgeMissingKmers{0};
     UserInputKreeq userInput;
@@ -57,8 +57,8 @@ class DBG : public Kmap<DBG, UserInputKreeq, DBGkmer, DBGkmer32> { // CRTP
     InSequencesDBG *genome;
     
     // subgraph objects
-    parallelMap32 *DBGsubgraph = new parallelMap32;
-    std::vector<parallelMap32*> DBGTmpSubgraphs;
+    ParallelMap32 *DBGsubgraph = new ParallelMap32;
+    std::vector<ParallelMap32*> DBGTmpSubgraphs;
     InSequences GFAsubgraph;
 
     uint64_t totEdgeCount = 0;
@@ -93,11 +93,11 @@ public:
     
     bool deleteMap(uint16_t m);
     
-    bool mergeSubMaps(parallelMap* map1, parallelMap* map2, uint8_t subMapIndex, uint16_t m);
+    bool mergeSubMaps(ParallelMap* map1, ParallelMap* map2, uint8_t subMapIndex, uint16_t m);
     
-    bool mergeSubMaps(parallelMap32* map1, parallelMap32* map2, uint8_t subMapIndex);
+    bool mergeSubMaps(ParallelMap32* map1, ParallelMap32* map2, uint8_t subMapIndex);
     
-    bool unionSum(parallelMap32* map1, parallelMap32* map2);
+    bool unionSum(ParallelMap32* map1, ParallelMap32* map2);
     
     void kunion();
     

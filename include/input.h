@@ -24,7 +24,8 @@ public:
 
 struct UserInputKreeq : UserInput {
 
-    uint8_t covCutOff = 0, depth = 3, backtrackingSpan = 5;
+    uint32_t covCutOff = 0;
+    uint8_t depth = 3, backtrackingSpan = 5;
     uint64_t maxMem = 0;
 
 };

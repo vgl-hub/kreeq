@@ -196,6 +196,7 @@ int main(int argc, char **argv) {
                         printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.9 of max).\n");
                         printf("\t-j --threads <n> numbers of threads (default: max).\n");
                         printf("\t-v --version software version.\n");
+                        printf("\t--search-depth the max depth for graph traversal (default: 3).\n");
                         printf("\t--cmd print $0 to stdout.\n");
                         exit(0);
                 }
@@ -290,7 +291,9 @@ int main(int argc, char **argv) {
             static struct option long_options[] = { // struct mapping long options
                 {"database", required_argument, 0, 'd'},
                 {"input-sequence", required_argument, 0, 'f'},
+                {"search-depth", required_argument, 0, 0},
                 {"out-format", required_argument, 0, 'o'},
+                {"input-positions", required_argument, 0, 'p'},
                 
                 {"threads", required_argument, 0, 'j'},
                 {"verbose", no_argument, &verbose_flag, 1},
@@ -302,7 +305,7 @@ int main(int argc, char **argv) {
             while (true) { // loop through argv
                 
                 int option_index = 1;
-                c = getopt_long(argc, argv, "-:d:f:j:o:h",
+                c = getopt_long(argc, argv, "-:d:f:j:o:p:h",
                                 long_options, &option_index);
                 
                 if (c == -1) // exit the loop if run out of options
@@ -321,8 +324,8 @@ int main(int argc, char **argv) {
                         break;
                     default: // handle positional arguments
                     case 0: // case for long options without short options
-                        //                if (strcmp(long_options[option_index].name,"line-length") == 0)
-                        //                  splitLength = atoi(optarg);
+                        if(strcmp(long_options[option_index].name,"search-depth") == 0)
+                            userInput.kmerDepth = atoi(optarg);
                         break;
                     case 'd': // input sequence
                         
@@ -350,13 +353,19 @@ int main(int argc, char **argv) {
                     case 'o': // handle output (file or stdout)
                         userInput.outFile = optarg;
                         break;
+                    case 'p': // input coordinates
+                        ifFileExists(optarg);
+                        userInput.inBedInclude = optarg;
+                        break;
                     case 'h': // help
                         printf("kreeq subgraph [options]\n");
                         printf("\nOptions:\n");
                         printf("\t-d --database DBG database.\n");
                         printf("\t-f --input-sequence sequence input file (fasta).\n");
+                        printf("\t--search-depth the max depth for graph traversal (default: 3).\n");
                         printf("\t-j --threads <n> numbers of threads (default: max).\n");
                         printf("\t-o --out-format generates various kinds of outputs (currently supported: .gfa1/2).\n");
+                        printf("\t-p --input-positions BED coordinates of positions to extract kmers from.\n");
                         printf("\t--cmd print $0 to stdout.\n");
                         exit(0);
                 }

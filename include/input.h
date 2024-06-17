@@ -24,7 +24,7 @@ public:
 
 struct UserInputKreeq : UserInput {
 
-    uint32_t covCutOff = 0;
+    uint32_t covCutOff = 0, kmerDepth = 11; // kmer search is in both directions
     uint8_t depth = 3, backtrackingSpan = 5;
     uint64_t maxMem = 0;
 

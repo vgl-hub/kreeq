@@ -906,8 +906,8 @@ void DBG::subgraph() {
         deleteMapRange(mapRange);
 
     }
-    
     mergeSubgraphs();
+    DFS();
     DBGgraphToGFA();
     
 }
@@ -979,6 +979,106 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
     logs.push_back(threadLog);
     
     return true;
+}
+
+void DBG::DFS() {
+    
+    ParallelMap32 candidates, newCandidates;
+    ParallelMap32* subgraph = DBGsubgraph;
+    
+    std::array<uint16_t, 2> mapRange = {0,0};
+    for (uint8_t i = 0; i < userInput.kmerDepth; ++i) {
+
+        mapRange = {0,0};
+
+        while (mapRange[1] < mapCount) {
+
+            mapRange = computeMapRange(mapRange);
+            loadMapRange(mapRange);
+            newCandidates = DFSpass(subgraph, mapRange);
+            deleteMapRange(mapRange);
+            candidates.insert(newCandidates.begin(), newCandidates.end());
+            subgraph = &newCandidates;
+        }
+    }
+    DBGsubgraph->insert(candidates.begin(), candidates.end());
+}
+
+ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapRange) {
+    
+    ParallelMap32 newCandidates;
+    
+    for (auto pair : *subgraph) {
+        
+        for (uint8_t i = 0; i<4; ++i) { // forward edges
+            if (pair.second.fw[i] != 0) {
+                
+                uint8_t nextKmer[k];
+                std::string firstKmer = reverseHash(pair.first);
+                firstKmer.push_back(itoc[i]);
+                for (uint8_t e = 0; e<k; ++e)
+                    nextKmer[e] = ctoi[(unsigned char)firstKmer[e+1]];
+                
+                ParallelMap *map;
+                ParallelMap32 *map32;
+                bool isFw = false;
+                uint64_t key = hash(nextKmer, &isFw);
+                uint64_t m = key % mapCount;
+                
+                if (m >= mapRange[0] && m < mapRange[1]) {
+                    
+                    map = maps[m];
+                    auto got = map->find(key);
+                    
+                    if (got != map->end()) {
+                        
+                        if (got->second.cov != 255) {
+                            newCandidates.insert(*got);
+                        }else{
+                            map32 = maps32[m];
+                            auto got = map32->find(key);
+                            newCandidates.insert(*got);
+                        }
+                    }
+                }
+            }
+        }
+        for (uint8_t i = 0; i<4; ++i) { // reverse edges
+            if (pair.second.bw[i] != 0) {
+                
+                uint8_t nextKmer[k];
+                std::string firstKmer;
+                firstKmer.push_back(itoc[i]);
+                firstKmer.append(reverseHash(pair.first));
+                
+                for (uint8_t e = 0; e<k; ++e)
+                    nextKmer[e] = ctoi[(unsigned char)firstKmer[e]];
+                
+                ParallelMap *map;
+                ParallelMap32 *map32;
+                bool isFw = false;
+                uint64_t key = hash(nextKmer, &isFw);
+                uint64_t m = key % mapCount;
+                
+                if (m >= mapRange[0] && m < mapRange[1]) {
+                    
+                    map = maps[m];
+                    auto got = map->find(key);
+                    
+                    if (got != map->end()) {
+                        if (got->second.cov != 255) {
+                            newCandidates.insert(*got);
+                        }else{
+                            map32 = maps32[m];
+                            auto got = map32->find(key);
+                            newCandidates.insert(*got);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return newCandidates;
 }
 
 void DBG::mergeSubgraphs() {

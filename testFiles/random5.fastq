@@ -1,0 +1,8 @@
+@sequence1 - no errors
+CATACTACGATCAGATCGACTGACTCGTACATGCAGTGATGTACGAATGCATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
++
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+@sequence2 - two point errors apart (25:T>A, 65:C>T)
+CATACTACGATCAGATCGACTGACaCGTACATGCAGTGATGTACGAATGCATGCATCGATCGATtGAAATGATAGCATGACTCAGACTGATCAGATCGA
++
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

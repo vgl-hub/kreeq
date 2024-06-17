@@ -1,4 +1,4 @@
-kreeq subgraph -d testFiles/test1.kreeq -f testFiles/random1.fasta 
+kreeq subgraph -d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0 
 embedded
 +++Assembly summary+++: 
 # scaffolds: 0

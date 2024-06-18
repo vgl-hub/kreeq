@@ -141,6 +141,8 @@ public:
     
     void DFS();
     
+    void summary(ParallelMap32& DBGsubgraph);
+    
     ParallelMap32 DFSpass(ParallelMap32* candidates, std::array<uint16_t, 2> mapRange);
     
     void mergeSubgraphs();

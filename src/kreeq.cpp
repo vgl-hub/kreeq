@@ -908,8 +908,39 @@ void DBG::subgraph() {
     }
     mergeSubgraphs();
     DFS();
+    summary(*DBGsubgraph);
     DBGgraphToGFA();
     
+}
+
+void DBG::summary(ParallelMap32& DBGsubgraph) {
+    
+    uint64_t tot = 0, kmersUnique = 0, kmersDistinct = 0, edgeCount = 0;
+    phmap::parallel_flat_hash_map<uint64_t, uint64_t> hist;
+
+    for (auto pair : DBGsubgraph) {
+        
+        if (pair.second.cov == 1)
+            ++kmersUnique;
+        
+        for (uint8_t w = 0; w<4; ++w) // update weights
+            edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
+        
+        ++kmersDistinct;
+        ++hist[pair.second.cov];
+    }
+    for (auto pair : hist) {
+        
+        finalHistogram[pair.first] += pair.second;
+        tot += pair.first * pair.second;
+    }
+    uint64_t missing = pow(4,k)-kmersDistinct;
+    std::cout<<"Subgraph summary statistics:\n"
+             <<"Total kmers: "<<tot<<"\n"
+             <<"Unique kmers: "<<kmersUnique<<"\n"
+             <<"Distinct kmers: "<<kmersDistinct<<"\n"
+             <<"Missing kmers: "<<missing<<"\n"
+             <<"Total edges: "<<edgeCount<<"\n";
 }
 
 bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> mapRange) {

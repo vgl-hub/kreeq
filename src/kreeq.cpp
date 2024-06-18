@@ -915,7 +915,7 @@ void DBG::subgraph() {
 
 void DBG::summary(ParallelMap32& DBGsubgraph) {
     
-    uint64_t tot = 0, kmersUnique = 0, kmersDistinct = 0, edgeCount = 0;
+    uint64_t tot = 0, kmersUnique = 0, kmersDistinct = DBGsubgraph.size(), edgeCount = 0;
     phmap::parallel_flat_hash_map<uint64_t, uint64_t> hist;
 
     for (auto pair : DBGsubgraph) {
@@ -926,14 +926,11 @@ void DBG::summary(ParallelMap32& DBGsubgraph) {
         for (uint8_t w = 0; w<4; ++w) // update weights
             edgeCount += pair.second.fw[w] > 0 ? 1 : 0 + pair.second.bw[w] > 0 ? 1 : 0;
         
-        ++kmersDistinct;
         ++hist[pair.second.cov];
     }
-    for (auto pair : hist) {
-        
-        finalHistogram[pair.first] += pair.second;
+    for (auto pair : hist)
         tot += pair.first * pair.second;
-    }
+        
     uint64_t missing = pow(4,k)-kmersDistinct;
     std::cout<<"Subgraph summary statistics:\n"
              <<"Total kmers: "<<tot<<"\n"
@@ -1054,21 +1051,27 @@ ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapR
                 ParallelMap32 *map32;
                 bool isFw = false;
                 uint64_t key = hash(nextKmer, &isFw);
-                uint64_t m = key % mapCount;
                 
-                if (m >= mapRange[0] && m < mapRange[1]) {
+                auto got = DBGsubgraph->find(key);
+                
+                if (got == DBGsubgraph->end()) {
                     
-                    map = maps[m];
-                    auto got = map->find(key);
+                    uint64_t m = key % mapCount;
                     
-                    if (got != map->end()) {
+                    if (m >= mapRange[0] && m < mapRange[1]) {
                         
-                        if (got->second.cov != 255) {
-                            newCandidates.insert(*got);
-                        }else{
-                            map32 = maps32[m];
-                            auto got = map32->find(key);
-                            newCandidates.insert(*got);
+                        map = maps[m];
+                        auto got = map->find(key);
+                        
+                        if (got != map->end()) {
+                            
+                            if (got->second.cov != 255) {
+                                newCandidates.insert(*got);
+                            }else{
+                                map32 = maps32[m];
+                                auto got = map32->find(key);
+                                newCandidates.insert(*got);
+                            }
                         }
                     }
                 }
@@ -1089,20 +1092,26 @@ ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapR
                 ParallelMap32 *map32;
                 bool isFw = false;
                 uint64_t key = hash(nextKmer, &isFw);
-                uint64_t m = key % mapCount;
                 
-                if (m >= mapRange[0] && m < mapRange[1]) {
+                auto got = DBGsubgraph->find(key);
+                
+                if (got == DBGsubgraph->end()) {
                     
-                    map = maps[m];
-                    auto got = map->find(key);
+                    uint64_t m = key % mapCount;
                     
-                    if (got != map->end()) {
-                        if (got->second.cov != 255) {
-                            newCandidates.insert(*got);
-                        }else{
-                            map32 = maps32[m];
-                            auto got = map32->find(key);
-                            newCandidates.insert(*got);
+                    if (m >= mapRange[0] && m < mapRange[1]) {
+                        
+                        map = maps[m];
+                        auto got = map->find(key);
+                        
+                        if (got != map->end()) {
+                            if (got->second.cov != 255) {
+                                newCandidates.insert(*got);
+                            }else{
+                                map32 = maps32[m];
+                                auto got = map32->find(key);
+                                newCandidates.insert(*got);
+                            }
                         }
                     }
                 }

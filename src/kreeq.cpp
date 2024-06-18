@@ -1052,7 +1052,7 @@ ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapR
                 bool isFw = false;
                 uint64_t key = hash(nextKmer, &isFw);
                 
-                auto got = DBGsubgraph->find(key);
+                auto got = DBGsubgraph->find(key); // avoid trying implicit searches
                 
                 if (got == DBGsubgraph->end()) {
                     
@@ -1093,7 +1093,7 @@ ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapR
                 bool isFw = false;
                 uint64_t key = hash(nextKmer, &isFw);
                 
-                auto got = DBGsubgraph->find(key);
+                auto got = DBGsubgraph->find(key); // avoid trying implicit searches
                 
                 if (got == DBGsubgraph->end()) {
                     

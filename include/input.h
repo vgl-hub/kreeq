@@ -24,9 +24,11 @@ public:
 
 struct UserInputKreeq : UserInput {
 
-    uint32_t covCutOff = 0, kmerDepth = std::ceil(kmerLen/2); // kmer search is in both directions
+    uint32_t covCutOff = 0, kmerDepth = std::ceil((float)kmerLen/2); // kmer search is in both directions
     uint8_t depth = 3, backtrackingSpan = 5;
     uint64_t maxMem = 0;
+    // bool
+    int doNotCollapseNodes = 0;
 
 };
 

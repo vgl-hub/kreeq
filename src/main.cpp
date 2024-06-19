@@ -292,6 +292,7 @@ int main(int argc, char **argv) {
                 {"database", required_argument, 0, 'd'},
                 {"input-sequence", required_argument, 0, 'f'},
                 {"search-depth", required_argument, 0, 0},
+                {"do-not-collapse-nodes", no_argument, &userInput.doNotCollapseNodes, 1},
                 {"out-format", required_argument, 0, 'o'},
                 {"input-positions", required_argument, 0, 'p'},
                 

@@ -19,6 +19,28 @@ struct edgeBit {
 
 struct DBGkmer {
     uint8_t fw[4] = {0}, bw[4] = {0}, cov = 0;
+    
+    uint8_t fwCount() { // count forward edges
+        
+        uint8_t fwEdges = 0;
+        
+        for (uint8_t i = 0; i<4; ++i) {
+            if (fw[i] != 0)
+                ++fwEdges;
+        }
+        return fwEdges;
+    }
+    
+    uint8_t bwCount() { // count backward edges
+        
+        uint8_t bwEdges = 0;
+        
+        for (uint8_t i = 0; i<4; ++i) {
+            if (bw[i] != 0)
+                ++bwEdges;
+        }
+        return bwEdges;
+    }
 };
 
 #define LARGEST 4294967295 // 2^32-1
@@ -31,6 +53,28 @@ struct DBGkmer32 {
         std::copy(std::begin(dbgkmer.fw), std::end(dbgkmer.fw), std::begin(fw));
         std::copy(std::begin(dbgkmer.bw), std::end(dbgkmer.bw), std::begin(bw));
         cov = dbgkmer.cov;
+    }
+    
+    uint32_t fwCount() { // count forward edges
+        
+        uint32_t fwEdges = 0;
+        
+        for (uint8_t i = 0; i<4; ++i) {
+            if (fw[i] != 0)
+                ++fwEdges;
+        }
+        return fwEdges;
+    }
+    
+    uint32_t bwCount() { // count backward edges
+        
+        uint32_t bwEdges = 0;
+        
+        for (uint8_t i = 0; i<4; ++i) {
+            if (bw[i] != 0)
+                ++bwEdges;
+        }
+        return bwEdges;
     }
     
 };

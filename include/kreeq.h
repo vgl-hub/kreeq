@@ -41,6 +41,28 @@ struct DBGkmer {
         }
         return bwEdges;
     }
+    
+    std::vector<uint8_t> fwEdgeIndexes() { // count forward edges
+        
+        std::vector<uint8_t> indexes;
+        
+        for (uint8_t i = 0; i<4; ++i) {
+            if (fw[i] != 0)
+                indexes.push_back(i);
+        }
+        return indexes;
+    }
+    
+    std::vector<uint8_t> bwEdgeIndexes() { // count forward edges
+        
+        std::vector<uint8_t> indexes;
+        
+        for (uint8_t i = 0; i<4; ++i) {
+            if (bw[i] != 0)
+                indexes.push_back(i);
+        }
+        return indexes;
+    }
 };
 
 #define LARGEST 4294967295 // 2^32-1
@@ -75,6 +97,28 @@ struct DBGkmer32 {
                 ++bwEdges;
         }
         return bwEdges;
+    }
+    
+    std::vector<uint8_t> fwEdgeIndexes() { // count forward edges
+        
+        std::vector<uint8_t> indexes;
+        
+        for (uint8_t i = 0; i<4; ++i) {
+            if (fw[i] != 0)
+                indexes.push_back(i);
+        }
+        return indexes;
+    }
+    
+    std::vector<uint8_t> bwEdgeIndexes() { // count forward edges
+        
+        std::vector<uint8_t> indexes;
+        
+        for (uint8_t i = 0; i<4; ++i) {
+            if (bw[i] != 0)
+                indexes.push_back(i);
+        }
+        return indexes;
     }
     
 };

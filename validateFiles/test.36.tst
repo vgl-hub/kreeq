@@ -1,5 +1,11 @@
-kreeq subgraph -d testFiles/random5.kreeq -f testFiles/random5.fasta 
+kreeq subgraph -d testFiles/random5.kreeq -f testFiles/random5.fasta --do-not-collapse-nodes 
 embedded
+Subgraph summary statistics:
+Total kmers: 158
+Unique kmers: 84
+Distinct kmers: 121
+Missing kmers: 4398046510983
+Total edges: 203
 +++Assembly summary+++: 
 # scaffolds: 0
 Total scaffold length: 0

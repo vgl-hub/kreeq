@@ -80,8 +80,8 @@ int main(void) {
     }
     // test subgraph
     file_args = {
-        {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0"}, {""}},
-        {{"-d testFiles/random5.kreeq -f testFiles/random5.fasta"}, {""}}
+        {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0 --do-not-collapse-nodes"}, {""}},
+        {{"-d testFiles/random5.kreeq -f testFiles/random5.fasta --do-not-collapse-nodes"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
     };
     for(const auto &pair : file_args) {

@@ -913,7 +913,7 @@ void DBG::subgraph() {
     
 }
 
-void DBG::summary(ParallelMap32& DBGsubgraph) {
+void DBG::summary(ParallelMap32color& DBGsubgraph) {
     
     uint64_t tot = 0, kmersUnique = 0, kmersDistinct = DBGsubgraph.size(), edgeCount = 0;
     phmap::parallel_flat_hash_map<uint64_t, uint64_t> hist;
@@ -948,7 +948,7 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
     std::string sHeader = inSegment->getSeqHeader();
     ParallelMap *map;
     ParallelMap32 *map32;
-    ParallelMap32 *segmentSubmap = new ParallelMap32;
+    ParallelMap32color *segmentSubmap = new ParallelMap32color;
     uint64_t key, i;
     bool isFw = false;
     std::vector<uint64_t> segmentCoordinates;
@@ -990,12 +990,43 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
                 
                 if (got != map->end()) {
                     if (got->second.cov != 255) {
-                        segmentSubmap->insert(*got);
+                        DBGkmer32color dbgKmer32color(got->second);
+                        dbgKmer32color.color = 1;
+                        segmentSubmap->insert(std::make_pair(got->first,dbgKmer32color));
                     }else{
                         map32 = maps32[i];
                         auto got = map32->find(key);
-                        segmentSubmap->insert(*got);
+                        DBGkmer32color dbgKmer32color(got->second);
+                        dbgKmer32color.color = 1;
+                        segmentSubmap->insert(std::make_pair(got->first,dbgKmer32color));
                     }
+                }else{ // construct the kmer
+                    
+                    DBGkmer32color dbgKmer32color;
+                    dbgKmer32color.color = 2;
+                    edgeBit edges;
+                    
+                    if (isFw){
+                        if (ctoi[*(first+p+k)] <= 3)
+                            edges.assign(ctoi[*(first+p+k)]);
+                        if (p > 0 && *(str+p-1) <= 3)
+                            edges.assign(4+*(str+p-1));
+                    }else{
+                        if (p > 0 && *(str+p-1) <= 3)
+                            edges.assign(3-*(str+p-1));
+                        if (ctoi[*(first+p+k)] <= 3)
+                            edges.assign(4+3-ctoi[*(first+p+k)]);
+                    }
+                    
+                    for (uint64_t w = 0; w<4; ++w) { // update weights
+                       
+                        dbgKmer32color.fw[w] += edges.read(w);
+                        dbgKmer32color.bw[w] += edges.read(4+w);
+                    }
+                    if (dbgKmer32color.cov < LARGEST)
+                        ++dbgKmer32color.cov; // increase kmer coverage
+                    
+                    segmentSubmap->insert(std::make_pair(key,dbgKmer32color));
                 }
             }
         }
@@ -1011,8 +1042,8 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
 
 void DBG::DFS() {
     
-    ParallelMap32 candidates, newCandidates;
-    ParallelMap32* subgraph = DBGsubgraph;
+    ParallelMap32color candidates, newCandidates;
+    ParallelMap32color* subgraph = DBGsubgraph;
     
     std::array<uint16_t, 2> mapRange = {0,0};
     for (uint8_t i = 0; i < userInput.kmerDepth; ++i) {
@@ -1032,9 +1063,9 @@ void DBG::DFS() {
     DBGsubgraph->insert(candidates.begin(), candidates.end());
 }
 
-ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapRange) {
+ParallelMap32color DBG::DFSpass(ParallelMap32color* subgraph, std::array<uint16_t, 2> mapRange) {
     
-    ParallelMap32 newCandidates;
+    ParallelMap32color newCandidates;
     
     for (auto pair : *subgraph) {
         
@@ -1066,11 +1097,13 @@ ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapR
                         if (got != map->end()) {
                             
                             if (got->second.cov != 255) {
-                                newCandidates.insert(*got);
+                                DBGkmer32color dbgKmer32color(got->second);
+                                newCandidates.insert(std::make_pair(got->first,dbgKmer32color));
                             }else{
                                 map32 = maps32[m];
                                 auto got = map32->find(key);
-                                newCandidates.insert(*got);
+                                DBGkmer32color dbgKmer32color(got->second);
+                                newCandidates.insert(std::make_pair(got->first,dbgKmer32color));
                             }
                         }
                     }
@@ -1106,11 +1139,13 @@ ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapR
                         
                         if (got != map->end()) {
                             if (got->second.cov != 255) {
-                                newCandidates.insert(*got);
+                                DBGkmer32color dbgKmer32color(got->second);
+                                newCandidates.insert(std::make_pair(got->first,dbgKmer32color));
                             }else{
                                 map32 = maps32[m];
                                 auto got = map32->find(key);
-                                newCandidates.insert(*got);
+                                DBGkmer32color dbgKmer32color(got->second);
+                                newCandidates.insert(std::make_pair(got->first,dbgKmer32color));
                             }
                         }
                     }
@@ -1123,11 +1158,10 @@ ParallelMap32 DBG::DFSpass(ParallelMap32* subgraph, std::array<uint16_t, 2> mapR
 
 void DBG::mergeSubgraphs() {
     
-    for (ParallelMap32 *map1 : DBGTmpSubgraphs) {
+    for (ParallelMap32color *map1 : DBGTmpSubgraphs) {
         unionSum(map1, DBGsubgraph);
         delete map1;
     }
-    
 }
 
 void DBG::DBGgraphToGFA() {

@@ -475,8 +475,8 @@ bool DBG::mergeSubMaps(ParallelMap32* map1, ParallelMap32* map2, uint8_t subMapI
     
 }
 
-
-bool DBG::unionSum(ParallelMap32* map1, ParallelMap32* map2) {
+template<typename MAPTYPE>
+bool DBG::unionSum(MAPTYPE* map1, MAPTYPE* map2) {
     
     std::vector<std::function<bool()>> jobs;
     

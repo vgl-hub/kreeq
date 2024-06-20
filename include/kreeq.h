@@ -123,19 +123,29 @@ struct DBGkmer32 {
     
 };
 
-using ParallelMap = phmap::parallel_flat_hash_map<uint64_t, DBGkmer,
+struct DBGkmer32color : public DBGkmer32 {
+    uint8_t color = 0;
+    
+    DBGkmer32color() {}
+    
+    DBGkmer32color(const DBGkmer32& dbgkmer32) {
+        std::copy(std::begin(dbgkmer32.fw), std::end(dbgkmer32.fw), std::begin(fw));
+        std::copy(std::begin(dbgkmer32.bw), std::end(dbgkmer32.bw), std::begin(bw));
+        cov = dbgkmer32.cov;
+    }
+};
+
+template<typename T>
+class PM : public phmap::parallel_flat_hash_map<uint64_t, T,
                                           std::hash<uint64_t>,
                                           std::equal_to<uint64_t>,
-                                          std::allocator<std::pair<const uint64_t, DBGkmer>>,
+                                          std::allocator<std::pair<const uint64_t, T>>,
                                           8,
-                                          phmap::NullMutex>;
+phmap::NullMutex> {};
 
-using ParallelMap32 = phmap::parallel_flat_hash_map<uint64_t, DBGkmer32,
-std::hash<uint64_t>,
-                                          std::equal_to<uint64_t>,
-                                          std::allocator<std::pair<const uint64_t, DBGkmer32>>,
-                                          8,
-                                          phmap::NullMutex>;
+using ParallelMap = PM<DBGkmer>;
+using ParallelMap32 = PM<DBGkmer32>;
+using ParallelMap32color = PM<DBGkmer32color>;
 
 class DBG : public Kmap<DBG, UserInputKreeq, uint64_t, DBGkmer, DBGkmer32> { // CRTP
     
@@ -145,8 +155,8 @@ class DBG : public Kmap<DBG, UserInputKreeq, uint64_t, DBGkmer, DBGkmer32> { // 
     InSequencesDBG *genome;
     
     // subgraph objects
-    ParallelMap32 *DBGsubgraph = new ParallelMap32;
-    std::vector<ParallelMap32*> DBGTmpSubgraphs;
+    ParallelMap32color *DBGsubgraph = new ParallelMap32color;
+    std::vector<ParallelMap32color*> DBGTmpSubgraphs;
     InSequences GFAsubgraph;
 
     uint64_t totEdgeCount = 0;
@@ -185,7 +195,8 @@ public:
     
     bool mergeSubMaps(ParallelMap32* map1, ParallelMap32* map2, uint8_t subMapIndex);
     
-    bool unionSum(ParallelMap32* map1, ParallelMap32* map2);
+    template<typename MAPTYPE>
+    bool unionSum(MAPTYPE* map1, MAPTYPE* map2);
     
     void kunion();
     
@@ -229,9 +240,9 @@ public:
     
     void DFS();
     
-    void summary(ParallelMap32& DBGsubgraph);
+    void summary(ParallelMap32color& DBGsubgraph);
     
-    ParallelMap32 DFSpass(ParallelMap32* candidates, std::array<uint16_t, 2> mapRange);
+    ParallelMap32color DFSpass(ParallelMap32color* candidates, std::array<uint16_t, 2> mapRange);
     
     void mergeSubgraphs();
     

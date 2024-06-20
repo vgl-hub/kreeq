@@ -193,7 +193,8 @@ public:
     
     bool mergeSubMaps(ParallelMap* map1, ParallelMap* map2, uint8_t subMapIndex, uint16_t m);
     
-    bool mergeSubMaps(ParallelMap32* map1, ParallelMap32* map2, uint8_t subMapIndex);
+    template<typename MAPTYPE>
+    bool mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex);
     
     template<typename MAPTYPE>
     bool unionSum(MAPTYPE* map1, MAPTYPE* map2);

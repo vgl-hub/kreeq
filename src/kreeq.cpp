@@ -1287,7 +1287,7 @@ void DBG::DBGgraphToGFA() {
             
             Sequence* sequence = new Sequence {std::to_string(idCounter++), "", inSequence}; // add sequence
             sequence->seqPos = seqPos; // remember the order
-            std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair->second.cov*k)}};
+            std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair->second.cov*k)},Tag{'z',"CL",std::to_string(pair->second.color)}};
             GFAsubgraph.appendSegment(sequence, inTags);
             seqPos++;
             
@@ -1361,7 +1361,7 @@ void DBG::DBGgraphToGFA() {
             std::string* inSequence = new std::string(reverseHash(pair.first));
             Sequence* sequence = new Sequence {std::to_string(idCounter++), "", inSequence};
             sequence->seqPos = seqPos++; // remember the order
-            std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair.second.cov*k)}};
+            std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair.second.cov*k)},Tag{'z',"CL",std::to_string(pair.second.color)}};
             GFAsubgraph.appendSegment(sequence, inTags);
         }
         jobWait(threadPool);
@@ -1420,4 +1420,70 @@ void DBG::DBGgraphToGFA() {
     GFAsubgraph.updateStats(); // compute summary statistics
     Report report;
     report.reportStats(GFAsubgraph, 0, 0);
+}
+
+// subgraph functions
+
+template<typename MAPTYPE>
+bool DBG::mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex) {
+    
+    auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
+    auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
+    auto& inner2 = map2->get_inner(subMapIndex);
+    auto& submap2 = inner2.set_;
+    
+    for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
+        
+        auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
+        if (got == submap2.end()){
+            submap2.insert(pair);
+        }else{
+
+            DBGkmer32& dbgkmerMap = got->second;
+        
+            for (uint64_t w = 0; w<4; ++w) { // update weights
+                
+                if (LARGEST - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap.fw[w] += pair.second.fw[w];
+                else
+                    dbgkmerMap.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap.bw[w] += pair.second.bw[w];
+                else
+                    dbgkmerMap.bw[w] = LARGEST;
+                
+            }
+            
+            if (LARGEST - dbgkmerMap.cov >= pair.second.cov)
+                dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+            else
+                dbgkmerMap.cov = LARGEST;
+            
+        };
+        
+    }
+    
+    return true;
+    
+}
+
+template<typename MAPTYPE>
+bool DBG::unionSum(MAPTYPE* map1, MAPTYPE* map2) {
+    
+    std::vector<std::function<bool()>> jobs;
+    
+    if (map1->subcnt() != map2->subcnt()) {
+        fprintf(stderr, "Maps don't have the same numbers of submaps (%zu != %zu). Terminating.\n", map1->subcnt(), map2->subcnt());
+        exit(EXIT_FAILURE);
+    }
+    
+    for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
+        jobs.push_back([this, map1, map2, subMapIndex] { return this->mergeSubMaps(map1, map2, subMapIndex); });
+    
+    threadPool.queueJobs(jobs);
+    
+    jobWait(threadPool);
+    
+    return true;
+    
 }

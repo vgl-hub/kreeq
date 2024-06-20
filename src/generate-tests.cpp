@@ -5,7 +5,7 @@
 #include "validate.h"
 
 int main(void) {
-    std::cout << "WARNING: only run this program if gfastats is in a working state" << std::endl;
+    std::cout << "WARNING: only run this program if the program is in a working state" << std::endl;
     std::cout << "WARNING: previous validate files will be deleted" << std::endl;
     std::cout << "continue? (Y/N) ";
     std::string input;
@@ -33,7 +33,7 @@ int main(void) {
     };
     
     const std::set<std::string> excludeExt {};
-    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "random5.fasta", "random5.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta", "repeat1.fasta", "repeat1.fastq"};
+    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "random5.fasta", "random5.fastq", "random6.fastq", "random7.fastq", "random8.fastq", "random9.fastq", "random10.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta", "repeat1.fasta", "repeat1.fastq"};
 
     std::map<std::set<std::string>, std::vector<std::string>> file_args = {
         {{"-f testFiles/random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},
@@ -81,7 +81,14 @@ int main(void) {
     // test subgraph
     file_args = {
         {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0 --do-not-collapse-nodes"}, {""}},
-        {{"-d testFiles/random5.kreeq -f testFiles/random5.fasta --do-not-collapse-nodes"}, {""}}
+        {{"-d testFiles/random5.kreeq -f testFiles/random5.fasta --do-not-collapse-nodes"}, {""}},
+        {{"-d testFiles/random5.kreeq -f testFiles/random5.fasta"}, {""}},
+        {{"-d testFiles/random6.kreeq -f testFiles/random5.fasta"}, {""}},
+        {{"-d testFiles/random7.kreeq -f testFiles/random5.fasta"}, {""}},
+        {{"-d testFiles/random8.kreeq -f testFiles/random5.fasta"}, {""}},
+        {{"-d testFiles/random9.kreeq -f testFiles/random5.fasta"}, {""}},
+        {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 15"}, {""}},
+        {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 16"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
     };
     for(const auto &pair : file_args) {

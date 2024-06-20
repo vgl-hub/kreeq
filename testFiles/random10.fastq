@@ -1,0 +1,8 @@
+@sequence1 - no errors
+CATACTACGATCAGATCGACTGACTCGTACATGCAGTGATGTACGAATGCATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
++
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+@sequence7 - two point errors overlapping (25:T>A, 35:C>T)
+CATACTACGATCAGATCGACTGACaCGTACATGCtGTGATGTACGAATGCATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
++
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

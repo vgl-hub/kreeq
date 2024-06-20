@@ -1,0 +1,8 @@
+@sequence1 - no errors
+CATACTACGATCAGATCGACTGACTCGTACATGCAGTGATGTACGAATGCATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
++
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+@sequence3 - one insertion error (34:A)
+CATACTACGATCAGATCGACTGACTCGTACATGaCAGTGATGTACGAATGCATGCATCGATCGATCGAAATGATAGCATGACTCAGACTGATCAGATCGA
++
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

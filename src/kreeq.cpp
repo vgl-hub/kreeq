@@ -869,7 +869,7 @@ void DBG::DBGgraphToGFA() {
     uint32_t idCounter = 0, seqPos = 0, edgeCounter = 0;
     phmap::flat_hash_map<std::string, unsigned int>& headersToIds = *GFAsubgraph.getHash1();
     
-    if (!userInput.doNotCollapseNodes) {
+    if (!userInput.noCollapse) {
         
         phmap::parallel_flat_hash_map<uint64_t, std::tuple<DBGkmer32,uint32_t,bool>> residualEdges; // hash, kmer, G' node
         

@@ -171,7 +171,7 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
                         dbgKmer32color.color = 1;
                         segmentSubmap->insert(std::make_pair(got->first,dbgKmer32color));
                     }
-                }else{ // construct the kmer
+                }else if(!userInput.noReference){ // construct the kmer
                     
                     DBGkmer32color dbgKmer32color;
                     dbgKmer32color.color = 2;

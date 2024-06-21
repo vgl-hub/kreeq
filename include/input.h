@@ -28,7 +28,7 @@ struct UserInputKreeq : UserInput {
     uint8_t depth = 3, backtrackingSpan = 5;
     uint64_t maxMem = 0;
     // bool
-    int doNotCollapseNodes = 0;
+    int noCollapse = 0, noReference = 0;
 
 };
 

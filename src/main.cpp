@@ -292,7 +292,8 @@ int main(int argc, char **argv) {
                 {"database", required_argument, 0, 'd'},
                 {"input-sequence", required_argument, 0, 'f'},
                 {"search-depth", required_argument, 0, 0},
-                {"do-not-collapse-nodes", no_argument, &userInput.doNotCollapseNodes, 1},
+                {"no-collapse", no_argument, &userInput.noCollapse, 1},
+                {"no-reference", no_argument, &userInput.noReference, 1},
                 {"out-format", required_argument, 0, 'o'},
                 {"input-positions", required_argument, 0, 'p'},
                 
@@ -364,6 +365,8 @@ int main(int argc, char **argv) {
                         printf("\t-d --database DBG database.\n");
                         printf("\t-f --input-sequence sequence input file (fasta).\n");
                         printf("\t--search-depth the max depth for graph traversal (default: 3).\n");
+                        printf("\t--no-collapse do not collapse linear nodes (default: false).\n");
+                        printf("\t--no-reference do not include reference nodes (default: false).\n");
                         printf("\t-j --threads <n> numbers of threads (default: max).\n");
                         printf("\t-o --out-format generates various kinds of outputs (currently supported: .gfa1/2).\n");
                         printf("\t-p --input-positions BED coordinates of positions to extract kmers from.\n");

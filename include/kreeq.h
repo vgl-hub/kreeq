@@ -193,12 +193,6 @@ public:
     
     bool mergeSubMaps(ParallelMap* map1, ParallelMap* map2, uint8_t subMapIndex, uint16_t m);
     
-    template<typename MAPTYPE>
-    bool mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex);
-    
-    template<typename MAPTYPE>
-    bool unionSum(MAPTYPE* map1, MAPTYPE* map2);
-    
     void kunion();
     
     void report();
@@ -235,6 +229,10 @@ public:
     
     bool variantsToGFA(InSegment *inSegment, Log &threadLog);
     
+    void DBGgraphToGFA();
+    
+    // subgraph functions
+    
     bool DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> mapRange);
     
     void subgraph();
@@ -247,7 +245,11 @@ public:
     
     void mergeSubgraphs();
     
-    void DBGgraphToGFA();
+    template<typename MAPTYPE>
+    bool mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex);
+    
+    template<typename MAPTYPE>
+    bool unionSum(MAPTYPE* map1, MAPTYPE* map2);
     
 };
 

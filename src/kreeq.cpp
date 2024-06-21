@@ -864,6 +864,20 @@ bool DBG::variantsToGFA(InSegment *inSegment, Log &threadLog) {
     
 }
 
+std::string colorPalette(uint8_t value){
+    
+    const static phmap::parallel_flat_hash_map<uint8_t,std::string> value_to_color{ // map each value to a color
+        {0,"gray"},
+        {1,"blue"},
+        {2,"red"},
+    };
+    if (value > value_to_color.size()) {
+        fprintf(stderr, "Node color value %i does not exist\n", value);
+        exit(EXIT_FAILURE);
+    }
+    return (value_to_color.find(value)->second);
+}
+
 void DBG::DBGgraphToGFA() {
 
     uint32_t idCounter = 0, seqPos = 0, edgeCounter = 0;
@@ -987,7 +1001,7 @@ void DBG::DBGgraphToGFA() {
             
             Sequence* sequence = new Sequence {std::to_string(idCounter++), "", inSequence}; // add sequence
             sequence->seqPos = seqPos; // remember the order
-            std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair->second.cov*k)},Tag{'z',"CL",std::to_string(pair->second.color)}};
+            std::vector<Tag> inTags = {Tag{'f',"DP",std::to_string(pair->second.cov)},Tag{'Z',"CB",colorPalette(pair->second.color)}};
             GFAsubgraph.appendSegment(sequence, inTags);
             seqPos++;
             
@@ -1061,7 +1075,7 @@ void DBG::DBGgraphToGFA() {
             std::string* inSequence = new std::string(reverseHash(pair.first));
             Sequence* sequence = new Sequence {std::to_string(idCounter++), "", inSequence};
             sequence->seqPos = seqPos++; // remember the order
-            std::vector<Tag> inTags = {Tag{'i',"RC",std::to_string(pair.second.cov*k)},Tag{'z',"CL",std::to_string(pair.second.color)}};
+            std::vector<Tag> inTags = {Tag{'f',"DP",std::to_string(pair.second.cov)},Tag{'Z',"CB",colorPalette(pair.second.color)}};
             GFAsubgraph.appendSegment(sequence, inTags);
         }
         jobWait(threadPool);

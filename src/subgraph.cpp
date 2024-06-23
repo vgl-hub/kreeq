@@ -539,12 +539,12 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
         for (uint64_t destination : destinations) {
             while (destination != source.first) { // construct the shortest path with a stack S
                 discoveredNodes.insert(*graphCache->find(destination)); // push the vertex onto the stack
-                dist.erase(destination);
+//                dist.erase(destination);
                 destination = prev[destination];
             }
         }
-        for (auto node : dist) // clear the cache for this source
-            graphCache->erase(node.first);
+//        for (auto node : dist) // clear the cache for this source
+//            graphCache->erase(node.first);
     }
     return std::make_pair(explored,discoveredNodes);
 }

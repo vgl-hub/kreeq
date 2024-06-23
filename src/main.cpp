@@ -289,6 +289,7 @@ int main(int argc, char **argv) {
         case 2: { // subgraph
             
             static struct option long_options[] = { // struct mapping long options
+                {"coverage-cutoff", required_argument, 0, 'c'},
                 {"database", required_argument, 0, 'd'},
                 {"input-sequence", required_argument, 0, 'f'},
                 {"traversal-algorithm", required_argument, 0, 0},
@@ -308,7 +309,7 @@ int main(int argc, char **argv) {
             while (true) { // loop through argv
                 
                 int option_index = 1;
-                c = getopt_long(argc, argv, "-:d:f:j:o:p:h",
+                c = getopt_long(argc, argv, "-:c:d:f:j:o:p:h",
                                 long_options, &option_index);
                 
                 if (c == -1) // exit the loop if run out of options
@@ -331,6 +332,13 @@ int main(int argc, char **argv) {
                             userInput.kmerDepth = atoi(optarg);
                         if(strcmp(long_options[option_index].name,"traversal-algorithm") == 0)
                             userInput.travAlgorithm = optarg;
+                        break;
+                    case 'c': // coverage cutoff
+                        if (!isNumber(optarg)) {
+                            fprintf(stderr, "input '%s' to option -%c must be a number\n", optarg, optopt);
+                            return EXIT_FAILURE;
+                        }
+                        userInput.covCutOff = atoi(optarg);
                         break;
                     case 'd': // input sequence
                         
@@ -365,6 +373,7 @@ int main(int argc, char **argv) {
                     case 'h': // help
                         printf("kreeq subgraph [options]\n");
                         printf("\nOptions:\n");
+                        printf("\t-c --coverage-cutoff coverage cutoff.\n");
                         printf("\t-d --database DBG database.\n");
                         printf("\t-f --input-sequence sequence input file (fasta).\n");
                         printf("\t--traversal-algorithm <string> the approach used for graph search (best-first/traversal, default: best-first).\n");

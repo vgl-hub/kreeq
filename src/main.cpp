@@ -310,7 +310,7 @@ int main(int argc, char **argv) {
             while (true) { // loop through argv
                 
                 int option_index = 1;
-                c = getopt_long(argc, argv, "-:c:d:f:j:o:p:h",
+                c = getopt_long(argc, argv, "-:c:d:f:j:m:o:p:h",
                                 long_options, &option_index);
                 
                 if (c == -1) // exit the loop if run out of options

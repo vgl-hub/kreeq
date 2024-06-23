@@ -81,33 +81,33 @@ class FibonacciHeap {
         //Extract the node with the minimum key from the heap. O(log n) operation, where n is the number of nodes in the heap
         FibonacciNode<V>* minN = this->minNode;
         if (minN != NULL) {
-//            std::cout<<"here we are"<<std::endl;
+            std::cout<<"here we are"<<std::endl;
             int deg = minN->degree;
             FibonacciNode<V>* currChild = minN->child;
             FibonacciNode<V>* remChild;
             for (int i = 0; i < deg; i++) {
-//                std::cout<<"here we are0.1"<<std::endl;
+                std::cout<<"here we are0.1"<<std::endl;
                 remChild = currChild;
-//                std::cout<<"here we are0.2"<<std::endl;
+                std::cout<<"here we are0.2"<<std::endl;
                 currChild = currChild->right;
                 _existingToRoot(remChild);
-//                std::cout<<"here we are0.3"<<std::endl;
+                std::cout<<"here we are0.3"<<std::endl;
             }
-//            std::cout<<"here we are1"<<std::endl;
+            std::cout<<"here we are1"<<std::endl;
             _removeNodeFromRoot(minN);
-//            std::cout<<"here we are2"<<std::endl;
+            std::cout<<"here we are2"<<std::endl;
             this->numNodes--;
             if (this->numNodes == 0) {
                 this->minNode = NULL;
             }else{
-//                std::cout<<"here we are2.1"<<std::endl;
+                std::cout<<"here we are2.1"<<std::endl;
                 this->minNode = minN->right;
                 FibonacciNode<V>* minNLeft = minN->left;
                 this->minNode->left = minNLeft;
-//                std::cout<<"here we are2.2"<<std::endl;
+                std::cout<<"here we are2.2"<<std::endl;
                 minNLeft->right = this->minNode;
                 _consolidate();
-//                std::cout<<"here we are2.3"<<std::endl;
+                std::cout<<"here we are2.3"<<std::endl;
             }
             return minN->objPtr;
             

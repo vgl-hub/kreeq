@@ -469,9 +469,9 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     
     uint64_t key;
     int16_t depth = 0;
-    
+    std::cout<<"hereA.1"<<std::endl;
     while (!explored && depth < userInput.kmerDepth + 1) { // The main loop
-        
+        std::cout<<"hereA.2"<<std::endl;
         ParallelMap *map;
 //        ParallelMap32 *map32;
         bool isFw = false;
@@ -480,6 +480,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
             explored = true;
             break;
         }
+        std::cout<<"hereA.3"<<std::endl;
         auto checkNext = [&,this] (uint64_t key) {
             auto startNode = DBGsubgraph->find(key);
             if (startNode == DBGsubgraph->end()) { // if we connect to the original graph we are done
@@ -492,6 +493,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 }else{
                     return false;
                 }
+                std::cout<<"hereA.4"<<std::endl;
                 uint8_t alt = dist[u->first]; // g(n)
                 if (alt < std::numeric_limits<uint8_t>::max())
                     alt += 1; // Graph.Edges(u, v) << actual weight g(h)
@@ -500,17 +502,19 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                     dist[nextKmer->first] = std::numeric_limits<uint8_t>::max(); // unknown distance from source to v
                     Q.insert(&*nextKmer, 0);
                 }
+                std::cout<<"hereA.5"<<std::endl;
                 if (alt < dist[nextKmer->first]) {
                     prev[nextKmer->first] = u->first;
                     dist[nextKmer->first] = alt;
                     Q.decreaseKey(&*nextKmer, alt);
                 }
+                std::cout<<"hereA.6"<<std::endl;
                 return false;
             }else{
                 return true;
             }
         };
-        
+        std::cout<<"hereA.7"<<std::endl;
         uint8_t edgeCount = 0, exploredCount = 0;
         for (uint8_t i = 0; i<4; ++i) { // forward edges
             if (u->second.fw[i] != 0) {
@@ -524,6 +528,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 }
                 ++edgeCount;
             }
+            std::cout<<"hereA.8"<<std::endl;
             if (u->second.bw[i] != 0) { // backward edges
                 uint8_t nextKmer[k];
                 buildNextKmer(nextKmer, u->first, i, false); // compute next node
@@ -535,12 +540,15 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 }
                 ++edgeCount;
             }
+            std::cout<<"hereA.9"<<std::endl;
         }
         depth += 1;
         if(edgeCount == exploredCount || depth == userInput.kmerDepth + 1)
             explored = true;
+        std::cout<<"hereA.10"<<std::endl;
     }
     ParallelMap32color discoveredNodes;
+    std::cout<<"hereA.11"<<std::endl;
     if (destinations.size() > 0) { // traverse from target to source
         for (uint64_t destination : destinations) {
             while (destination != source.first) { // construct the shortest path with a stack S
@@ -548,6 +556,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 destination = prev[destination];
             }
         }
+        std::cout<<"hereA.12"<<std::endl;
     }
     return std::make_pair(explored,discoveredNodes);
 }

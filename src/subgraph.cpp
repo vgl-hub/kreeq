@@ -464,16 +464,18 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     
     uint64_t key;
     int16_t depth = 0;
-    
+    std::cout<<"here0"<<std::endl;
     while (!explored && depth < userInput.kmerDepth + 1) { // The main loop
         ParallelMap *map;
 //        ParallelMap32 *map32;
+        std::cout<<"here1"<<std::endl;
         bool isFw = false;
         std::pair<const uint64_t, DBGkmer32>* u = Q.extractMin(); // Remove and return best vertex
         if (u == NULL) { // no more nodes to expand
             explored = true;
             break;
         }
+        std::cout<<"here2"<<std::endl;
         auto checkNext = [&,this] (uint64_t key) {
             auto startNode = DBGsubgraph->find(key);
             if (startNode == DBGsubgraph->end()) { // if we connect to the original graph we are done
@@ -505,8 +507,10 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
             }
         };
         uint8_t edgeCount = 0, exploredCount = 0;
+        std::cout<<"here3"<<std::endl;
         for (uint8_t i = 0; i<4; ++i) { // forward edges
-            if (u->second.fw[i] != 0) {
+            std::cout<<"here4"<<std::endl;
+            if (u->second.fw[i] >= userInput.covCutOff) {
                 uint8_t nextKmer[k];
                 buildNextKmer(nextKmer, u->first, i, true); // compute next node
                 key = hash(nextKmer, &isFw);
@@ -517,7 +521,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 }
                 ++edgeCount;
             }
-            if (u->second.bw[i] != 0) { // backward edges
+            if (u->second.bw[i] != userInput.covCutOff) { // backward edges
                 uint8_t nextKmer[k];
                 buildNextKmer(nextKmer, u->first, i, false); // compute next node
                 key = hash(nextKmer, &isFw);
@@ -533,18 +537,23 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
         if(edgeCount == exploredCount || depth == userInput.kmerDepth + 1 || destinations.size() == 10) // everything explored/found, depth reached, or top10
             explored = true;
     }
+    std::cout<<"here5"<<std::endl;
     ParallelMap32color discoveredNodes;
     if (destinations.size() > 0) { // traverse from target to source
+        std::cout<<"here6"<<std::endl;
         for (uint64_t destination : destinations) {
             while (destination != source.first) { // construct the shortest path with a stack S
+                std::cout<<"here7"<<std::endl;
                 discoveredNodes.insert(*graphCache->find(destination)); // push the vertex onto the stack
                 dist.erase(destination);
                 destination = prev[destination];
             }
         }
+        std::cout<<"here8"<<std::endl;
         for (auto node : dist) // clear the cache for this source
             graphCache->erase(node.first);
     }
+    std::cout<<"here9"<<std::endl;
     return std::make_pair(explored,discoveredNodes);
 }
 

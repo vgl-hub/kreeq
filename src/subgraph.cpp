@@ -155,7 +155,9 @@ void DBG::subgraph() {
         deleteMapRange(mapRange);
 
     }
+    lg.verbose("Merging subgraphs");
     mergeSubgraphs();
+    lg.verbose("Searching graph");
     if (userInput.travAlgorithm == "best-first") {
         if (userInput.kmerDepth == -1)
             userInput.kmerDepth = userInput.kmerLen; // unidirectional search
@@ -168,7 +170,9 @@ void DBG::subgraph() {
         fprintf(stderr, "Cannot find input algorithm (%s). Terminating.\n", userInput.travAlgorithm.c_str());
         exit(EXIT_FAILURE);
     }
+    lg.verbose("Computing summary graph");
     summary(*DBGsubgraph);
+    lg.verbose("Generating GFA");
     DBGgraphToGFA();
     
 }

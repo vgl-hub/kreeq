@@ -442,7 +442,7 @@ void DBG::bestFirst() {
                     candidates->insert(results.second.begin(), results.second.end());
                     DBGsubgraphCpy.erase(pair.first);
                 }
-                std::cout<<DBGsubgraphCpy.size()<<std::endl;
+//                std::cout<<DBGsubgraphCpy.size()<<std::endl;
             }
             deleteMapRange(mapRange);
         }
@@ -468,7 +468,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     
     while (!explored && depth < userInput.kmerDepth + 1) { // The main loop
         ParallelMap *map;
-//        ParallelMap32 *map32;
+        //        ParallelMap32 *map32;
         
         bool isFw = false;
         std::pair<const uint64_t, DBGkmer32>* u = Q.extractMin(); // Remove and return best vertex
@@ -544,8 +544,10 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 destination = prev[destination];
             }
         }
-//        for (auto node : dist) // clear the cache for this source
-//            graphCache->erase(node.first);
+    }
+    if (explored) {
+        for (auto node : dist) // clear the cache for this source
+            graphCache->erase(node.first);
     }
     return std::make_pair(explored,discoveredNodes);
 }

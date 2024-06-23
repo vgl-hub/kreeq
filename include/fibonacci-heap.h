@@ -229,11 +229,12 @@ class FibonacciHeap {
                 deg = currConsolNode->degree;
                 std::cout<<"hey4"<<std::endl;
                 while (true) {
-
+                    std::cout<<"hey4.1"<<std::endl;
                     if (this->degTable.find(deg) == this->degTable.end()) {
                         this->degTable[deg] = currConsolNode;
                         break;
                     }else{
+                        std::cout<<"hey4.2"<<std::endl;
                         currDeg = this->degTable[deg];
                         if (currConsolNode->key > currDeg->key) {
                             std::swap(currConsolNode, currDeg);
@@ -242,6 +243,7 @@ class FibonacciHeap {
                         _link(currDeg, currConsolNode);
                         this->degTable[deg] = NULL;
                         deg++;
+                        std::cout<<"hey4.3"<<std::endl;
                     }
                     std::cout<<"hey5"<<std::endl;
                 }

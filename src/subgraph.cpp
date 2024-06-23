@@ -139,7 +139,7 @@ void DBG::subgraph() {
     
     std::vector<std::function<bool()>> jobs;
     std::array<uint16_t, 2> mapRange = {0,0};
-    std::cout<<+maxMem<<std::endl;
+
     while (mapRange[1] < mapCount) {
 
         mapRange = computeMapRange(mapRange);

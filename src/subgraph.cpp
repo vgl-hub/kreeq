@@ -507,7 +507,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
         };
         uint8_t edgeCount = 0, exploredCount = 0;
         for (uint8_t i = 0; i<4; ++i) { // forward edges
-            if (u->second.fw[i] > userInput.covCutOff) {
+            if (u->second.fw[i] != 0) {
                 uint8_t nextKmer[k];
                 buildNextKmer(nextKmer, u->first, i, true); // compute next node
                 key = hash(nextKmer, &isFw);
@@ -518,7 +518,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 }
                 ++edgeCount;
             }
-            if (u->second.bw[i] > userInput.covCutOff) { // backward edges
+            if (u->second.bw[i] != 0) { // backward edges
                 uint8_t nextKmer[k];
                 buildNextKmer(nextKmer, u->first, i, false); // compute next node
                 key = hash(nextKmer, &isFw);

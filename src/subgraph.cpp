@@ -426,7 +426,7 @@ void DBG::bestFirst() {
     uint32_t explored = 0;
     std::array<uint16_t, 2> mapRange;
     ParallelMap32color DBGsubgraphCpy = *DBGsubgraph;
-    
+    std::cout<<"here1"<<std::endl;
     while(explored < DBGsubgraph->size()) {
 
         mapRange = {0,0};
@@ -446,9 +446,11 @@ void DBG::bestFirst() {
                 }
             }
             deleteMapRange(mapRange);
+            std::cout<<"here2"<<std::endl;
         }
     }
     DBGsubgraph->insert(candidates.begin(), candidates.end());
+    std::cout<<"here3"<<std::endl;
 }
 
 std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32color> source, std::array<uint16_t, 2> mapRange) {

@@ -459,7 +459,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     
     dist[source.first] = 0;
     std::pair<const uint64_t, DBGkmer32> firstKmer = std::make_pair(source.first,source.second);
-    Q.insert(&firstKmer, 0); // associated priority equals dist[·]
+    Q.insert(&firstKmer, 1); // associated priority equals dist[·]
     
     uint64_t key;
     int16_t depth = 0;

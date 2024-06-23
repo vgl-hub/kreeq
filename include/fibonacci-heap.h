@@ -99,6 +99,7 @@ class FibonacciHeap {
             this->numNodes--;
             if (this->numNodes == 0) {
                 this->minNode = NULL;
+                return NULL;
             }else{
                 std::cout<<"here we are2.1"<<std::endl;
                 this->minNode = minN->right;
@@ -108,10 +109,12 @@ class FibonacciHeap {
                 minNLeft->right = this->minNode;
                 _consolidate();
                 std::cout<<"here we are2.3"<<std::endl;
+                return this->minNode->objPtr;
             }
-            std::cout<<"here we are3"<<std::endl;
-            return minN->objPtr;
+           
+            
         }else{
+            std::cout<<"here we are3"<<std::endl;
             return NULL;
         }
         

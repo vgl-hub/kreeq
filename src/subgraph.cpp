@@ -514,7 +514,8 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 bool found = checkNext(key);
                 if (found) {
                     ++exploredCount;
-                    destinations.push_back(u->first);
+                    if (DBGsubgraph->find(key) != DBGsubgraph->end())
+                        destinations.push_back(u->first);
                 }
                 ++edgeCount;
             }
@@ -525,7 +526,8 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 bool found = checkNext(key);
                 if (found) {
                     ++exploredCount;
-                    destinations.push_back(u->first);
+                    if (DBGsubgraph->find(key) != DBGsubgraph->end())
+                        destinations.push_back(u->first);
                 }
                 ++edgeCount;
             }
@@ -542,6 +544,8 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 destination = prev[destination];
             }
         }
+    }else{
+        
     }
 //    if (explored) {
 //        for (auto node : dist) // clear the cache for this source

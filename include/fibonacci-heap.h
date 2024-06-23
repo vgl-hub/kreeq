@@ -24,7 +24,7 @@ struct FibonacciNode {
 template<typename V>
 class FibonacciHeap {
     FibonacciNode<V>* minNode;
-    uint16_t numNodes, maxNumNodes = 1000;
+    uint32_t numNodes;
     std::vector<FibonacciNode<V>*> degTable;
     phmap::parallel_flat_hash_map<uint64_t, FibonacciNode<V>*> nodePtrs; // this originally was a vector
     public:
@@ -53,12 +53,6 @@ class FibonacciHeap {
         else return true;
     }
     void insert(V u, int key) {
-//        if (numNodes >= maxNumNodes) { // make space for the new node
-//            decreaseKey(degTable.back()->objPtr, 0);
-//            V toBeDeleted = extractMin();
-//            nodePtrs.erase(toBeDeleted->first);
-//            delete toBeDeleted;
-//        }
         //Insert the vertex u with the specified key (value for L(u)) into the Fibonacci heap. O(1) operation
         this->nodePtrs[u->first] = new FibonacciNode<V>;
         this->nodePtrs[u->first]->objPtr = u;
@@ -87,27 +81,35 @@ class FibonacciHeap {
         //Extract the node with the minimum key from the heap. O(log n) operation, where n is the number of nodes in the heap
         FibonacciNode<V>* minN = this->minNode;
         if (minN != NULL) {
- 
+            std::cout<<"here we are"<<std::endl;
             int deg = minN->degree;
             FibonacciNode<V>* currChild = minN->child;
             FibonacciNode<V>* remChild;
             for (int i = 0; i < deg; i++) {
-
+                std::cout<<"here we are0.1"<<std::endl;
                 remChild = currChild;
+                std::cout<<"here we are0.2"<<std::endl;
                 currChild = currChild->right;
                 _existingToRoot(remChild);
+                std::cout<<"here we are0.3"<<std::endl;
             }
+            std::cout<<"here we are1"<<std::endl;
             _removeNodeFromRoot(minN);
+            std::cout<<"here we are2"<<std::endl;
             this->numNodes--;
             if (this->numNodes == 0) {
                 this->minNode = NULL;
             }else{
+                std::cout<<"here we are2.1"<<std::endl;
                 this->minNode = minN->right;
                 FibonacciNode<V>* minNLeft = minN->left;
                 this->minNode->left = minNLeft;
+                std::cout<<"here we are2.2"<<std::endl;
                 minNLeft->right = this->minNode;
                 _consolidate();
+                std::cout<<"here we are2.3"<<std::endl;
             }
+            std::cout<<"here we are3"<<std::endl;
             return minN->objPtr;
         }else{
             return NULL;
@@ -208,25 +210,25 @@ class FibonacciHeap {
     }
     void _consolidate() {
         int deg, rootCnt = 0;
-
+        std::cout<<"hey1"<<std::endl;
         if (this->numNodes > 1) {
             this->degTable.clear();
-            FibonacciNode<V> *currNode = this->minNode;
-            FibonacciNode<V> *currDeg, *currConsolNode;
-            FibonacciNode<V> *temp = this->minNode, *itNode = this->minNode;
-
+            FibonacciNode<V>* currNode = this->minNode;
+            FibonacciNode<V>* currDeg, * currConsolNode;
+            FibonacciNode<V>* temp = this->minNode, * itNode = this->minNode;
+            std::cout<<"hey2"<<std::endl;
             do {
                 rootCnt++;
                 itNode = itNode->right;
             } while (itNode != temp);
-
+            std::cout<<"hey3"<<std::endl;
             for (int cnt = 0; cnt < rootCnt; cnt++) {
                 currConsolNode = currNode;
                 currNode = currNode->right;
                 deg = currConsolNode->degree;
-
+                std::cout<<"hey4"<<std::endl;
                 while (true) {
-                    
+                    std::cout<<"hey4.1"<<std::endl;
                     while (deg >= int(this->degTable.size())) {
                         this->degTable.push_back(NULL);
                     }
@@ -234,6 +236,7 @@ class FibonacciHeap {
                         this->degTable[deg] = currConsolNode;
                         break;
                     }else{
+                        std::cout<<"hey4.2"<<std::endl;
                         currDeg = this->degTable[deg];
                         if (currConsolNode->key > currDeg->key) {
                             std::swap(currConsolNode, currDeg);
@@ -242,15 +245,20 @@ class FibonacciHeap {
                         _link(currDeg, currConsolNode);
                         this->degTable[deg] = NULL;
                         deg++;
+                        std::cout<<"hey4.3"<<std::endl;
                     }
+                    std::cout<<"hey5"<<std::endl;
                 }
+                std::cout<<"hey6"<<std::endl;
             }
             this->minNode = NULL;
+            std::cout<<"hey7"<<std::endl;
             for (size_t i = 0; i < this->degTable.size(); i++) {
                 if (this->degTable[i] != NULL) {
                     _existingToRoot(this->degTable[i]);
                 }
             }
+            std::cout<<"hey8"<<std::endl;
         }
     }
 };

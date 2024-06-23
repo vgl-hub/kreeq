@@ -101,11 +101,14 @@ class FibonacciHeap {
             if (this->numNodes == 0) {
                 this->minNode = NULL;
             }else{
+                std::cout<<"here we are2.1"<<std::endl;
                 this->minNode = minN->right;
                 FibonacciNode<V>* minNLeft = minN->left;
                 this->minNode->left = minNLeft;
+                std::cout<<"here we are2.2"<<std::endl;
                 minNLeft->right = this->minNode;
                 _consolidate();
+                std::cout<<"here we are2.3"<<std::endl;
             }
             std::cout<<"here we are3"<<std::endl;
             return minN->objPtr;

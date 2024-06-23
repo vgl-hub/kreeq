@@ -1,4 +1,4 @@
-kreeq subgraph -d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 16 
+kreeq subgraph -d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 16 --traversal-algorithm traversal
 embedded
 Subgraph summary statistics:
 Total kmers: 158

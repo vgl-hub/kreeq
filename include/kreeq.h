@@ -141,7 +141,7 @@ class PM : public phmap::parallel_flat_hash_map<uint64_t, T,
                                           std::equal_to<uint64_t>,
                                           std::allocator<std::pair<const uint64_t, T>>,
                                           8,
-phmap::NullMutex> {};
+                                          phmap::NullMutex> {};
 
 using ParallelMap = PM<DBGkmer>;
 using ParallelMap32 = PM<DBGkmer32>;
@@ -153,6 +153,8 @@ class DBG : public Kmap<DBG, UserInputKreeq, uint64_t, DBGkmer, DBGkmer32> { // 
     UserInputKreeq userInput;
     
     InSequencesDBG *genome;
+    
+    ParallelMap32 *graphCache = new ParallelMap32;
     
     // subgraph objects
     ParallelMap32color *DBGsubgraph = new ParallelMap32color;
@@ -237,13 +239,19 @@ public:
     
     void subgraph();
     
-    void DFS();
+    void traversal(); // a basic traversal, all nodes at the same time
+    
+    void bestFirst(); // best-first search traversal
     
     void summary(ParallelMap32color& DBGsubgraph);
     
-    ParallelMap32color DFSpass(ParallelMap32color* candidates, std::array<uint16_t, 2> mapRange);
+    ParallelMap32color traversalPass(ParallelMap32color* candidates, std::array<uint16_t, 2> mapRange);
     
     void mergeSubgraphs();
+    
+    std::pair<bool,ParallelMap32color> dijkstra(std::pair<uint64_t,DBGkmer32color>, std::array<uint16_t, 2> mapRange);
+    
+    void buildNextKmer(uint8_t* nextKmer, uint64_t hash, uint8_t nextBase, bool fw);
     
     template<typename MAPTYPE>
     bool mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex);

@@ -291,6 +291,7 @@ int main(int argc, char **argv) {
             static struct option long_options[] = { // struct mapping long options
                 {"database", required_argument, 0, 'd'},
                 {"input-sequence", required_argument, 0, 'f'},
+                {"traversal-algorithm", required_argument, 0, 0},
                 {"search-depth", required_argument, 0, 0},
                 {"no-collapse", no_argument, &userInput.noCollapse, 1},
                 {"no-reference", no_argument, &userInput.noReference, 1},
@@ -328,6 +329,8 @@ int main(int argc, char **argv) {
                     case 0: // case for long options without short options
                         if(strcmp(long_options[option_index].name,"search-depth") == 0)
                             userInput.kmerDepth = atoi(optarg);
+                        if(strcmp(long_options[option_index].name,"traversal-algorithm") == 0)
+                            userInput.travAlgorithm = optarg;
                         break;
                     case 'd': // input sequence
                         
@@ -364,6 +367,7 @@ int main(int argc, char **argv) {
                         printf("\nOptions:\n");
                         printf("\t-d --database DBG database.\n");
                         printf("\t-f --input-sequence sequence input file (fasta).\n");
+                        printf("\t--traversal-algorithm <string> the approach used for graph search (best-first/traversal, default: best-first).\n");
                         printf("\t--search-depth the max depth for graph traversal (default: 3).\n");
                         printf("\t--no-collapse do not collapse linear nodes (default: false).\n");
                         printf("\t--no-reference do not include reference nodes (default: false).\n");

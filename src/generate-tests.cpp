@@ -87,8 +87,8 @@ int main(void) {
         {{"-d testFiles/random7.kreeq -f testFiles/random5.fasta"}, {""}},
         {{"-d testFiles/random8.kreeq -f testFiles/random5.fasta"}, {""}},
         {{"-d testFiles/random9.kreeq -f testFiles/random5.fasta"}, {""}},
-        {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 15"}, {""}},
-        {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 16"}, {""}}
+        {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 15 --traversal-algorithm traversal"}, {""}},
+        {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 16 --traversal-algorithm traversal"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
     };
     for(const auto &pair : file_args) {

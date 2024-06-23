@@ -14,6 +14,7 @@
 #include <future>
 #include <cstdio>
 #include <deque>
+#include <limits>
 
 #include "parallel-hashmap/phmap.h"
 #include "parallel-hashmap/phmap_dump.h"
@@ -32,8 +33,85 @@
 #include "input.h"
 #include "kmer.h"
 #include "kreeq.h"
+#include "fibonacci-heap.h"
 
 #include "subgraph.h"
+
+// help functions
+
+void DBG::mergeSubgraphs() {
+    
+    for (ParallelMap32color *map1 : DBGTmpSubgraphs) {
+        unionSum(map1, DBGsubgraph);
+        delete map1;
+    }
+}
+
+template<typename MAPTYPE>
+bool DBG::mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex) {
+    
+    auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
+    auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
+    auto& inner2 = map2->get_inner(subMapIndex);
+    auto& submap2 = inner2.set_;
+    
+    for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
+        
+        auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
+        if (got == submap2.end()){
+            submap2.insert(pair);
+        }else{
+
+            DBGkmer32& dbgkmerMap = got->second;
+        
+            for (uint64_t w = 0; w<4; ++w) { // update weights
+                
+                if (LARGEST - dbgkmerMap.fw[w] >= pair.second.fw[w])
+                    dbgkmerMap.fw[w] += pair.second.fw[w];
+                else
+                    dbgkmerMap.fw[w] = LARGEST;
+                if (LARGEST - dbgkmerMap.bw[w] >= pair.second.bw[w])
+                    dbgkmerMap.bw[w] += pair.second.bw[w];
+                else
+                    dbgkmerMap.bw[w] = LARGEST;
+                
+            }
+            
+            if (LARGEST - dbgkmerMap.cov >= pair.second.cov)
+                dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
+            else
+                dbgkmerMap.cov = LARGEST;
+            
+        };
+        
+    }
+    
+    return true;
+    
+}
+
+template<typename MAPTYPE>
+bool DBG::unionSum(MAPTYPE* map1, MAPTYPE* map2) {
+    
+    std::vector<std::function<bool()>> jobs;
+    
+    if (map1->subcnt() != map2->subcnt()) {
+        fprintf(stderr, "Maps don't have the same numbers of submaps (%zu != %zu). Terminating.\n", map1->subcnt(), map2->subcnt());
+        exit(EXIT_FAILURE);
+    }
+    
+    for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
+        jobs.push_back([this, map1, map2, subMapIndex] { return this->mergeSubMaps(map1, map2, subMapIndex); });
+    
+    threadPool.queueJobs(jobs);
+    
+    jobWait(threadPool);
+    
+    return true;
+    
+}
+
+// subgraph functions
 
 void DBG::subgraph() {
     
@@ -78,7 +156,18 @@ void DBG::subgraph() {
 
     }
     mergeSubgraphs();
-    DFS();
+    if (userInput.travAlgorithm == "best-first") {
+        if (userInput.kmerDepth == -1)
+            userInput.kmerDepth = userInput.kmerLen; // unidirectional search
+        bestFirst();
+    }else if (userInput.travAlgorithm == "traversal") {
+        if (userInput.kmerDepth == -1)
+            userInput.kmerDepth = std::ceil((float)userInput.kmerLen/2); // kmer search is in both directions
+        traversal();
+    }else{
+        fprintf(stderr, "Cannot find input algorithm (%s). Terminating.\n", userInput.travAlgorithm.c_str());
+        exit(EXIT_FAILURE);
+    }
     summary(*DBGsubgraph);
     DBGgraphToGFA();
     
@@ -211,7 +300,7 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
     return true;
 }
 
-void DBG::DFS() {
+void DBG::traversal() {
     
     ParallelMap32color candidates, newCandidates;
     ParallelMap32color* subgraph = DBGsubgraph;
@@ -225,7 +314,7 @@ void DBG::DFS() {
 
             mapRange = computeMapRange(mapRange);
             loadMapRange(mapRange);
-            newCandidates = DFSpass(subgraph, mapRange);
+            newCandidates = traversalPass(subgraph, mapRange);
             deleteMapRange(mapRange);
             candidates.insert(newCandidates.begin(), newCandidates.end());
             subgraph = &newCandidates;
@@ -234,7 +323,7 @@ void DBG::DFS() {
     DBGsubgraph->insert(candidates.begin(), candidates.end());
 }
 
-ParallelMap32color DBG::DFSpass(ParallelMap32color* subgraph, std::array<uint16_t, 2> mapRange) {
+ParallelMap32color DBG::traversalPass(ParallelMap32color* subgraph, std::array<uint16_t, 2> mapRange) {
     
     ParallelMap32color newCandidates;
     
@@ -327,74 +416,158 @@ ParallelMap32color DBG::DFSpass(ParallelMap32color* subgraph, std::array<uint16_
     return newCandidates;
 }
 
-void DBG::mergeSubgraphs() {
+void DBG::bestFirst() {
     
-    for (ParallelMap32color *map1 : DBGTmpSubgraphs) {
-        unionSum(map1, DBGsubgraph);
-        delete map1;
+    ParallelMap32color candidates;
+    uint32_t explored = 0;
+    std::array<uint16_t, 2> mapRange;
+    ParallelMap32color DBGsubgraphCpy = *DBGsubgraph;
+    
+    while(explored < DBGsubgraph->size()) {
+
+        mapRange = {0,0};
+
+        while (mapRange[1] < mapCount) {
+
+            mapRange = computeMapRange(mapRange);
+            loadMapRange(mapRange);
+            
+            for (auto pair : DBGsubgraphCpy) {
+                
+                auto results = dijkstra(pair, mapRange);;
+                explored += results.first;
+                if (results.first) {
+                    candidates.insert(results.second.begin(), results.second.end());
+                    DBGsubgraphCpy.erase(pair.first);
+                }
+            }
+            deleteMapRange(mapRange);
+        }
     }
+    DBGsubgraph->insert(candidates.begin(), candidates.end());
 }
 
-template<typename MAPTYPE>
-bool DBG::mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex) {
+std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32color> source, std::array<uint16_t, 2> mapRange) {
     
-    auto& inner = map1->get_inner(subMapIndex);   // to retrieve the submap at given index
-    auto& submap1 = inner.set_;        // can be a set or a map, depending on the type of map1
-    auto& inner2 = map2->get_inner(subMapIndex);
-    auto& submap2 = inner2.set_;
+    bool explored = false; // true if we reached a node in the original graph
+    std::vector<uint64_t> destinations;
+    FibonacciHeap<std::pair<const uint64_t, DBGkmer32>*> Q; // node priority queue Q
+    phmap::parallel_flat_hash_map<uint64_t,uint8_t> dist;
+    phmap::parallel_flat_hash_map<uint64_t,uint64_t> prev; // distance table
     
-    for (auto pair : submap1) { // for each element in map1, find it in map2 and increase its value
+    dist[source.first] = 0;
+    std::pair<const uint64_t, DBGkmer32> firstKmer = std::make_pair(source.first,source.second);
+    Q.insert(&firstKmer, 0); // associated priority equals dist[·]
+    
+    uint64_t key;
+    int16_t depth = 0;
+    
+    while (!explored && depth < userInput.kmerDepth + 1) { // The main loop
         
-        auto got = submap2.find(pair.first); // insert or find this kmer in the hash table
-        if (got == submap2.end()){
-            submap2.insert(pair);
-        }else{
-
-            DBGkmer32& dbgkmerMap = got->second;
-        
-            for (uint64_t w = 0; w<4; ++w) { // update weights
-                
-                if (LARGEST - dbgkmerMap.fw[w] >= pair.second.fw[w])
-                    dbgkmerMap.fw[w] += pair.second.fw[w];
-                else
-                    dbgkmerMap.fw[w] = LARGEST;
-                if (LARGEST - dbgkmerMap.bw[w] >= pair.second.bw[w])
-                    dbgkmerMap.bw[w] += pair.second.bw[w];
-                else
-                    dbgkmerMap.bw[w] = LARGEST;
-                
+        ParallelMap *map;
+//        ParallelMap32 *map32;
+        bool isFw = false;
+        std::pair<const uint64_t, DBGkmer32>* u = Q.extractMin(); // Remove and return best vertex
+        if (u == NULL) { // no more nodes to expand
+            explored = true;
+            break;
+        }
+        auto checkNext = [&,this] (uint64_t key) {
+            auto startNode = DBGsubgraph->find(key);
+            if (startNode == DBGsubgraph->end()) { // if we connect to the original graph we are done
+                auto nextKmer = graphCache->find(key); // check if the node is in the cache (already visited)
+                uint64_t m = key % mapCount;
+                if (nextKmer == graphCache->end() && m >= mapRange[0] && m < mapRange[1]) { // the node is in not cached but is available to visit now
+                    map = maps[m];
+                    auto got = map->find(key);
+                    nextKmer = graphCache->insert(*got).first; // cache node for future iterations
+                }else{
+                    return false;
+                }
+                uint8_t alt = dist[u->first]; // g(n)
+                if (alt < std::numeric_limits<uint8_t>::max())
+                    alt += 1; // Graph.Edges(u, v) << actual weight g(h)
+                auto got = dist.find(nextKmer->first);
+                if (got == dist.end()) { // if the next node was not seen before we add it to the queue
+                    dist[nextKmer->first] = std::numeric_limits<uint8_t>::max(); // unknown distance from source to v
+                    Q.insert(&*nextKmer, 0);
+                }
+                if (alt < dist[nextKmer->first]) {
+                    prev[nextKmer->first] = u->first;
+                    dist[nextKmer->first] = alt;
+                    Q.decreaseKey(&*nextKmer, alt);
+                }
+                return false;
+            }else{
+                return true;
             }
-            
-            if (LARGEST - dbgkmerMap.cov >= pair.second.cov)
-                dbgkmerMap.cov += pair.second.cov; // increase kmer coverage
-            else
-                dbgkmerMap.cov = LARGEST;
-            
         };
         
+        uint8_t edgeCount = 0, exploredCount = 0;
+        for (uint8_t i = 0; i<4; ++i) { // forward edges
+            if (u->second.fw[i] != 0) {
+                uint8_t nextKmer[k];
+                buildNextKmer(nextKmer, u->first, i, true); // compute next node
+                key = hash(nextKmer, &isFw);
+                bool found = checkNext(key);
+                if (found) {
+                    ++exploredCount;
+                    destinations.push_back(u->first);
+                }
+                ++edgeCount;
+            }
+            if (u->second.bw[i] != 0) { // backward edges
+                uint8_t nextKmer[k];
+                buildNextKmer(nextKmer, u->first, i, false); // compute next node
+                key = hash(nextKmer, &isFw);
+                bool found = checkNext(key);
+                if (found) {
+                    ++exploredCount;
+                    destinations.push_back(u->first);
+                }
+                ++edgeCount;
+            }
+        }
+        depth += 1;
+        if(edgeCount == exploredCount || depth == userInput.kmerDepth + 1)
+            explored = true;
     }
-    
-    return true;
-    
+    ParallelMap32color discoveredNodes;
+    if (destinations.size() > 0) { // traverse from target to source
+        for (uint64_t destination : destinations) {
+            while (destination != source.first) { // construct the shortest path with a stack S
+                discoveredNodes.insert(*graphCache->find(destination)); // push the vertex onto the stack
+                destination = prev[destination];
+            }
+        }
+    }
+    return std::make_pair(explored,discoveredNodes);
 }
 
-template<typename MAPTYPE>
-bool DBG::unionSum(MAPTYPE* map1, MAPTYPE* map2) {
+void DBG::buildNextKmer(uint8_t* nextKmer, uint64_t hash, uint8_t nextBase, bool fw) {
     
-    std::vector<std::function<bool()>> jobs;
+    std::string firstKmer;
     
-    if (map1->subcnt() != map2->subcnt()) {
-        fprintf(stderr, "Maps don't have the same numbers of submaps (%zu != %zu). Terminating.\n", map1->subcnt(), map2->subcnt());
-        exit(EXIT_FAILURE);
+    if (fw) {
+        firstKmer.append(reverseHash(hash));
+        firstKmer.push_back(itoc[nextBase]);
+        for (uint8_t e = 0; e<k; ++e)
+            nextKmer[e] = ctoi[(unsigned char)firstKmer[e+1]];
+    }else{
+        firstKmer.push_back(itoc[nextBase]);
+        firstKmer.append(reverseHash(hash));
+        for (uint8_t e = 0; e<k; ++e)
+            nextKmer[e] = ctoi[(unsigned char)firstKmer[e]];
+        
     }
-    
-    for(std::size_t subMapIndex = 0; subMapIndex < map1->subcnt(); ++subMapIndex)
-        jobs.push_back([this, map1, map2, subMapIndex] { return this->mergeSubMaps(map1, map2, subMapIndex); });
-    
-    threadPool.queueJobs(jobs);
-    
-    jobWait(threadPool);
-    
-    return true;
-    
 }
+
+
+
+
+
+
+
+
+
+

@@ -458,35 +458,36 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     FibonacciHeap<std::pair<const uint64_t, DBGkmer32>*> Q; // node priority queue Q
     phmap::parallel_flat_hash_map<uint64_t,uint8_t> dist;
     phmap::parallel_flat_hash_map<uint64_t,uint64_t> prev; // distance table
+    ParallelMap32color discoveredNodes;
     
-    dist[source.first] = 0;
+    dist[source.first] = 1;
     std::pair<const uint64_t, DBGkmer32> firstKmer = std::make_pair(source.first,source.second);
     Q.insert(&firstKmer, 1); // associated priority equals dist[·]
     
     uint64_t key;
     int16_t depth = 0;
     
-    while (!explored && depth < userInput.kmerDepth + 1) { // The main loop
+    while (Q.size() > 0 && depth < userInput.kmerDepth + 1) { // The main loop
         ParallelMap *map;
         //        ParallelMap32 *map32;
         
         bool isFw = false;
         std::pair<const uint64_t, DBGkmer32>* u = Q.extractMin(); // Remove and return best vertex
-        if (u == NULL) { // no more nodes to expand
-            explored = true;
-            break;
-        }
+
         auto checkNext = [&,this] (uint64_t key) {
             auto startNode = DBGsubgraph->find(key);
             if (startNode == DBGsubgraph->end()) { // if we connect to the original graph we are done
                 auto nextKmer = graphCache->find(key); // check if the node is in the cache (already visited)
-                uint64_t m = key % mapCount;
-                if (nextKmer == graphCache->end() && m >= mapRange[0] && m < mapRange[1]) { // the node is in not cached but is available to visit now
-                    map = maps[m];
-                    auto got = map->find(key);
-                    nextKmer = graphCache->insert(*got).first; // cache node for future iterations
-                }else{
-                    return false;
+                
+                if (nextKmer == graphCache->end()) { // we cached this node before
+                    uint64_t m = key % mapCount;
+                    if (m >= mapRange[0] && m < mapRange[1]) { // the node is in not cached but is available to visit now
+                        map = maps[m];
+                        auto got = map->find(key);
+                        nextKmer = graphCache->insert(*got).first; // cache node for future iterations
+                    }else{
+                        return false;
+                    }
                 }
                 uint8_t alt = dist[u->first]; // g(n)
                 if (alt < std::numeric_limits<uint8_t>::max())
@@ -501,10 +502,8 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                     dist[nextKmer->first] = alt;
                     Q.decreaseKey(&*nextKmer, alt);
                 }
-                return false;
-            }else{
-                return true;
             }
+            return true;
         };
         uint8_t edgeCount = 0, exploredCount = 0;
         for (uint8_t i = 0; i<4; ++i) { // forward edges
@@ -535,7 +534,6 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
         if(edgeCount == exploredCount || depth == userInput.kmerDepth + 1 || destinations.size() == 10) // everything explored/found, depth reached, or top10
             explored = true;
     }
-    ParallelMap32color discoveredNodes;
     if (destinations.size() > 0) { // traverse from target to source
         for (uint64_t destination : destinations) {
             while (destination != source.first) { // construct the shortest path with a stack S

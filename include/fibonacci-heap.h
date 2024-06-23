@@ -25,7 +25,8 @@ template<typename V>
 class FibonacciHeap {
     FibonacciNode<V>* minNode;
     uint32_t numNodes;
-    phmap::parallel_flat_hash_map<uint64_t, FibonacciNode<V>*> degTable, nodePtrs;
+    std::vector<FibonacciNode<V>*> degTable;
+    phmap::parallel_flat_hash_map<uint64_t, FibonacciNode<V>*> nodePtrs;
     public:
     FibonacciHeap() {
         //Constructor function
@@ -37,8 +38,6 @@ class FibonacciHeap {
         //Destructor function
         this->numNodes = 0;
         this->minNode = NULL;
-        for (auto node : degTable)
-            delete node.second;
         for (auto node : nodePtrs)
             delete node.second;
         this->degTable.clear();
@@ -230,7 +229,10 @@ class FibonacciHeap {
                 std::cout<<"hey4"<<std::endl;
                 while (true) {
                     std::cout<<"hey4.1"<<std::endl;
-                    if (this->degTable.find(deg) == this->degTable.end()) {
+                    while (deg >= int(this->degTable.size())) {
+                        this->degTable.push_back(NULL);
+                    }
+                    if (this->degTable[deg] == NULL) {
                         this->degTable[deg] = currConsolNode;
                         break;
                     }else{

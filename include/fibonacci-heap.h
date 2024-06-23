@@ -82,6 +82,7 @@ class FibonacciHeap {
         //Extract the node with the minimum key from the heap. O(log n) operation, where n is the number of nodes in the heap
         FibonacciNode<V>* minN = this->minNode;
         if (minN != NULL) {
+            std::cout<<"here we are"<<std::endl;
             int deg = minN->degree;
             FibonacciNode<V>* currChild = minN->child;
             FibonacciNode<V>* remChild;

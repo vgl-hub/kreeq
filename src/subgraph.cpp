@@ -434,8 +434,9 @@ void DBG::bestFirst() {
         while (mapRange[1] < mapCount) {
 
             mapRange = computeMapRange(mapRange);
+            std::cout<<"here1.1"<<std::endl;
             loadMapRange(mapRange);
-            
+            std::cout<<"here1.2"<<std::endl;
             for (auto pair : DBGsubgraphCpy) {
                 
                 auto results = dijkstra(pair, mapRange);;
@@ -445,6 +446,7 @@ void DBG::bestFirst() {
                     DBGsubgraphCpy.erase(pair.first);
                 }
             }
+            std::cout<<"here1.3"<<std::endl;
             deleteMapRange(mapRange);
             std::cout<<"here2"<<std::endl;
         }

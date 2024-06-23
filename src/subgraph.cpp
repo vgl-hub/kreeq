@@ -424,10 +424,10 @@ ParallelMap32color DBG::traversalPass(ParallelMap32color* subgraph, std::array<u
 void DBG::bestFirst() {
     
     ParallelMap32color* candidates = new ParallelMap32color;
-    uint32_t explored = 0;
+    uint32_t explored = 0, total = DBGsubgraph->size();
     std::array<uint16_t, 2> mapRange;
-    ParallelMap32color DBGsubgraphCpy = *DBGsubgraph;
-    while(explored < DBGsubgraph->size()) {
+    ParallelMap32color* DBGsubgraphCpy = new ParallelMap32color;
+    while(explored < total) {
 
         mapRange = {0,0};
 
@@ -435,19 +435,22 @@ void DBG::bestFirst() {
 
             mapRange = computeMapRange(mapRange);
             loadMapRange(mapRange);
-            for (auto pair : DBGsubgraphCpy) {
+            for (auto pair : *DBGsubgraph) {
                 auto results = dijkstra(pair, mapRange);;
                 explored += results.first;
                 if (results.first) {
                     candidates->insert(results.second.begin(), results.second.end());
-                    DBGsubgraphCpy.erase(pair.first);
+                    DBGsubgraphCpy->insert(pair);
+//                    DBGsubgraph->erase(pair.first);
                 }
 //                std::cout<<DBGsubgraphCpy.size()<<std::endl;
             }
             deleteMapRange(mapRange);
         }
     }
-    DBGsubgraph->insert(candidates->begin(), candidates->end());
+    DBGsubgraphCpy->insert(candidates->begin(), candidates->end());
+    delete DBGsubgraph;
+    DBGsubgraph = DBGsubgraphCpy;
     delete candidates;
 }
 

@@ -441,6 +441,7 @@ void DBG::bestFirst() {
                     candidates->insert(results.second.begin(), results.second.end());
                     DBGsubgraphCpy.erase(pair.first);
                 }
+                std::cout<<DBGsubgraphCpy.size()<<std::endl;
             }
             deleteMapRange(mapRange);
         }
@@ -467,6 +468,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     while (!explored && depth < userInput.kmerDepth + 1) { // The main loop
         ParallelMap *map;
 //        ParallelMap32 *map32;
+        
         bool isFw = false;
         std::pair<const uint64_t, DBGkmer32>* u = Q.extractMin(); // Remove and return best vertex
         if (u == NULL) { // no more nodes to expand
@@ -505,7 +507,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
         };
         uint8_t edgeCount = 0, exploredCount = 0;
         for (uint8_t i = 0; i<4; ++i) { // forward edges
-            if (u->second.fw[i] != 0) {
+            if (u->second.fw[i] > userInput.covCutOff) {
                 uint8_t nextKmer[k];
                 buildNextKmer(nextKmer, u->first, i, true); // compute next node
                 key = hash(nextKmer, &isFw);
@@ -516,7 +518,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 }
                 ++edgeCount;
             }
-            if (u->second.bw[i] != 0) { // backward edges
+            if (u->second.bw[i] > userInput.covCutOff) { // backward edges
                 uint8_t nextKmer[k];
                 buildNextKmer(nextKmer, u->first, i, false); // compute next node
                 key = hash(nextKmer, &isFw);
@@ -537,9 +539,12 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
         for (uint64_t destination : destinations) {
             while (destination != source.first) { // construct the shortest path with a stack S
                 discoveredNodes.insert(*graphCache->find(destination)); // push the vertex onto the stack
+                dist.erase(destination);
                 destination = prev[destination];
             }
         }
+        for (auto node : dist) // clear the cache for this source
+            graphCache->erase(node.first);
     }
     return std::make_pair(explored,discoveredNodes);
 }

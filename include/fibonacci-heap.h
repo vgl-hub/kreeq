@@ -109,7 +109,7 @@ class FibonacciHeap {
                 minNLeft->right = this->minNode;
                 _consolidate();
                 std::cout<<"here we are2.3"<<std::endl;
-                return this->minN->objPtr;
+                return minN->objPtr;
             }
            
             

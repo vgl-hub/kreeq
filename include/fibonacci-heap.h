@@ -211,19 +211,23 @@ class FibonacciHeap {
     }
     void _consolidate() {
         int deg, rootCnt = 0;
+        std::cout<<"hey1"<<std::endl;
         if (this->numNodes > 1) {
             this->degTable.clear();
             FibonacciNode<V>* currNode = this->minNode;
             FibonacciNode<V>* currDeg, * currConsolNode;
             FibonacciNode<V>* temp = this->minNode, * itNode = this->minNode;
+            std::cout<<"hey2"<<std::endl;
             do {
                 rootCnt++;
                 itNode = itNode->right;
             } while (itNode != temp);
+            std::cout<<"hey3"<<std::endl;
             for (int cnt = 0; cnt < rootCnt; cnt++) {
                 currConsolNode = currNode;
                 currNode = currNode->right;
                 deg = currConsolNode->degree;
+                std::cout<<"hey4"<<std::endl;
                 while (true) {
 
                     if (this->degTable.find(deg) == this->degTable.end()) {
@@ -239,14 +243,18 @@ class FibonacciHeap {
                         this->degTable[deg] = NULL;
                         deg++;
                     }
+                    std::cout<<"hey5"<<std::endl;
                 }
+                std::cout<<"hey6"<<std::endl;
             }
             this->minNode = NULL;
+            std::cout<<"hey7"<<std::endl;
             for (size_t i = 0; i < this->degTable.size(); i++) {
                 if (this->degTable[i] != NULL) {
                     _existingToRoot(this->degTable[i]);
                 }
             }
+            std::cout<<"hey8"<<std::endl;
         }
     }
 };

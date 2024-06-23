@@ -544,8 +544,8 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                 destination = prev[destination];
             }
         }
-        for (auto node : dist) // clear the cache for this source
-            graphCache->erase(node.first);
+//        for (auto node : dist) // clear the cache for this source
+//            graphCache->erase(node.first);
     }
     return std::make_pair(explored,discoveredNodes);
 }

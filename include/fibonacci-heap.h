@@ -53,12 +53,12 @@ class FibonacciHeap {
         else return true;
     }
     void insert(V u, int key) {
-//        if (numNodes >= maxNumNodes) { // make space for the new node
-//            decreaseKey(degTable.back()->objPtr, 0);
-//            V toBeDeleted = extractMin();
-//            nodePtrs.erase(toBeDeleted->first);
-//            delete toBeDeleted;
-//        }
+        if (numNodes >= maxNumNodes) { // make space for the new node
+            decreaseKey(degTable.back()->objPtr, 0);
+            V toBeDeleted = extractMin();
+            nodePtrs.erase(toBeDeleted->first);
+            delete toBeDeleted;
+        }
         //Insert the vertex u with the specified key (value for L(u)) into the Fibonacci heap. O(1) operation
         this->nodePtrs[u->first] = new FibonacciNode<V>;
         this->nodePtrs[u->first]->objPtr = u;

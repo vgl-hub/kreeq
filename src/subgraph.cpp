@@ -438,7 +438,7 @@ void DBG::bestFirst() {
                 auto results = dijkstra(pair, mapRange);;
                 explored += results.first;
                 if (results.first) {
-                    candidates->insert(results.second.begin(), results.second.end());
+//                    candidates->insert(results.second.begin(), results.second.end());
                     DBGsubgraphCpy.erase(pair.first);
                 }
             }

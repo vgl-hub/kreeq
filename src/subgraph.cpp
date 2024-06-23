@@ -438,9 +438,10 @@ void DBG::bestFirst() {
                 auto results = dijkstra(pair, mapRange);;
                 explored += results.first;
                 if (results.first) {
-//                    candidates->insert(results.second.begin(), results.second.end());
+                    candidates->insert(results.second.begin(), results.second.end());
                     DBGsubgraphCpy.erase(pair.first);
                 }
+                std::cout<<DBGsubgraphCpy.size()<<std::endl;
             }
             deleteMapRange(mapRange);
         }
@@ -537,9 +538,12 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
         for (uint64_t destination : destinations) {
             while (destination != source.first) { // construct the shortest path with a stack S
                 discoveredNodes.insert(*graphCache->find(destination)); // push the vertex onto the stack
+                dist.erase(destination);
                 destination = prev[destination];
             }
         }
+        for (auto node : dist) // clear the cache for this source
+            graphCache->erase(node.first);
     }
     return std::make_pair(explored,discoveredNodes);
 }

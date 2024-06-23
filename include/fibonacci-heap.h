@@ -24,7 +24,7 @@ struct FibonacciNode {
 template<typename V>
 class FibonacciHeap {
     FibonacciNode<V>* minNode;
-    uint8_t numNodes;
+    uint32_t numNodes;
     phmap::parallel_flat_hash_map<uint64_t, FibonacciNode<V>*> degTable, nodePtrs;
     public:
     FibonacciHeap() {

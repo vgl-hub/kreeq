@@ -300,6 +300,7 @@ int main(int argc, char **argv) {
                 {"input-positions", required_argument, 0, 'p'},
                 
                 {"threads", required_argument, 0, 'j'},
+                {"max-memory", required_argument, 0, 'm'},
                 {"verbose", no_argument, &verbose_flag, 1},
                 {"cmd", no_argument, &cmd_flag, 1},
                 {"help", no_argument, 0, 'h'},
@@ -360,15 +361,18 @@ int main(int argc, char **argv) {
                             userInput.inSequence = optarg;
                         }
                         break;
-                    case 'j': // max threads
-                        maxThreads = atoi(optarg);
-                        break;
                     case 'o': // handle output (file or stdout)
                         userInput.outFile = optarg;
                         break;
                     case 'p': // input coordinates
                         ifFileExists(optarg);
                         userInput.inBedInclude = optarg;
+                        break;
+                    case 'j': // max threads
+                        maxThreads = atoi(optarg);
+                        break;
+                    case 'm': // max memory
+                        userInput.maxMem = atof(optarg);
                         break;
                     case 'h': // help
                         printf("kreeq subgraph [options]\n");
@@ -380,9 +384,10 @@ int main(int argc, char **argv) {
                         printf("\t--search-depth the max depth for graph traversal (default: 3).\n");
                         printf("\t--no-collapse do not collapse linear nodes (default: false).\n");
                         printf("\t--no-reference do not include reference nodes (default: false).\n");
-                        printf("\t-j --threads <n> numbers of threads (default: max).\n");
                         printf("\t-o --out-format generates various kinds of outputs (currently supported: .gfa1/2).\n");
                         printf("\t-p --input-positions BED coordinates of positions to extract kmers from.\n");
+                        printf("\t-j --threads <n> numbers of threads (default: max).\n");
+                        printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.9 of max).\n");
                         printf("\t--cmd print $0 to stdout.\n");
                         exit(0);
                 }

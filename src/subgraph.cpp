@@ -441,6 +441,7 @@ void DBG::bestFirst() {
                     candidates->insert(results.second.begin(), results.second.end());
                     DBGsubgraphCpy.erase(pair.first);
                 }
+                std::cout<<DBGsubgraphCpy.size()<<std::endl;
             }
             deleteMapRange(mapRange);
         }

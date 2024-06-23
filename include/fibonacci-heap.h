@@ -24,7 +24,7 @@ struct FibonacciNode {
 template<typename V>
 class FibonacciHeap {
     FibonacciNode<V>* minNode;
-    uint32_t numNodes;
+    uint16_t numNodes, maxNumNodes = 1000;
     std::vector<FibonacciNode<V>*> degTable;
     phmap::parallel_flat_hash_map<uint64_t, FibonacciNode<V>*> nodePtrs; // this originally was a vector
     public:
@@ -53,6 +53,12 @@ class FibonacciHeap {
         else return true;
     }
     void insert(V u, int key) {
+        if (numNodes >= maxNumNodes) { // make space for the new node
+            decreaseKey(degTable.back()->objPtr, 0);
+            V toBeDeleted = extractMin();
+            nodePtrs.erase(toBeDeleted->first);
+            delete toBeDeleted;
+        }
         //Insert the vertex u with the specified key (value for L(u)) into the Fibonacci heap. O(1) operation
         this->nodePtrs[u->first] = new FibonacciNode<V>;
         this->nodePtrs[u->first]->objPtr = u;

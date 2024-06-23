@@ -533,7 +533,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
             }
         }
         depth += 1;
-        if(edgeCount == exploredCount || depth == userInput.kmerDepth + 1 || destinations.size() => 10) // everything explored/found, depth reached, or top10
+        if(edgeCount == exploredCount || depth == userInput.kmerDepth + 1 || destinations.size() >= 10) // everything explored/found, depth reached, or top10
             explored = true;
     }
     if (destinations.size() > 0) { // traverse from target to source

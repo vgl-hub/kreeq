@@ -80,8 +80,8 @@ int main(void) {
     }
     // test subgraph
     file_args = {
-        {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0 --do-not-collapse-nodes"}, {""}},
-        {{"-d testFiles/random5.kreeq -f testFiles/random5.fasta --do-not-collapse-nodes"}, {""}},
+        {{"-d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0 --no-collapse"}, {""}},
+        {{"-d testFiles/random5.kreeq -f testFiles/random5.fasta --no-collapse"}, {""}},
         {{"-d testFiles/random5.kreeq -f testFiles/random5.fasta"}, {""}},
         {{"-d testFiles/random6.kreeq -f testFiles/random5.fasta"}, {""}},
         {{"-d testFiles/random7.kreeq -f testFiles/random5.fasta"}, {""}},
@@ -89,7 +89,8 @@ int main(void) {
         {{"-d testFiles/random9.kreeq -f testFiles/random5.fasta"}, {""}},
         {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 15 --traversal-algorithm traversal"}, {""}},
         {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 16 --traversal-algorithm traversal"}, {""}},
-        {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 32 --traversal-algorithm best-first"}, {""}}
+        {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 32 --traversal-algorithm best-first"}, {""}},
+        {{"-d testFiles/random11.kreeq -f testFiles/random11.fasta --search-depth 32 --traversal-algorithm best-first --no-collapse"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
     };
     for(const auto &pair : file_args) {

@@ -438,7 +438,7 @@ void DBG::bestFirst() {
             loadMapRange(mapRange);
             std::cout<<"here1.2"<<std::endl;
             for (auto pair : DBGsubgraphCpy) {
-                
+                std::cout<<DBGsubgraphCpy.size()<<std::endl;
                 auto results = dijkstra(pair, mapRange);;
                 explored += results.first;
                 if (results.first) {

@@ -91,18 +91,20 @@ class FibonacciHeap {
                 currChild = currChild->right;
                 _existingToRoot(remChild);
             }
+            std::cout<<"here we are1"<<std::endl;
             _removeNodeFromRoot(minN);
+            std::cout<<"here we are2"<<std::endl;
             this->numNodes--;
             if (this->numNodes == 0) {
                 this->minNode = NULL;
-            }
-            else {
+            }else{
                 this->minNode = minN->right;
                 FibonacciNode<V>* minNLeft = minN->left;
                 this->minNode->left = minNLeft;
                 minNLeft->right = this->minNode;
                 _consolidate();
             }
+            std::cout<<"here we are3"<<std::endl;
             return minN->objPtr;
         }else{
             return NULL;

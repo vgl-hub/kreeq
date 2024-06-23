@@ -87,9 +87,12 @@ class FibonacciHeap {
             FibonacciNode<V>* currChild = minN->child;
             FibonacciNode<V>* remChild;
             for (int i = 0; i < deg; i++) {
+                std::cout<<"here we are0.1"<<std::endl;
                 remChild = currChild;
+                std::cout<<"here we are0.2"<<std::endl;
                 currChild = currChild->right;
                 _existingToRoot(remChild);
+                std::cout<<"here we are0.3"<<std::endl;
             }
             std::cout<<"here we are1"<<std::endl;
             _removeNodeFromRoot(minN);

@@ -919,7 +919,7 @@ void DBG::DBGgraphToGFA() {
                     if (nextPair == DBGsubgraph->end()) { // we found a novel dead end
                         auto got = residualEdges.find(key); // we couldn't find the node as it was already visited and deleted
                         if(got != residualEdges.end()) {
-                            residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,isFw);
+                            residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,1);
                             continue;
                         }else{
                             break;
@@ -930,7 +930,7 @@ void DBG::DBGgraphToGFA() {
                     nextBwEdges = isFw ? nextPair->second.bwEdgeIndexes().size() : nextPair->second.fwEdgeIndexes().size();
                     
                     if(nextBwEdges > 1)  { // this node is branching back, we cannot include it
-                        residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,isFw);
+                        residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,1);
                         break;
                     }
                     
@@ -938,9 +938,9 @@ void DBG::DBGgraphToGFA() {
                     DBGsubgraph->erase(key);
                     
                     if (nextFwEdges > 1) { // we found a fw branching node, nothing more to be done
-                        residualEdges[key] = std::make_tuple(nextPair->second,idCounter,isFw); // we preserve the edge infomrmation
+                        residualEdges[key] = std::make_tuple(nextPair->second,idCounter,1); // we preserve the edge information
                         break;
-                    }else if (nextFwEdges == 0) { // we found a dead end
+                    } else if (nextFwEdges == 0) { // we found a dead end
                         break;
                     }
                 }
@@ -972,7 +972,7 @@ void DBG::DBGgraphToGFA() {
                     if (nextPair == DBGsubgraph->end()) { // we found a novel dead end
                         auto got = residualEdges.find(key); // we couldn't find the node as it was already visited and deleted
                         if(got != residualEdges.end()) {
-                            residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,isFw);
+                            residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,0);
                             continue;
                         }else{
                             break;
@@ -983,7 +983,7 @@ void DBG::DBGgraphToGFA() {
                     nextFwEdges = isFw ? nextPair->second.bwEdgeIndexes().size() : nextPair->second.fwEdgeIndexes().size();
                     
                     if(nextFwEdges > 1) { // this node is branching back, we cannot include it
-                        residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,isFw);
+                        residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,0);
                         break;
                     }
                     
@@ -991,7 +991,7 @@ void DBG::DBGgraphToGFA() {
                     DBGsubgraph->erase(key);
                     
                     if (nextBwEdges > 1) { // we found a branching kmer, nothing more to be done
-                        residualEdges[key] = std::make_tuple(nextPair->second,idCounter,isFw); // we preserve the edge infomrmation
+                        residualEdges[key] = std::make_tuple(nextPair->second,idCounter,0); // we preserve the edge infomrmation
                         break;
                     }else if (nextBwEdges == 0) { // we found a dead end
                         break;

@@ -945,7 +945,7 @@ void DBG::DBGgraphToGFA() {
                     }
                 }
             }else{
-                residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,1); // we preserve the edge
+                residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,0); // we preserve the edge
             }
                 
             if (bwEdges == 1) {
@@ -998,7 +998,7 @@ void DBG::DBGgraphToGFA() {
                     }
                 }
             }else{
-                residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,0); // we preserve the edge
+                residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,1); // we preserve the edge
             }
                 
             std::string* inSequence = new std::string(revCom(bwSequence) + fwSequence.substr(k)); // new sequence

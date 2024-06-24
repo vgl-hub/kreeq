@@ -471,6 +471,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     int16_t depth = 0;
     
     while (Q.size() > 0 && depth < userInput.kmerDepth + 1) { // The main loop
+        explored = false; // if there are still node in the queue we cannot be done
         ParallelMap *map;
         //        ParallelMap32 *map32;
         

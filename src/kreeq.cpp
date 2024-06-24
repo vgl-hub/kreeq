@@ -1035,7 +1035,7 @@ void DBG::DBGgraphToGFA() {
                     std::string nextSegmentHeader = std::to_string(std::get<1>(got->second));
 
                     std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(std::get<0>(pair.second).fw[i])}};
-                    InEdge edge(idCounter++, edgeCounter, headersToIds[thisSegmentHeader], headersToIds[nextSegmentHeader], std::get<2>(pair.second) ? '+' : '-', std::get<2>(got->second) ? '-' : '+', "1N"+std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+                    InEdge edge(idCounter++, edgeCounter, headersToIds[thisSegmentHeader], headersToIds[nextSegmentHeader], std::get<2>(pair.second) ? '+' : '-', std::get<2>(got->second) ? '-' : '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
                     ++edgeCounter;
 
                     GFAsubgraph.appendEdge(edge);
@@ -1062,7 +1062,7 @@ void DBG::DBGgraphToGFA() {
                     std::string prevSegmentHeader = std::to_string(std::get<1>(got->second));
  
                     std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(std::get<0>(pair.second).bw[i])}};
-                    InEdge edge(idCounter++, edgeCounter, headersToIds[prevSegmentHeader], headersToIds[thisSegmentHeader], std::get<2>(got->second) ? '+' : '-', std::get<2>(pair.second) ? '-' : '+', "1N"+std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+                    InEdge edge(idCounter++, edgeCounter, headersToIds[prevSegmentHeader], headersToIds[thisSegmentHeader], std::get<2>(got->second) ? '+' : '-', std::get<2>(pair.second) ? '-' : '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
                     ++edgeCounter;
                     GFAsubgraph.appendEdge(edge);
                 }
@@ -1104,7 +1104,7 @@ void DBG::DBGgraphToGFA() {
                     std::string nextSegmentHeader = got->second;
                     
                     std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(pair.second.fw[i])}};
-                    InEdge edge(idCounter++, edgeCounter, headersToIds[thisSegmentHeader], headersToIds[nextSegmentHeader], '+', isFw ? '+' : '-', "1N"+std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+                    InEdge edge(idCounter++, edgeCounter, headersToIds[thisSegmentHeader], headersToIds[nextSegmentHeader], '+', isFw ? '+' : '-', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
                     ++edgeCounter;
                     GFAsubgraph.appendEdge(edge);
                 }
@@ -1127,7 +1127,7 @@ void DBG::DBGgraphToGFA() {
                         continue;
                     std::string prevSegmentHeader = got->second;
                     std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(pair.second.bw[i])}};
-                    InEdge edge(idCounter++, edgeCounter, headersToIds[prevSegmentHeader], headersToIds[thisSegmentHeader], isFw ? '+' : '-', '+', "1N"+std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+                    InEdge edge(idCounter++, edgeCounter, headersToIds[prevSegmentHeader], headersToIds[thisSegmentHeader], isFw ? '+' : '-', '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
                     ++edgeCounter;
                     GFAsubgraph.appendEdge(edge);
                 }

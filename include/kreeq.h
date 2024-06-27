@@ -77,7 +77,7 @@ struct DBGkmer32 {
         cov = dbgkmer.cov;
     }
     
-    uint32_t fwCount() { // count forward edges
+    uint8_t fwCount() { // count forward edges
         
         uint32_t fwEdges = 0;
         
@@ -88,7 +88,7 @@ struct DBGkmer32 {
         return fwEdges;
     }
     
-    uint32_t bwCount() { // count backward edges
+    uint8_t bwCount() { // count backward edges
         
         uint32_t bwEdges = 0;
         
@@ -252,6 +252,10 @@ public:
     std::pair<bool,ParallelMap32color> dijkstra(std::pair<uint64_t,DBGkmer32color>, std::array<uint16_t, 2> mapRange);
     
     void buildNextKmer(uint8_t* nextKmer, uint64_t hash, uint8_t nextBase, bool fw);
+    
+    void nextKmerFromString(uint8_t *nextKmer, std::string *sequence, uint64_t start, uint8_t nextBase);
+    
+    bool isKeyFw(uint64_t key);
     
     template<typename MAPTYPE>
     bool mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex);

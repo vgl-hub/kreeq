@@ -878,6 +878,25 @@ std::string colorPalette(uint8_t value){
     return (value_to_color.find(value)->second);
 }
 
+void DBG::nextKmerFromString(uint8_t *nextKmer, std::string *sequence, uint64_t start, uint8_t nextBase){
+    
+    std::string kmer = sequence->substr(start, k);
+    kmer.push_back(itoc[nextBase]); // append its base
+    for (uint8_t e = 0; e<k; ++e)
+        nextKmer[e] = ctoi[(unsigned char)kmer[e+1]];
+    
+}
+
+bool DBG::isKeyFw(uint64_t key) {
+    bool isFw;
+    std::string kmer = reverseHash(key);
+    uint8_t thisKmer[k];
+    for (uint8_t e = 0; e<k; ++e)
+        thisKmer[e] = ctoi[(unsigned char)kmer[e]];
+    hash(thisKmer, &isFw);
+    return isFw;
+}
+
 void DBG::DBGgraphToGFA() {
 
     uint32_t idCounter = 0, seqPos = 0, edgeCounter = 0;
@@ -885,264 +904,149 @@ void DBG::DBGgraphToGFA() {
     
     if (!userInput.noCollapse) {
         
-        std::queue<std::pair<uint32_t,std::pair<const uint64_t, DBGkmer32color>*>> Q; // node id and hash
-        std::vector<std::tuple<uint64_t,char,uint64_t,char>> residualEdges; // hash, kmer, G' node
-        auto pair = DBGsubgraph->begin(); // pick a random node
+        phmap::parallel_flat_hash_map<uint64_t, std::tuple<DBGkmer32,uint32_t,bool>> residualEdges; // hash, kmer, G' node
+        
+        auto extend = [&,this] (std::pair<uint64_t, DBGkmer32color> node, std::string &seed, uint8_t side) {
+            
+            if ((side ? node.second.bwCount() : node.second.fwCount()) > 1) {
+                std::cout<<"Branching node side, cannot extend. Terminating."<<std::endl;
+                exit(EXIT_FAILURE);
+            }else if ((side ? node.second.bwCount() : node.second.fwCount()) == 0){
+                std::cout<<"Dead end, cannot extend. Terminating."<<std::endl;
+                exit(EXIT_FAILURE);
+            }
+            
+            uint64_t key, baseCounter = 0;
+            bool isFw = isKeyFw(node.first);
+            isFw = side ? !isFw : isFw;
+            
+            while (true) {
+                
+                uint8_t i = isFw ? node.second.fwEdgeIndexes()[0] : 3-node.second.bwEdgeIndexes()[0];
+                
+                uint8_t nextKmer[k];
+                nextKmerFromString(nextKmer, &seed, baseCounter++, i);
+                key = hash(nextKmer, &isFw);
+                
+//                std::cout<<seed<<std::endl;
+//                std::cout<<+i<<std::endl;
+                
+                auto got = DBGsubgraph->find(key);
+                
+                if (got == DBGsubgraph->end()) // we found a dead end
+                    break;
+
+                node = *got;
+
+                uint8_t nextFrontEdges = isFw ? node.second.fwEdgeIndexes().size() : node.second.bwEdgeIndexes().size();
+                uint8_t nextBackEdges = isFw ? node.second.bwEdgeIndexes().size() : node.second.fwEdgeIndexes().size();
+                
+                if(nextBackEdges > 1)  { // this node is branching back, we cannot include it
+//                    residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,1);
+                    break;
+                }
+                
+                seed.push_back(itoc[i]); // append its base
+                DBGsubgraph->erase(key); // we can now safely erase as these nodes don't need to be stored
+                
+                if (nextFrontEdges > 1) { // we found a fw branching node, nothing more to be done
+//                     residualEdges[key] = std::make_tuple(nextPair->second,idCounter,1); // we preserve the edge information
+                    break;
+                }
+                
+                if (nextFrontEdges == 0) { // we found a dead end
+                    break;
+                }
+            }
+        };
         
         while (DBGsubgraph->size() != 0) { // until all nodes have been merged or outputted
             
-            std::cout<<+DBGsubgraph->size()<<std::endl;
-            uint8_t frontEdges = pair->second.fwCount(), backEdges = pair->second.bwCount(); // need to check if the current node can be merged in one direction or the other
+            auto pair = DBGsubgraph->begin(); // pick a random node
+            std::string frontSequence = reverseHash(pair->first); // we grow the sequence in both directions
+            std::string backSequence = revCom(reverseHash(pair->first));
+        
+            uint8_t edgeCounts[2] = {pair->second.fwCount(), pair->second.bwCount()};
             
-            if (frontEdges != 1 || backEdges != 1) { // we are at a branch, otherwise we are in the middle, nothing can be merged safely
-                
-                Q.push(std::make_pair(idCounter++,&*pair));
-                
-                std::cout<<"we are here"<<std::endl;
-                
-                while (!Q.empty()) { // Iterate over the queue until everything has been discovered
+            if (edgeCounts[0] == 1 || edgeCounts[1] == 1) { // we are at a branch, otherwise we are in the middle, nothing can be merged safely
                     
-                    std::cout<<"we are here1"<<std::endl;
+                    for (uint8_t side = 0; side < 2; ++side) {
+                        
+                        if (edgeCounts[side] == 1) { // we can extend if we are at a branch and this the non branching side
+                            
+                            extend(*pair, (!side ? frontSequence : backSequence), side);
+                            std::cout<<"sequence: "<<(!side ? frontSequence : backSequence)<<std::endl;
                     
-                    auto Qelement = Q.front(); // Dequeue a vertex from queue
-                    Q.pop();
-                    
-                    auto EE = [&,this] (std::pair<uint32_t,std::pair<const uint64_t, DBGkmer32color>*> Qelement) {
-                        
-                        std::cout<<"we are here1.1"<<std::endl;
-                        uint32_t currentNodeId = Qelement.first;
-                        std::cout<<+Qelement.second->first<<std::endl;
-                        std::pair<const uint64_t, DBGkmer32color> startNode = *Qelement.second;
-                        
-                        if (DBGsubgraph->find(startNode.first) == DBGsubgraph->end())
-                            return;
-                        
-                        std::cout<<"we are here2"<<std::endl;
-                        
-                        std::string firstKmer = reverseHash(startNode.first);
-                        bool isStartFw;
-                        uint8_t thisKmer[k];
-                        for (uint8_t e = 0; e<k; ++e)
-                            thisKmer[e] = ctoi[(unsigned char)firstKmer[e]];
-                        hash(thisKmer, &isStartFw);
-                        std::string* frontSequence = new std::string(firstKmer);
-                        std::string* backSequence = new std::string(revCom(firstKmer)); // we grow the sequence from the seed
-                        uint64_t frontCounter = 0, backCounter = 0;
-                        
-//                        std::cout<<"we are here3"<<std::endl;
-                        
-                        std::cout<<"seed sequence:"<<*frontSequence<<" "<<+isStartFw<<std::endl;
-                        
-                        uint8_t frontEdges = startNode.second.fwCount(), backEdges = startNode.second.bwCount();
-                        uint8_t nextFrontEdges = frontEdges, nextBackEdges = backEdges;
                             
-                        if (frontEdges == 1) {
-                            
-                            std::pair<uint64_t, DBGkmer32color> currentNode = startNode;
-                            uint64_t key = currentNode.first;
-                            bool isFw = true;
-                            
-                            while (true) { // this is where we extend
-                                
-//                                std::cout<<"we are hereA"<<std::endl;
-                                uint8_t i = isFw ? currentNode.second.fwEdgeIndexes()[0] : 3-currentNode.second.bwEdgeIndexes()[0];
-//                                std::cout<<"we are hereB"<<std::endl;
-                                uint8_t nextKmer[k];
-                                std::string kmer = frontSequence->substr(frontCounter++, k);
-                                kmer.push_back(itoc[i]); // append its base
-                                for (uint8_t e = 0; e<k; ++e)
-                                    nextKmer[e] = ctoi[(unsigned char)kmer[e+1]];
-//                                std::cout<<"we are hereC"<<std::endl;
-                                key = hash(nextKmer, &isFw);
-                                
-                                auto got = DBGsubgraph->find(key);
-                                if (got == DBGsubgraph->end()) { // we found a novel dead end
-                                         break;
-                                 }
-//                                std::cout<<"we are hereE"<<std::endl;
-                                
-                                currentNode = *got;
-                                 
-                                nextFrontEdges = isFw ? currentNode.second.fwEdgeIndexes().size() : currentNode.second.bwEdgeIndexes().size();
-                                nextBackEdges = isFw ? currentNode.second.bwEdgeIndexes().size() : currentNode.second.fwEdgeIndexes().size();
-//                                std::cout<<"we are hereF"<<std::endl;
-                                if(nextBackEdges > 1)  { // this node is branching back, we cannot include it
-                                    std::cout<<reverseHash(key)<<std::endl;
-                                    if (DBGsubgraph->find(key) != DBGsubgraph->end()) {
-                                        residualEdges.push_back(std::make_tuple(currentNodeId, '+', idCounter, '+'));
-                                        Q.push(std::make_pair(idCounter++,&*DBGsubgraph->find(key)));
-                                    }
-                                    break;
-                                }
-//                                std::cout<<"we are hereD"<<std::endl;
-                                frontSequence->push_back(itoc[i]); // append its base
-                                DBGsubgraph->erase(key);
-                                 
-                                if (nextFrontEdges > 1) { // we found a fw branching node, nothing more to be done
-                                    std::cout<<"new back nodes"<<std::endl;
-                                    for (uint8_t i = 0; i<4; ++i) {
-                                        
-                                        if (isFw ? currentNode.second.fw[i] : currentNode.second.bw[3-i] > userInput.covCutOff) {
-                                            uint8_t nextKmer[k];
-                                            std::string kmer = frontSequence->substr(frontCounter, k);
-                                            kmer.push_back(itoc[i]); // append its base
-                                            for (uint8_t e = 0; e<k; ++e)
-                                                nextKmer[e] = ctoi[(unsigned char)kmer[e+1]];
-                                            bool isFw;
-                                            uint64_t key = hash(nextKmer, &isFw);
-                                            std::cout<<reverseHash(key)<<std::endl;
-                                            if (DBGsubgraph->find(key) != DBGsubgraph->end()) {
-                                                residualEdges.push_back(std::make_tuple(currentNodeId, '+', idCounter, '+'));
-                                                Q.push(std::make_pair(idCounter++,&*DBGsubgraph->find(key)));
-                                            }
-                                        }
-                                    }
-                                    break;
-                                } else if (nextFrontEdges == 0) { // we found a dead end
-                                    break;
-                                }
-                            }
-                        }else{ // this is where we discover new paths
-                            std::cout<<"origin front nodes"<<std::endl;
-                            for (uint8_t i = 0; i<4; ++i) {
-                                
-                                if (isStartFw ? startNode.second.fw[i] : startNode.second.bw[3-i] > userInput.covCutOff) {
-                                    uint8_t nextKmer[k];
-                                    std::string kmer = frontSequence->substr(0, k);
-                                    kmer.push_back(itoc[i]); // append its base
-                                    for (uint8_t e = 0; e<k; ++e)
-                                        nextKmer[e] = ctoi[(unsigned char)kmer[e+1]];
-                                    bool isFw;
-                                    uint64_t key = hash(nextKmer, &isFw);
-                                    std::cout<<reverseHash(key)<<std::endl;
-                                    if (DBGsubgraph->find(key) != DBGsubgraph->end()) {
-                                        residualEdges.push_back(std::make_tuple(currentNodeId, '+', idCounter, '+'));
-                                        Q.push(std::make_pair(idCounter++,&*DBGsubgraph->find(key)));
-                                    }
-                                }
-                            }
+                        }else if (edgeCounts[side] > 1){ // if branch, we keep track of neighbours, otherwise it's a dead end and we pick another node
                         }
-                        std::cout<<"we are hereY"<<std::endl;
-                        if (backEdges == 1) {
-                            
-                            std::pair<uint64_t, DBGkmer32color> currentNode = startNode;
-                            uint64_t key = currentNode.first;
-                            bool isFw = false;
-                            
-                            while (true) { // this is where we extend
-                                
-                                uint8_t i = isFw ? currentNode.second.fwEdgeIndexes()[0] : 3-currentNode.second.bwEdgeIndexes()[0];
-                                
-                                uint8_t nextKmer[k];
-                                std::string kmer = backSequence->substr(backCounter++, k);
-                                kmer.push_back(itoc[i]); // append its base
-                                for (uint8_t e = 0; e<k; ++e)
-                                    nextKmer[e] = ctoi[(unsigned char)kmer[e+1]];
-                                
-                                key = hash(nextKmer, &isFw);
-                                auto got = DBGsubgraph->find(key);
-                                if (got == DBGsubgraph->end()) { // we found a novel dead end
-                                    break;
-                                }
-                                currentNode = *got;
-                                 
-                                nextBackEdges = isFw ? currentNode.second.fwEdgeIndexes().size() : currentNode.second.bwEdgeIndexes().size();
-                                nextFrontEdges = isFw ? currentNode.second.bwEdgeIndexes().size() : currentNode.second.fwEdgeIndexes().size();
-                                 
-                                if(nextFrontEdges > 1)  { // this node is branching back, we cannot include it
-                                    std::cout<<reverseHash(key)<<std::endl;
-                                    if (DBGsubgraph->find(key) != DBGsubgraph->end()) {
-                                        residualEdges.push_back(std::make_tuple(currentNodeId, '+', idCounter, '+'));
-                                        Q.push(std::make_pair(idCounter++,&*DBGsubgraph->find(key)));
-                                    }
-                                    break;
-                                }
-                                
-                                backSequence->push_back(itoc[i]); // append its base
-                                DBGsubgraph->erase(key);
-                                
-                                if (nextBackEdges > 1) { // we found a fw branching node, nothing more to be done
-                                    std::cout<<"new back nodes"<<std::endl;
-                                    for (uint8_t i = 0; i<4; ++i) {
-                                        
-                                        if (isFw ? currentNode.second.fw[i] : currentNode.second.bw[3-i] > userInput.covCutOff) {
-                                            uint8_t nextKmer[k];
-                                            std::string kmer = backSequence->substr(backCounter, k);
-                                            kmer.push_back(itoc[i]); // append its base
-                                            for (uint8_t e = 0; e<k; ++e)
-                                                nextKmer[e] = ctoi[(unsigned char)kmer[e+1]];
-                                            bool isFw;
-                                            uint64_t key = hash(nextKmer, &isFw);
-                                            std::cout<<reverseHash(key)<<std::endl;
-                                            if (DBGsubgraph->find(key) != DBGsubgraph->end()) {
-                                                residualEdges.push_back(std::make_tuple(currentNodeId, '+', idCounter, '+'));
-                                                Q.push(std::make_pair(idCounter++,&*DBGsubgraph->find(key)));
-                                            }
-                                        }
-                                    }
-                                    break;
-                                } else if (nextBackEdges == 0) { // we found a dead end
-                                    break;
-                                }
-                            }
-                        }else{ // this is where we discover new paths
-                            std::cout<<"origin back nodes"<<std::endl;
-                            for (uint8_t i = 0; i<4; ++i) {
-                                
-                                if (isStartFw ? startNode.second.fw[i] : startNode.second.bw[3-i] > userInput.covCutOff) {
-                                    uint8_t nextKmer[k];
-                                    std::string kmer = backSequence->substr(0, k);
-                                    kmer.push_back(itoc[i]); // append its base
-                                    for (uint8_t e = 0; e<k; ++e)
-                                        nextKmer[e] = ctoi[(unsigned char)kmer[e+1]];
-                                    bool isFw;
-                                    uint64_t key = hash(nextKmer, &isFw);
-                                    std::cout<<reverseHash(key)<<std::endl;
-                                    if (DBGsubgraph->find(key) != DBGsubgraph->end()) {
-                                        residualEdges.push_back(std::make_tuple(currentNodeId, '+', idCounter, '+'));
-                                        Q.push(std::make_pair(idCounter++,&*DBGsubgraph->find(key)));
-                                    }
-                                }
-                            }
-                        }
-
-                        std::cout<<"fw sequence:"<<*frontSequence<<std::endl;
-                        std::cout<<"bw sequence:"<<*backSequence<<std::endl;
-                        
-                        std::cout<<"we are here4"<<std::endl;
-                        Sequence* seq = new Sequence {std::to_string(currentNodeId), "", frontCounter > backCounter ? frontSequence : backSequence}; // add sequence
-                        seq->seqPos = seqPos; // remember the order
-                        std::vector<Tag> inTags = {Tag{'f',"DP",std::to_string(startNode.second.cov)},Tag{'Z',"CB",colorPalette(startNode.second.color)}};
-                        GFAsubgraph.appendSegment(seq, inTags);
-                        seqPos++;
-                        std::cout<<"we are here5"<<std::endl;
-                    };
-                    EE(Qelement);
-                    std::cout<<"we are here6"<<std::endl;
-                    DBGsubgraph->erase(Qelement.second->first);
-                    std::cout<<"we are here7"<<std::endl;
-                }
-                
+                    }
+                Sequence* sequence = new Sequence {std::to_string(idCounter++), "", new std::string(revCom(backSequence) + frontSequence.substr(k))}; // add sequence
+                std::vector<Tag> inTags = {Tag{'f',"DP",std::to_string(pair->second.cov)},Tag{'Z',"CB",colorPalette(pair->second.color)}};
+                sequence->seqPos = seqPos++; // remember the order
+                GFAsubgraph.appendSegment(sequence, inTags);
+                std::cout<<*sequence->sequence<<std::endl;
+                DBGsubgraph->erase(pair->first);
             }
-            if (std::next(pair) != DBGsubgraph->end())
-                ++pair;
-            else if (DBGsubgraph->size() > 0)
-                pair = DBGsubgraph->begin(); // check next node
-            else
-                break;
         }
         jobWait(threadPool);
-        for (auto edge : residualEdges) { // construct the edges
-            
-            std::string firstNode = std::to_string(std::get<0>(edge));
-            std::string secondNode = std::to_string(std::get<2>(edge));
-            
-            std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(0)}};
-            InEdge newEdge(idCounter++, edgeCounter, headersToIds[firstNode], headersToIds[secondNode], std::get<1>(edge), std::get<3>(edge), std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
-            ++edgeCounter;
-
-            GFAsubgraph.appendEdge(newEdge);
-        }
+//        while (residualEdges.size() != 0) { // construct the edges
+//            
+//            auto pair = *residualEdges.begin();
+//            std::string thisSegmentHeader = std::to_string(std::get<1>(pair.second));
+//            
+//            for (uint8_t i = 0; i<4; ++i) { // forward edges
+//                if (std::get<0>(pair.second).fw[i] != 0) {
+//
+//                    uint8_t nextKmer[k];
+//                    std::string firstKmer = reverseHash(pair.first);
+//                    firstKmer.push_back(itoc[i]);
+//                    for (uint8_t e = 0; e<k; ++e)
+//                        nextKmer[e] = ctoi[(unsigned char)firstKmer[e+1]];
+//                    
+//                    bool isFw = false;
+//                    uint64_t key = hash(nextKmer, &isFw);
+//                    auto got = residualEdges.find(key);
+//                    if (got == residualEdges.end())
+//                        continue;
+//                    DBGsubgraph->erase(key);
+//                    std::string nextSegmentHeader = std::to_string(std::get<1>(got->second));
+//
+//                    std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(std::get<0>(pair.second).fw[i])}};
+//                    InEdge edge(idCounter++, edgeCounter, headersToIds[thisSegmentHeader], headersToIds[nextSegmentHeader], std::get<2>(pair.second) ? '+' : '-', std::get<2>(got->second) ? '-' : '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+//                    ++edgeCounter;
+//
+//                    GFAsubgraph.appendEdge(edge);
+//                }
+//            }
+//            
+//            for (uint8_t i = 0; i<4; ++i) { // reverse edges
+//                if (std::get<0>(pair.second).bw[i] != 0) {
+//
+//                    uint8_t nextKmer[k];
+//                    std::string firstKmer;
+//                    firstKmer.push_back(itoc[i]);
+//                    firstKmer.append(reverseHash(pair.first));
+//                    
+//                    for (uint8_t e = 0; e<k; ++e)
+//                        nextKmer[e] = ctoi[(unsigned char)firstKmer[e]];
+//                    
+//                    bool isFw = false;
+//                    uint64_t key = hash(nextKmer, &isFw);
+//                    auto got = residualEdges.find(key);
+//                    if (got == residualEdges.end())
+//                        continue;
+//                    DBGsubgraph->erase(key);
+//                    std::string prevSegmentHeader = std::to_string(std::get<1>(got->second));
+// 
+//                    std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(std::get<0>(pair.second).bw[i])}};
+//                    InEdge edge(idCounter++, edgeCounter, headersToIds[prevSegmentHeader], headersToIds[thisSegmentHeader], std::get<2>(got->second) ? '+' : '-', std::get<2>(pair.second) ? '-' : '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+//                    ++edgeCounter;
+//                    GFAsubgraph.appendEdge(edge);
+//                }
+//            }
+//            residualEdges.erase(residualEdges.begin());
+//        }
         
     }else{
 

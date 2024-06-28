@@ -977,26 +977,28 @@ void DBG::DBGgraphToGFA() {
             
             if (edgeCounts[0] == 1 || edgeCounts[1] == 1) { // we are at a branch, otherwise we are in the middle, nothing can be merged safely
                     
-                    for (uint8_t side = 0; side < 2; ++side) {
-                        
-                        if (edgeCounts[side] == 1) { // we can extend if we are at a branch and this the non branching side
-                            
-                            extend(*pair, (!side ? frontSequence : backSequence), side);
-//                            std::cout<<"sequence: "<<(!side ? frontSequence : backSequence)<<std::endl;
+                for (uint8_t side = 0; side < 2; ++side) {
                     
-                            
-                        }else if (edgeCounts[side] > 1){ // if branch, we keep track of neighbours, otherwise it's a dead end and we pick another node
-                            residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,side); // we preserve the edge
-                        }
+                    if (edgeCounts[side] == 1) { // we can extend if we are at a branch and this the non branching side
+                        
+                        extend(*pair, (!side ? frontSequence : backSequence), side);
+//                            std::cout<<"sequence: "<<(!side ? frontSequence : backSequence)<<std::endl;
+                
+                        
+                    }else if (edgeCounts[side] > 1){ // if branch, we keep track of neighbours, otherwise it's a dead end and we pick another node
+                        residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,side); // we preserve the edge
                     }
-                Sequence* sequence = new Sequence {std::to_string(idCounter++), "", new std::string(revCom(backSequence) + frontSequence.substr(k))}; // add sequence
-                std::vector<Tag> inTags = {Tag{'f',"DP",std::to_string(pair->second.cov)},Tag{'Z',"CB",colorPalette(pair->second.color)}};
-                sequence->seqPos = seqPos++; // remember the order
-                GFAsubgraph.appendSegment(sequence, inTags);
+                }
 //                std::cout<<*sequence->sequence<<std::endl;
             }else{
                 residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,0);
             }
+            
+            Sequence* sequence = new Sequence {std::to_string(idCounter++), "", new std::string(revCom(backSequence) + frontSequence.substr(k))}; // add sequence
+            std::vector<Tag> inTags = {Tag{'f',"DP",std::to_string(pair->second.cov)},Tag{'Z',"CB",colorPalette(pair->second.color)}};
+            sequence->seqPos = seqPos++; // remember the order
+            GFAsubgraph.appendSegment(sequence, inTags);
+            
             DBGsubgraph->erase(pair->first);
         }
         jobWait(threadPool);

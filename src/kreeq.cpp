@@ -906,19 +906,19 @@ void DBG::DBGgraphToGFA() {
         
         phmap::parallel_flat_hash_map<uint64_t, std::tuple<DBGkmer32,uint32_t,bool>> residualEdges; // hash, kmer, G' node, node side
         
-        auto extend = [&,this] (std::pair<uint64_t, DBGkmer32color> node, std::string &seed, uint8_t side) {
+        auto extend = [&,this] (std::pair<uint64_t, DBGkmer32color> node, std::string &seed, int8_t side) {
             
-            if ((side ? node.second.bwCount() : node.second.fwCount()) > 1) {
+            if ((side ? node.second.fwCount() : node.second.bwCount()) > 1) {
                 std::cout<<"Branching node side, cannot extend. Terminating."<<std::endl;
                 exit(EXIT_FAILURE);
-            }else if ((side ? node.second.bwCount() : node.second.fwCount()) == 0){
+            }else if ((side ? node.second.fwCount() : node.second.bwCount()) == 0){
                 std::cout<<"Dead end, cannot extend. Terminating."<<std::endl;
                 exit(EXIT_FAILURE);
             }
             
             uint64_t key, baseCounter = 0;
             bool isFw = isKeyFw(node.first);
-            isFw = side ? !isFw : isFw;
+            isFw = side ? isFw : !isFw;
             
             while (true) {
                 
@@ -1001,15 +1001,15 @@ void DBG::DBGgraphToGFA() {
             std::string frontSequence = reverseHash(pair->first); // we grow the sequence in both directions
             std::string backSequence = revCom(reverseHash(pair->first));
         
-            uint8_t edgeCounts[2] = {pair->second.fwCount(), pair->second.bwCount()};
+            uint8_t edgeCounts[2] = {pair->second.bwCount(), pair->second.fwCount()};
             
             if (edgeCounts[0] == 1 || edgeCounts[1] == 1) { // we are at a branch, otherwise we are in the middle, nothing can be merged safely
                     
-                for (uint8_t side = 0; side < 2; ++side) {
+                for (int8_t side = 1; side >= 0; --side) {
                     
                     if (edgeCounts[side] == 1) { // we can extend if we are at a branch and this the non branching side
                         
-                        extend(*pair, (!side ? frontSequence : backSequence), side);
+                        extend(*pair, (side ? frontSequence : backSequence), side);
 //                            std::cout<<"sequence: "<<(!side ? frontSequence : backSequence)<<std::endl;
                 
                         

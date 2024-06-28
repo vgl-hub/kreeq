@@ -904,7 +904,7 @@ void DBG::DBGgraphToGFA() {
     
     if (!userInput.noCollapse) {
         
-        phmap::parallel_flat_hash_map<uint64_t, std::tuple<DBGkmer32,uint32_t,bool>> residualEdges; // hash, kmer, G' node
+        phmap::parallel_flat_hash_map<uint64_t, std::tuple<DBGkmer32,uint32_t,bool>> residualEdges; // hash, kmer, G' node, node side
         
         auto extend = [&,this] (std::pair<uint64_t, DBGkmer32color> node, std::string &seed, uint8_t side) {
             
@@ -930,11 +930,18 @@ void DBG::DBGgraphToGFA() {
                 
 //                std::cout<<seed<<std::endl;
 //                std::cout<<+i<<std::endl;
-                
+                auto prevNode = node;
                 auto got = DBGsubgraph->find(key);
                 
-                if (got == DBGsubgraph->end()) // we found a dead end
-                    break;
+                if (got == DBGsubgraph->end()) { // we found a novel dead end
+                    auto got = residualEdges.find(key); // we couldn't find the node as it was already visited and deleted
+                    if(got != residualEdges.end()) {
+                        residualEdges[prevNode.first] = std::make_tuple(prevNode.second,idCounter,side);
+                        continue;
+                    }else{
+                        break;
+                    }
+                }
 
                 node = *got;
 
@@ -942,7 +949,7 @@ void DBG::DBGgraphToGFA() {
                 uint8_t nextBackEdges = isFw ? node.second.bwEdgeIndexes().size() : node.second.fwEdgeIndexes().size();
                 
                 if(nextBackEdges > 1)  { // this node is branching back, we cannot include it
-//                    residualEdges[prevPair->first] = std::make_tuple(prevPair->second,idCounter,1);
+                    residualEdges[prevNode.first] = std::make_tuple(prevNode.second,idCounter,side);
                     break;
                 }
                 
@@ -950,7 +957,7 @@ void DBG::DBGgraphToGFA() {
                 DBGsubgraph->erase(key); // we can now safely erase as these nodes don't need to be stored
                 
                 if (nextFrontEdges > 1) { // we found a fw branching node, nothing more to be done
-//                     residualEdges[key] = std::make_tuple(nextPair->second,idCounter,1); // we preserve the edge information
+                     residualEdges[key] = std::make_tuple(node.second,idCounter,side); // we preserve the edge information
                     break;
                 }
                 
@@ -975,78 +982,79 @@ void DBG::DBGgraphToGFA() {
                         if (edgeCounts[side] == 1) { // we can extend if we are at a branch and this the non branching side
                             
                             extend(*pair, (!side ? frontSequence : backSequence), side);
-                            std::cout<<"sequence: "<<(!side ? frontSequence : backSequence)<<std::endl;
+//                            std::cout<<"sequence: "<<(!side ? frontSequence : backSequence)<<std::endl;
                     
                             
                         }else if (edgeCounts[side] > 1){ // if branch, we keep track of neighbours, otherwise it's a dead end and we pick another node
+                            residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,side); // we preserve the edge
                         }
                     }
                 Sequence* sequence = new Sequence {std::to_string(idCounter++), "", new std::string(revCom(backSequence) + frontSequence.substr(k))}; // add sequence
                 std::vector<Tag> inTags = {Tag{'f',"DP",std::to_string(pair->second.cov)},Tag{'Z',"CB",colorPalette(pair->second.color)}};
                 sequence->seqPos = seqPos++; // remember the order
                 GFAsubgraph.appendSegment(sequence, inTags);
-                std::cout<<*sequence->sequence<<std::endl;
+//                std::cout<<*sequence->sequence<<std::endl;
                 DBGsubgraph->erase(pair->first);
             }
         }
         jobWait(threadPool);
-//        while (residualEdges.size() != 0) { // construct the edges
-//            
-//            auto pair = *residualEdges.begin();
-//            std::string thisSegmentHeader = std::to_string(std::get<1>(pair.second));
-//            
-//            for (uint8_t i = 0; i<4; ++i) { // forward edges
-//                if (std::get<0>(pair.second).fw[i] != 0) {
-//
-//                    uint8_t nextKmer[k];
-//                    std::string firstKmer = reverseHash(pair.first);
-//                    firstKmer.push_back(itoc[i]);
-//                    for (uint8_t e = 0; e<k; ++e)
-//                        nextKmer[e] = ctoi[(unsigned char)firstKmer[e+1]];
-//                    
-//                    bool isFw = false;
-//                    uint64_t key = hash(nextKmer, &isFw);
-//                    auto got = residualEdges.find(key);
-//                    if (got == residualEdges.end())
-//                        continue;
-//                    DBGsubgraph->erase(key);
-//                    std::string nextSegmentHeader = std::to_string(std::get<1>(got->second));
-//
-//                    std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(std::get<0>(pair.second).fw[i])}};
-//                    InEdge edge(idCounter++, edgeCounter, headersToIds[thisSegmentHeader], headersToIds[nextSegmentHeader], std::get<2>(pair.second) ? '+' : '-', std::get<2>(got->second) ? '-' : '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
-//                    ++edgeCounter;
-//
-//                    GFAsubgraph.appendEdge(edge);
-//                }
-//            }
-//            
-//            for (uint8_t i = 0; i<4; ++i) { // reverse edges
-//                if (std::get<0>(pair.second).bw[i] != 0) {
-//
-//                    uint8_t nextKmer[k];
-//                    std::string firstKmer;
-//                    firstKmer.push_back(itoc[i]);
-//                    firstKmer.append(reverseHash(pair.first));
-//                    
-//                    for (uint8_t e = 0; e<k; ++e)
-//                        nextKmer[e] = ctoi[(unsigned char)firstKmer[e]];
-//                    
-//                    bool isFw = false;
-//                    uint64_t key = hash(nextKmer, &isFw);
-//                    auto got = residualEdges.find(key);
-//                    if (got == residualEdges.end())
-//                        continue;
-//                    DBGsubgraph->erase(key);
-//                    std::string prevSegmentHeader = std::to_string(std::get<1>(got->second));
-// 
-//                    std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(std::get<0>(pair.second).bw[i])}};
-//                    InEdge edge(idCounter++, edgeCounter, headersToIds[prevSegmentHeader], headersToIds[thisSegmentHeader], std::get<2>(got->second) ? '+' : '-', std::get<2>(pair.second) ? '-' : '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
-//                    ++edgeCounter;
-//                    GFAsubgraph.appendEdge(edge);
-//                }
-//            }
-//            residualEdges.erase(residualEdges.begin());
-//        }
+        while (residualEdges.size() != 0) { // construct the edges
+            
+            auto pair = *residualEdges.begin();
+            std::string thisSegmentHeader = std::to_string(std::get<1>(pair.second));
+            
+            for (uint8_t i = 0; i<4; ++i) { // forward edges
+                if (std::get<0>(pair.second).fw[i] != 0) {
+
+                    uint8_t nextKmer[k];
+                    std::string firstKmer = reverseHash(pair.first);
+                    firstKmer.push_back(itoc[i]);
+                    for (uint8_t e = 0; e<k; ++e)
+                        nextKmer[e] = ctoi[(unsigned char)firstKmer[e+1]];
+                    
+                    bool isFw = false;
+                    uint64_t key = hash(nextKmer, &isFw);
+                    auto got = residualEdges.find(key);
+                    if (got == residualEdges.end())
+                        continue;
+                    DBGsubgraph->erase(key);
+                    std::string nextSegmentHeader = std::to_string(std::get<1>(got->second));
+
+                    std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(std::get<0>(pair.second).fw[i])}};
+                    InEdge edge(idCounter++, edgeCounter, headersToIds[thisSegmentHeader], headersToIds[nextSegmentHeader], std::get<2>(pair.second) ? '+' : '-', std::get<2>(got->second) ? '-' : '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+                    ++edgeCounter;
+
+                    GFAsubgraph.appendEdge(edge);
+                }
+            }
+            
+            for (uint8_t i = 0; i<4; ++i) { // reverse edges
+                if (std::get<0>(pair.second).bw[i] != 0) {
+
+                    uint8_t nextKmer[k];
+                    std::string firstKmer;
+                    firstKmer.push_back(itoc[i]);
+                    firstKmer.append(reverseHash(pair.first));
+                    
+                    for (uint8_t e = 0; e<k; ++e)
+                        nextKmer[e] = ctoi[(unsigned char)firstKmer[e]];
+                    
+                    bool isFw = false;
+                    uint64_t key = hash(nextKmer, &isFw);
+                    auto got = residualEdges.find(key);
+                    if (got == residualEdges.end())
+                        continue;
+                    DBGsubgraph->erase(key);
+                    std::string prevSegmentHeader = std::to_string(std::get<1>(got->second));
+ 
+                    std::vector<Tag> inTags = {Tag{'i',"KC",std::to_string(std::get<0>(pair.second).bw[i])}};
+                    InEdge edge(idCounter++, edgeCounter, headersToIds[prevSegmentHeader], headersToIds[thisSegmentHeader], std::get<2>(got->second) ? '+' : '-', std::get<2>(pair.second) ? '-' : '+', std::to_string(k-1)+"M", "edge." + std::to_string(edgeCounter), inTags);
+                    ++edgeCounter;
+                    GFAsubgraph.appendEdge(edge);
+                }
+            }
+            residualEdges.erase(residualEdges.begin());
+        }
         
     }else{
 

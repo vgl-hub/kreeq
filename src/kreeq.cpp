@@ -151,7 +151,7 @@ bool DBG::evaluateSegment(uint32_t s, std::array<uint16_t, 2> mapRange) {
             
             map = maps[i];
             auto it = map->find(key);
-            DBGkmer32 khmer;            
+            DBGkmer32 khmer;
             if (it != map->end()) {
                 khmer = it->second;
                 
@@ -945,10 +945,10 @@ void DBG::DBGgraphToGFA() {
 
                 node = *got;
 
-                uint8_t nextFrontEdges = isFw ? node.second.fwEdgeIndexes().size() : node.second.bwEdgeIndexes().size();
-                uint8_t nextBackEdges = isFw ? node.second.bwEdgeIndexes().size() : node.second.fwEdgeIndexes().size();
+                std::vector<uint8_t> nextFrontEdges = isFw ? node.second.fwEdgeIndexes() : node.second.bwEdgeIndexes();
+                std::vector<uint8_t> nextBackEdges = isFw ? node.second.bwEdgeIndexes() : node.second.fwEdgeIndexes();
                 
-                if(nextBackEdges > 1)  { // this node is branching back, we cannot include it
+                if(nextBackEdges.size() > 1)  { // this node is branching back, we cannot include it
                     residualEdges[prevNode.first] = std::make_tuple(prevNode.second,idCounter,side);
                     break;
                 }
@@ -956,13 +956,40 @@ void DBG::DBGgraphToGFA() {
                 seed.push_back(itoc[i]); // append its base
                 DBGsubgraph->erase(key); // we can now safely erase as these nodes don't need to be stored
                 
-                if (nextFrontEdges > 1) { // we found a fw branching node, nothing more to be done
-                     residualEdges[key] = std::make_tuple(node.second,idCounter,side); // we preserve the edge information
+                if (nextFrontEdges.size() == 0) { // we found a dead end
                     break;
-                }
-                
-                if (nextFrontEdges == 0) { // we found a dead end
-                    break;
+                } else if (nextFrontEdges.size() > 1) { // we found a potentially fw branching node, if true, nothing more to be done
+                    
+                    uint8_t edgeCount = 0; // we need to actually check that these nodes exist in the subgraph
+                    
+                    for (uint8_t i : nextFrontEdges) {
+
+                        uint8_t nextKmer[k];
+                        std::string kmer = seed.substr(baseCounter, k);
+                        nextKmerFromString(nextKmer, &kmer, 0, i);
+                        bool isNextFw = isFw; // need to make sure we do not invalidate variables if we are not using this node
+                        uint64_t nextKey = hash(nextKmer, &isNextFw);
+
+                        auto got = DBGsubgraph->find(nextKey);
+
+                        if (got == DBGsubgraph->end()) {
+                            auto got = residualEdges.find(nextKey); // we couldn't find the next node as it was already visited and deleted
+                            if(got != residualEdges.end()) {
+                                residualEdges[node.first] = std::make_tuple(node.second,idCounter,side);
+                            }else{ // lenient version:
+//                                fprintf(stderr, "The kmer is expected in the graph but not available (%s). Terminating.\n", reverseHash(key).c_str());
+//                                exit(EXIT_FAILURE);
+                            }
+                        }
+                        ++edgeCount;
+                        
+                        if (edgeCount > 1) // stop checking
+                            break;
+                    }
+                    if (edgeCount > 1) { // only if the new nodes actually exist in the subgraph we should stop elongation
+                        residualEdges[node.first] = std::make_tuple(node.second,idCounter,side); // we preserve the edge information
+                        break;
+                    }
                 }
             }
         };

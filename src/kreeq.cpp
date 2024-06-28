@@ -961,14 +961,15 @@ void DBG::DBGgraphToGFA() {
                 } else if (nextFrontEdges.size() > 1) { // we found a potentially fw branching node, if true, nothing more to be done
                     
                     uint8_t edgeCount = 0; // we need to actually check that these nodes exist in the subgraph
+                    uint8_t nextKmer[k];
+                    std::string kmer = seed.substr(baseCounter, k);
                     
                     for (uint8_t i : nextFrontEdges) {
 
-                        uint8_t nextKmer[k];
-                        std::string kmer = seed.substr(baseCounter, k);
-                        nextKmerFromString(nextKmer, &kmer, 0, i);
+                        nextKmerFromString(nextKmer, &kmer, 0, isFw ? i : 3-i);
                         bool isNextFw = isFw; // need to make sure we do not invalidate variables if we are not using this node
                         uint64_t nextKey = hash(nextKmer, &isNextFw);
+//                        std::cout<<reverseHash(nextKey)<<std::endl;
 
                         auto got = DBGsubgraph->find(nextKey);
 
@@ -976,12 +977,13 @@ void DBG::DBGgraphToGFA() {
                             auto got = residualEdges.find(nextKey); // we couldn't find the next node as it was already visited and deleted
                             if(got != residualEdges.end()) {
                                 residualEdges[node.first] = std::make_tuple(node.second,idCounter,side);
+                                ++edgeCount;
                             }else{ // lenient version:
 //                                fprintf(stderr, "The kmer is expected in the graph but not available (%s). Terminating.\n", reverseHash(key).c_str());
 //                                exit(EXIT_FAILURE);
                             }
-                        }
-                        ++edgeCount;
+//
+                        }else{++edgeCount;}
                         
                         if (edgeCount > 1) // stop checking
                             break;

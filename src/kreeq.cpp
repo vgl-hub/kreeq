@@ -995,7 +995,7 @@ void DBG::DBGgraphToGFA() {
                 GFAsubgraph.appendSegment(sequence, inTags);
 //                std::cout<<*sequence->sequence<<std::endl;
             }else{
-                residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,side);
+                residualEdges[pair->first] = std::make_tuple(pair->second,idCounter,0);
             }
             DBGsubgraph->erase(pair->first);
         }

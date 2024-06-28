@@ -1,4 +1,4 @@
-kreeq subgraph -d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0 --no-collapse 
+kreeq subgraph -d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0 --no-collapse
 embedded
 Subgraph summary statistics:
 Total kmers: 1156
@@ -34,19 +34,19 @@ Smallest gap in scaffolds: 0
 Base composition (A:C:G:T): 0:0:0:0
 GC content %: nan
 # soft-masked bases: 0
-# segments: 16
-Total segment length: 580
-Average segment length: 36.25
+# segments: 260
+Total segment length: 5460
+Average segment length: 21.00
 # gaps: 0
 # paths: 0
-# edges: 3
-Average degree: 0.19
+# edges: 520
+Average degree: 2.00
 # connected components: 1
-Largest connected component length: 172
-# dead ends: 27
-# disconnected components: 12
-Total length disconnected components: 408
-# separated components: 13
+Largest connected component length: 5460
+# dead ends: 2
+# disconnected components: 0
+Total length disconnected components: 0
+# separated components: 1
 # bubbles: 0
 # circular segments: 0
 # circular paths: 0

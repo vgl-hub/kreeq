@@ -937,10 +937,9 @@ void DBG::DBGgraphToGFA() {
                     auto got = residualEdges.find(key); // we couldn't find the node as it was already visited and deleted
                     if(got != residualEdges.end()) {
                         residualEdges[prevNode.first] = std::make_tuple(prevNode.second,idCounter,side);
-                        continue;
-                    }else{
-                        break;
+                        
                     }
+                    break; // real dead ends
                 }
 
                 node = *got;

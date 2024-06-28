@@ -994,8 +994,9 @@ void DBG::DBGgraphToGFA() {
                 sequence->seqPos = seqPos++; // remember the order
                 GFAsubgraph.appendSegment(sequence, inTags);
 //                std::cout<<*sequence->sequence<<std::endl;
-                DBGsubgraph->erase(pair->first);
+                
             }
+            DBGsubgraph->erase(pair->first);
         }
         jobWait(threadPool);
         while (residualEdges.size() != 0) { // construct the edges

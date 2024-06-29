@@ -243,6 +243,8 @@ public:
     
     void bestFirst(); // best-first search traversal
     
+    void removeMissingEdges();
+    
     void summary(ParallelMap32color& DBGsubgraph);
     
     ParallelMap32color traversalPass(ParallelMap32color* candidates, std::array<uint16_t, 2> mapRange);

@@ -171,6 +171,8 @@ void DBG::subgraph() {
         fprintf(stderr, "Cannot find input algorithm (%s). Terminating.\n", userInput.travAlgorithm.c_str());
         exit(EXIT_FAILURE);
     }
+    lg.verbose("Remove missing edges");
+    removeMissingEdges();
     lg.verbose("Computing summary graph");
     summary(*DBGsubgraph);
     lg.verbose("Generating GFA");
@@ -576,6 +578,34 @@ void DBG::buildNextKmer(uint8_t* nextKmer, uint64_t hash, uint8_t nextBase, bool
     }
 }
 
+void DBG::removeMissingEdges() {
+    
+    bool isFw;
+    
+    for (auto &node : *DBGsubgraph) { // loop through all nodes
+        
+        for (uint8_t i = 0; i<4; ++i) { // forward edges
+            if (node.second.fw[i] > userInput.covCutOff) {
+                uint8_t nextKmer[k];
+                buildNextKmer(nextKmer, node.first, i, true); // compute next node
+                uint64_t key = hash(nextKmer, &isFw);
+                auto found = DBGsubgraph->find(key);
+                if (found == DBGsubgraph->end()) {
+                    node.second.fw[i] = 0;
+                }
+            }
+            if (node.second.bw[i] > userInput.covCutOff) { // backward edges
+                uint8_t nextKmer[k];
+                buildNextKmer(nextKmer, node.first, i, false); // compute next node
+                uint64_t key = hash(nextKmer, &isFw);
+                auto found = DBGsubgraph->find(key);
+                if (found == DBGsubgraph->end()) {
+                    node.second.bw[i] = 0;
+                }
+            }
+        }
+    }
+}
 
 
 

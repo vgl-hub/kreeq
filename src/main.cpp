@@ -377,7 +377,7 @@ int main(int argc, char **argv) {
                     case 'h': // help
                         printf("kreeq subgraph [options]\n");
                         printf("\nOptions:\n");
-                        printf("\t-c --coverage-cutoff coverage cutoff.\n");
+                        printf("\t-c --coverage-cutoff exclude nodes and edges below or equal to the cutoff (default: 0).\n");
                         printf("\t-d --database DBG database.\n");
                         printf("\t-f --input-sequence sequence input file (fasta).\n");
                         printf("\t--traversal-algorithm <string> the approach used for graph search (best-first/traversal, default: best-first).\n");

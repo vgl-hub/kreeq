@@ -1,0 +1,16 @@
+@seq1
+CAAAAGAGTGACTTTGTAAAAACA
++
+!!!!!!!!!!!!!!!!!!!!!!!!
+@seq2 - creates inward edges
+CAAAGAGTGACTTTGTAAAAAC
++
+!!!!!!!!!!!!!!!!!!!!!!
+@seq3 - creates inward edges
+AAAAGAGTGACTTTGTAAAAAT
++
+!!!!!!!!!!!!!!!!!!!!!!
+@seq4 - creates inward edges
+CAAAGAGTGACTTTGTAAAAAT
++
+!!!!!!!!!!!!!!!!!!!!!!

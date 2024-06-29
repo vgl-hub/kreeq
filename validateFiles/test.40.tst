@@ -1,4 +1,4 @@
-kreeq subgraph -d testFiles/random5.kreeq -f testFiles/random5.fasta --do-not-collapse-nodes 
+kreeq subgraph -d testFiles/random5.kreeq -f testFiles/random5.fasta 
 embedded
 Subgraph summary statistics:
 Total kmers: 158

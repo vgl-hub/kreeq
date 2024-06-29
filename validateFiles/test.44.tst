@@ -1,11 +1,11 @@
-kreeq subgraph -d testFiles/random9.kreeq -f testFiles/random5.fasta 
+kreeq subgraph -d testFiles/random8.kreeq -f testFiles/random5.fasta 
 embedded
 Subgraph summary statistics:
-Total kmers: 157
-Unique kmers: 37
+Total kmers: 159
+Unique kmers: 35
 Distinct kmers: 97
 Missing kmers: 4398046511007
-Total edges: 166
+Total edges: 165
 +++Assembly summary+++: 
 # scaffolds: 0
 Total scaffold length: 0
@@ -51,8 +51,8 @@ Total length disconnected components: 0
 # circular segments: 0
 # circular paths: 0
 DBG Summary statistics:
-Total kmers: 157
-Unique kmers: 37
+Total kmers: 159
+Unique kmers: 35
 Distinct kmers: 97
 Missing kmers: 4398046511007
-Total edges: 166
+Total edges: 165

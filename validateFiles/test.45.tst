@@ -1,11 +1,11 @@
-kreeq subgraph -d testFiles/test1.kreeq -f testFiles/random1.fasta --search-depth 0 --no-collapse
+kreeq subgraph -d testFiles/random9.kreeq -f testFiles/random5.fasta 
 embedded
 Subgraph summary statistics:
-Total kmers: 1156
-Unique kmers: 168
-Distinct kmers: 260
-Missing kmers: 4398046510844
-Total edges: 448
+Total kmers: 157
+Unique kmers: 37
+Distinct kmers: 97
+Missing kmers: 4398046511007
+Total edges: 166
 +++Assembly summary+++: 
 # scaffolds: 0
 Total scaffold length: 0
@@ -34,15 +34,15 @@ Smallest gap in scaffolds: 0
 Base composition (A:C:G:T): 0:0:0:0
 GC content %: nan
 # soft-masked bases: 0
-# segments: 260
-Total segment length: 5460
-Average segment length: 21.00
+# segments: 4
+Total segment length: 177
+Average segment length: 44.25
 # gaps: 0
 # paths: 0
-# edges: 520
-Average degree: 2.00
+# edges: 4
+Average degree: 1.00
 # connected components: 1
-Largest connected component length: 5460
+Largest connected component length: 177
 # dead ends: 2
 # disconnected components: 0
 Total length disconnected components: 0
@@ -51,8 +51,8 @@ Total length disconnected components: 0
 # circular segments: 0
 # circular paths: 0
 DBG Summary statistics:
-Total kmers: 172
-Unique kmers: 25
-Distinct kmers: 96
-Missing kmers: 4398046511008
-Total edges: 160
+Total kmers: 157
+Unique kmers: 37
+Distinct kmers: 97
+Missing kmers: 4398046511007
+Total edges: 166

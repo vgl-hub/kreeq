@@ -5,7 +5,7 @@ Total kmers: 157
 Unique kmers: 61
 Distinct kmers: 109
 Missing kmers: 4398046510995
-Total edges: 186
+Total edges: 184
 +++Assembly summary+++: 
 # scaffolds: 0
 Total scaffold length: 0

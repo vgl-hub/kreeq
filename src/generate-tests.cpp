@@ -33,9 +33,9 @@ int main(void) {
     };
     
     const std::set<std::string> excludeExt {};
-    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "random5.fasta", "random5.fastq", "random6.fastq", "random7.fastq", "random8.fastq", "random9.fastq", "random10.fastq", "random11.fasta", "random11.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta", "repeat1.fasta", "repeat1.fastq"};
+    const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "random5.fasta", "random5.fastq", "random6.fastq", "random7.fastq", "random8.fastq", "random9.fastq", "random10.fastq", "random11.fasta", "random11.fastq", "random12.fasta", "random12.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta", "repeat1.fasta", "repeat1.fastq"};
 
-    std::map<std::set<std::string>, std::vector<std::string>> file_args = {
+    std::vector<std::pair<std::set<std::string>, std::vector<std::string>>> file_args = {
         {{"-f testFiles/random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},
         {{"-f testFiles/random4.fasta"}, {"-r testFiles/random4.fastq -k3"}},
         {{"-f testFiles/to_correct.fasta"}, {"-r testFiles/to_correct.fastq", "-r testFiles/to_correct.fastq -o gfa", "-r testFiles/to_correct.fastq -o vcf", "-r testFiles/to_correct.fastq -o vcf -p testFiles/random1.anomalies.bed"}}
@@ -90,7 +90,8 @@ int main(void) {
         {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 15 --traversal-algorithm traversal"}, {""}},
         {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 16 --traversal-algorithm traversal"}, {""}},
         {{"-d testFiles/random10.kreeq -f testFiles/random5.fasta --search-depth 32 --traversal-algorithm best-first"}, {""}},
-        {{"-d testFiles/random11.kreeq -f testFiles/random11.fasta --search-depth 32 --traversal-algorithm best-first --no-collapse"}, {""}}
+        {{"-d testFiles/random11.kreeq -f testFiles/random11.fasta --search-depth 32 --traversal-algorithm best-first --no-collapse"}, {""}},
+        {{"-d testFiles/random12.kreeq -f testFiles/random12.fasta --search-depth 21 --traversal-algorithm best-first --no-collapse"}, {""}}
     //  {{set of test inputs}, {list of command line args to run with}}
     };
     for(const auto &pair : file_args) {

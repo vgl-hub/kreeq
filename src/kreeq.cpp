@@ -887,7 +887,7 @@ void DBG::nextKmerFromString(uint8_t *nextKmer, std::string *sequence, uint64_t 
     
 }
 
-bool DBG::isKeyFw(uint64_t key) {
+bool DBG::isKeyFw(uint64_t key) { // this doesn't make any sense
     bool isFw;
     std::string kmer = reverseHash(key);
     uint8_t thisKmer[k];

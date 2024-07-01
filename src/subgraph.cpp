@@ -462,7 +462,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     std::vector<uint64_t> destinations;
     FibonacciHeap<std::pair<const uint64_t, DBGkmer32>*> Q; // node priority queue Q
     phmap::parallel_flat_hash_map<uint64_t,uint8_t> dist;
-    phmap::parallel_flat_hash_map<uint64_t,uint64_t> prev; // distance table
+    phmap::parallel_flat_hash_map<uint64_t,std::pair<uint64_t,bool>> prev; // distance table
     ParallelMap32color discoveredNodes;
     
     dist[source.first] = 1;
@@ -471,16 +471,20 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     
     uint64_t key;
     int16_t depth = 0;
+    bool direction = true, isFw;
     
     while (Q.size() > 0 && depth < userInput.kmerDepth + 1) { // The main loop
         explored = false; // if there are still node in the queue we cannot be done
         ParallelMap *map;
         //        ParallelMap32 *map32;
         
-        bool isFw = false;
         std::pair<const uint64_t, DBGkmer32>* u = Q.extractMin(); // Remove and return best vertex
-
-        auto checkNext = [&,this] (uint64_t key) {
+        auto got = prev.find(u->first); // check direction
+        if (got != prev.end()) {
+            direction = got->second.second;
+        }
+        
+        auto checkNext = [&,this] (uint64_t key, bool direction) {
             auto startNode = DBGsubgraph->find(key);
             if (startNode == DBGsubgraph->end()) { // if we connect to the original graph we are done
                 auto nextKmer = graphCache->find(key); // check if the node is in the cache (already visited)
@@ -504,7 +508,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
                     Q.insert(&*nextKmer, 0);
                 }
                 if (alt < dist[nextKmer->first]) {
-                    prev[nextKmer->first] = u->first;
+                    prev[nextKmer->first] = std::make_pair(u->first,direction);
                     dist[nextKmer->first] = alt;
                     Q.decreaseKey(&*nextKmer, alt);
                 }
@@ -512,30 +516,43 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
             return true;
         };
         uint8_t edgeCount = 0, exploredCount = 0;
-        for (uint8_t i = 0; i<4; ++i) { // forward edges
-            if (u->second.fw[i] > userInput.covCutOff) {
-                uint8_t nextKmer[k];
-                buildNextKmer(nextKmer, u->first, i, true); // compute next node
-                key = hash(nextKmer, &isFw);
-                bool found = checkNext(key);
-                if (found) {
-                    ++exploredCount;
-                    if (key != source.first && DBGsubgraph->find(key) != DBGsubgraph->end())
-                        destinations.push_back(u->first);
+        for (uint8_t i = 0; i<4; ++i) {
+            
+            if (direction || depth == 0) { // forward edges
+                
+                if (depth == 0)
+                    direction = true;
+                
+                if (u->second.fw[i] > userInput.covCutOff) {
+                    uint8_t nextKmer[k];
+                    buildNextKmer(nextKmer, u->first, i, true); // compute next node
+                    key = hash(nextKmer, &isFw);
+                    bool found = checkNext(key, isFw ? direction : !direction);
+                    if (found) {
+                        ++exploredCount;
+                        if (key != source.first && DBGsubgraph->find(key) != DBGsubgraph->end())
+                            destinations.push_back(u->first);
+                    }
+                    ++edgeCount;
                 }
-                ++edgeCount;
             }
-            if (u->second.bw[i] > userInput.covCutOff) { // backward edges
-                uint8_t nextKmer[k];
-                buildNextKmer(nextKmer, u->first, i, false); // compute next node
-                key = hash(nextKmer, &isFw);
-                bool found = checkNext(key);
-                if (found) {
-                    ++exploredCount;
-                    if (key != source.first && DBGsubgraph->find(key) != DBGsubgraph->end())
-                        destinations.push_back(u->first);
+            if (!direction || depth == 0) {
+                
+                if (depth == 0)
+                    direction = false;
+                
+                if (u->second.bw[i] > userInput.covCutOff) { // backward edges
+                    uint8_t nextKmer[k];
+                    buildNextKmer(nextKmer, u->first, i, false); // compute next node
+                    key = hash(nextKmer, &isFw);
+                    bool found = checkNext(key, isFw ? direction : !direction);
+                    if (found) {
+                        ++exploredCount;
+                        if (key != source.first && DBGsubgraph->find(key) != DBGsubgraph->end())
+                            destinations.push_back(u->first);
+                    }
+                    ++edgeCount;
                 }
-                ++edgeCount;
             }
         }
         depth += 1;
@@ -547,7 +564,7 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
             while (destination != source.first) { // construct the shortest path with a stack S
                 discoveredNodes.insert(*graphCache->find(destination)); // push the vertex onto the stack
                 dist.erase(destination);
-                destination = prev[destination];
+                destination = prev[destination].first;
             }
         }
     }else{

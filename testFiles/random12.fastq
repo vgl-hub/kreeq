@@ -1,5 +1,5 @@
 @seq1
-CAAAAGAGTGACTTTGTAAAAACA
+CACATGAATACGATCGATCGATCAAAAGAGTGACTTTGTAAAAACA
 +
 !!!!!!!!!!!!!!!!!!!!!!!!
 @seq2 - creates inward edges
@@ -14,3 +14,7 @@ AAAAGAGTGACTTTGTAAAAAT
 CAAAGAGTGACTTTGTAAAAAT
 +
 !!!!!!!!!!!!!!!!!!!!!!
+@seq5 - alt allele
+CACATGAATACGATCGATCGAcCAAAAGAGTGACTTTGTAAAAACA
++
+!!!!!!!!!!!!!!!!!!!!!!!!

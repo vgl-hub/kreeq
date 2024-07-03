@@ -231,6 +231,8 @@ public:
     
     bool variantsToGFA(InSegment *inSegment, Log &threadLog);
     
+    void collapseNodes();
+    
     void DBGgraphToGFA();
     
     // subgraph functions
@@ -256,8 +258,6 @@ public:
     void buildNextKmer(uint8_t* nextKmer, uint64_t hash, uint8_t nextBase, bool fw);
     
     void nextKmerFromString(uint8_t *nextKmer, std::string *sequence, uint64_t start, uint8_t nextBase);
-    
-    bool isKeyFw(uint64_t key);
     
     template<typename MAPTYPE>
     bool mergeSubMaps(MAPTYPE* map1, MAPTYPE* map2, uint8_t subMapIndex);

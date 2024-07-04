@@ -72,7 +72,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     while(explored < kcount) {
 
         mapRange = {0,0};
-        std::deque<const uint64_t> targetsQueue;
+        std::deque<uint64_t> targetsQueue;
         phmap::parallel_flat_hash_map<uint64_t,bool> targetsMap;
 
         while (mapRange[1] < mapCount) {
@@ -176,7 +176,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     return true;
 }
 
-std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t,DBGkmer32> source, std::array<uint16_t, 2> mapRange, const std::deque<const uint64_t> &targetsQueue, const phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache) { // dijkstra variant search
+std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t,DBGkmer32> source, std::array<uint16_t, 2> mapRange, const std::deque<uint64_t> &targetsQueue, const phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache) { // dijkstra variant search
     
     bool explored = false; // true if we reached a node in the original graph
     std::vector<uint64_t> destinations;

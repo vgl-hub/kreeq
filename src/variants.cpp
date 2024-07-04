@@ -129,8 +129,19 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                             auto results = searchVariants(pair, mapRange, targetsQueue, targetsMap, localGraphCache);
                             explored += results.first;
                             if (results.first) {
-                                for (DBGpath &path : results.second)
+                                for (DBGpath &path : results.second) {
                                     path.pos = c+k;
+                                
+                                std::cout<<inSegment->getSeqHeader()<<" "<<+path.pos<<" "<<" "<<path.sequence<<std::endl;
+                                
+                                if (path.type == SNV)
+                                    std::cout<<"SNV"<<std::endl;
+                                else if (path.type == INS)
+                                    std::cout<<"INS"<<std::endl;
+                                else
+                                    std::cout<<"DEL"<<std::endl;
+                                
+                                }
                                 
                                 if (results.second.size() != 0)
                                     variants.push_back(results.second);
@@ -284,15 +295,18 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
             
             if (i == refLen)
                 newPath.type = SNV;
-            else if (i > refLen)
+            else if (i > refLen) {
                 newPath.type = DEL;
+                --i;
+            }
             else
                 newPath.type = INS;
             
             prevNode = prev[destination].first;
-            bool direction = prev[destination].second;
+            bool direction = prev[prevNode].second;
+            std::cout<<+direction<<" "<<+i<<" "<<+refLen<<std::endl;
             while (i >= refLen) {
-                newPath.sequence.push_back(direction ? revCom(reverseHash(prevNode))[0] : revCom(reverseHash(prevNode))[0]);
+                newPath.sequence.push_back(direction ? reverseHash(prevNode)[0] : revCom(reverseHash(prevNode)[k-1]));
                 prevNode = prev[prevNode].first;
                 direction = prev[prevNode].second;
                 --i;

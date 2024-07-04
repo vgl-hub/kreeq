@@ -26,7 +26,7 @@ struct UserInputKreeq : UserInput {
 
     uint32_t covCutOff = 0;
     int16_t kmerDepth = -1;
-    uint8_t depth = 3, backtrackingSpan = 5;
+    uint8_t maxSpan = 5;
     // bool
     int noCollapse = 0, noReference = 0;
     std::string travAlgorithm = "best-first";

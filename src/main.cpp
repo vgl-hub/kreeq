@@ -64,7 +64,14 @@ int main(int argc, char **argv) {
         {"subgraph",2}
     };
     
-    userInput.mode = string_to_case.at(argv[1]);
+    auto got = string_to_case.find(argv[1]);
+    if (got != string_to_case.end()) {
+        userInput.mode = got->second;
+    }else{
+        fprintf(stderr, "mode %s does not exist. Terminating\n", argv[1]);
+        return EXIT_FAILURE;
+    }
+        
     switch (userInput.mode) {
         case 0: { // sequence validation
             
@@ -75,7 +82,7 @@ int main(int argc, char **argv) {
                 {"input-sequence", required_argument, 0, 'f'},
                 {"kmer-length", required_argument, 0, 'k'},
                 {"search-depth", required_argument, 0, 0},
-                {"backtracking-span", required_argument, 0, 0},
+                {"max-span", required_argument, 0, 0},
                 {"out-format", required_argument, 0, 'o'},
                 {"input-reads", required_argument, 0, 'r'},
                 {"tmp-prefix", required_argument, 0, 't'},
@@ -112,10 +119,10 @@ int main(int argc, char **argv) {
                     default: // handle positional arguments
                     case 0: // case for long options without short options
                         if(strcmp(long_options[option_index].name,"search-depth") == 0)
-                            userInput.depth = atoi(optarg);
+                            userInput.kmerDepth = atoi(optarg);
                         
-                        if(strcmp(long_options[option_index].name,"backtracking-span") == 0)
-                            userInput.backtrackingSpan = atoi(optarg);
+                        if(strcmp(long_options[option_index].name,"max-span") == 0)
+                            userInput.maxSpan = atoi(optarg);
                         break;
                     case 'c': // coverage cutoff
                         if (!isNumber(optarg)) {
@@ -196,7 +203,7 @@ int main(int argc, char **argv) {
                         printf("\t-m --max-memory use at most this amount of memory (in Gb, default: 0.9 of max).\n");
                         printf("\t-j --threads <n> numbers of threads (default: max).\n");
                         printf("\t-v --version software version.\n");
-                        printf("\t--search-depth the max depth for graph traversal (default: 3).\n");
+                        printf("\t--search-depth the max depth for graph traversal (default: 21).\n");
                         printf("\t--cmd print $0 to stdout.\n");
                         exit(0);
                 }
@@ -381,7 +388,7 @@ int main(int argc, char **argv) {
                         printf("\t-d --database DBG database.\n");
                         printf("\t-f --input-sequence sequence input file (fasta).\n");
                         printf("\t--traversal-algorithm <string> the approach used for graph search (best-first/traversal, default: best-first).\n");
-                        printf("\t--search-depth the max depth for graph traversal (default: 3).\n");
+                        printf("\t--search-depth the max depth for graph traversal (default: 21).\n");
                         printf("\t--no-collapse do not collapse linear nodes (default: false).\n");
                         printf("\t--no-reference do not include reference nodes (default: false).\n");
                         printf("\t-o --out-format generates various kinds of outputs (currently supported: .gfa1/2).\n");

@@ -139,9 +139,9 @@ void DBG::subgraph() {
     
     std::vector<std::function<bool()>> jobs;
     std::array<uint16_t, 2> mapRange = {0,0};
-
+    
     while (mapRange[1] < mapCount) {
-
+        
         mapRange = computeMapRange(mapRange);
         loadMapRange(mapRange);
         
@@ -154,30 +154,10 @@ void DBG::subgraph() {
         jobs.clear();
         
         deleteMapRange(mapRange);
-
+        
     }
     lg.verbose("Merging subgraphs");
     mergeSubgraphs();
-    lg.verbose("Searching graph");
-    if (userInput.travAlgorithm == "best-first") {
-        if (userInput.kmerDepth == -1)
-            userInput.kmerDepth = userInput.kmerLen; // unidirectional search
-        bestFirst();
-    }else if (userInput.travAlgorithm == "traversal") {
-        if (userInput.kmerDepth == -1)
-            userInput.kmerDepth = std::ceil((float)userInput.kmerLen/2); // kmer search is in both directions
-        traversal();
-    }else{
-        fprintf(stderr, "Cannot find input algorithm (%s). Terminating.\n", userInput.travAlgorithm.c_str());
-        exit(EXIT_FAILURE);
-    }
-    lg.verbose("Remove missing edges");
-    removeMissingEdges();
-    lg.verbose("Computing summary graph");
-    summary(*DBGsubgraph);
-    lg.verbose("Generating GFA");
-    DBGgraphToGFA();
-    
 }
 
 void DBG::summary(ParallelMap32color& DBGsubgraph) {
@@ -307,6 +287,21 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
     return true;
 }
 
+void DBG::searchGraph() {
+    if (userInput.travAlgorithm == "best-first") {
+        if (this->userInput.kmerDepth == -1)
+            userInput.kmerDepth = userInput.kmerLen; // unidirectional search
+        bestFirst();
+    }else if (userInput.travAlgorithm == "traversal") {
+        if (userInput.kmerDepth == -1)
+            userInput.kmerDepth = std::ceil((float)userInput.kmerLen/2); // kmer search is in both directions
+        traversal();
+    }else{
+        fprintf(stderr, "Cannot find input algorithm (%s). Terminating.\n", userInput.travAlgorithm.c_str());
+        exit(EXIT_FAILURE);
+    }
+}
+
 void DBG::traversal() {
     
     ParallelMap32color candidates, newCandidates;
@@ -426,25 +421,34 @@ ParallelMap32color DBG::traversalPass(ParallelMap32color* subgraph, std::array<u
 void DBG::bestFirst() {
     
     ParallelMap32color* candidates = new ParallelMap32color;
-    uint32_t explored = 0, total = DBGsubgraph->size();
+    uint64_t explored = 0, total = DBGsubgraph->size();
     std::array<uint16_t, 2> mapRange;
     ParallelMap32color* DBGsubgraphCpy = new ParallelMap32color;
+    bool* visited = new bool[DBGsubgraph->size()]{false};
+    
     while(explored < total) {
 
         mapRange = {0,0};
+        uint64_t i = 0;
 
         while (mapRange[1] < mapCount) {
 
             mapRange = computeMapRange(mapRange);
             loadMapRange(mapRange);
             for (auto pair : *DBGsubgraph) {
-                auto results = dijkstra(pair, mapRange);;
-                explored += results.first;
-                if (results.first) {
-                    candidates->insert(results.second.begin(), results.second.end());
-                    DBGsubgraphCpy->insert(pair);
-//                    DBGsubgraph->erase(pair.first);
+                
+                if(!visited[i]) {
+                    
+                    auto results = dijkstra(pair, mapRange);;
+                    explored += results.first;
+                    if (results.first) {
+                        candidates->insert(results.second.begin(), results.second.end());
+                        DBGsubgraphCpy->insert(pair);
+                        //                    DBGsubgraph->erase(pair.first);
+                        visited[i] = true;
+                    }
                 }
+                ++i;
 //                std::cout<<DBGsubgraphCpy.size()<<std::endl;
             }
             deleteMapRange(mapRange);
@@ -454,6 +458,7 @@ void DBG::bestFirst() {
     delete DBGsubgraph;
     DBGsubgraph = DBGsubgraphCpy;
     delete candidates;
+    delete[] visited;
 }
 
 std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32color> source, std::array<uint16_t, 2> mapRange) {
@@ -473,12 +478,12 @@ std::pair<bool,ParallelMap32color> DBG::dijkstra(std::pair<uint64_t,DBGkmer32col
     int16_t depth = 0;
     bool direction = true, isFw;
     
-    while (Q.size() > 0 && depth < userInput.kmerDepth + 1) { // The main loop
+    while (Q.size() > 0 && depth < userInput.kmerDepth + 1) { // the main loop
         explored = false; // if there are still node in the queue we cannot be done
         ParallelMap *map;
         //        ParallelMap32 *map32;
         
-        std::pair<const uint64_t, DBGkmer32>* u = Q.extractMin(); // Remove and return best vertex
+        std::pair<const uint64_t, DBGkmer32>* u = Q.extractMin(); // remove and return best vertex
         auto got = prev.find(u->first); // check direction
         if (got != prev.end()) {
             direction = got->second.second;
@@ -622,6 +627,8 @@ void DBG::removeMissingEdges() {
             }
         }
     }
+    lg.verbose("Computing summary graph");
+    summary(*DBGsubgraph);
 }
 
 

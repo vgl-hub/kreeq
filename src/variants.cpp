@@ -43,8 +43,11 @@ void DBG::correctSequences() {
         return;
 
     std::vector<InSegment*> inSegments = *genome->getInSegments();
-    for (InSegment *inSegment : inSegments)
+    
+    for (InSegment *inSegment : inSegments) {
+        lg.verbose("Processing segment: " + inSegment->getSeqHeader());
         DBGtoVariants(inSegment);
+    }
 }
 
 bool DBG::DBGtoVariants(InSegment *inSegment) {

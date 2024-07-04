@@ -86,7 +86,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             bool isFw = false;
             
             for (uint16_t pos = 0; pos < userInput.maxSpan; ++pos) { // populate targets
-                if (pos < len-userInput.maxSpan) {
+                if (pos < kcount) {
                     key = hash(str+pos);
                     targetsQueue.push_back(key);
                     targetsMap[key];
@@ -97,7 +97,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                 
                 targetsMap.erase(targetsQueue.front());
                 targetsQueue.pop_front();
-                if (c < len-userInput.maxSpan) {
+                if (c < kcount-userInput.maxSpan) {
                     key = hash(str+c+userInput.maxSpan);
                     targetsMap[key];
                     targetsQueue.push_back(key);
@@ -294,14 +294,17 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
                 prevNode = prev[prevNode].first;
                 ++i;
             }
-            
-            if (refLen > k)
+            int16_t b = i-refLen;
+            if (refLen > k) {
                 newPath.type = COM;
+                newPath.refLen = refLen-k+1;
+                b = refLen - k;
+            }
             else if (i == refLen)
                 newPath.type = SNV;
             else if (i > refLen) {
                 newPath.type = DEL;
-                --i;
+                --b;
             }
             else
                 newPath.type = INS;
@@ -309,11 +312,13 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
             prevNode = prev[destination].first;
             bool direction = prev[prevNode].second;
             std::cout<<+direction<<" "<<+i<<" "<<+refLen<<std::endl;
-            for (int16_t b = i-refLen; b >= 0; --b) {
+            while (b >= 0) {
                 newPath.sequence.push_back(direction ? reverseHash(prevNode)[0] : revCom(reverseHash(prevNode)[k-1]));
                 prevNode = prev[prevNode].first;
                 direction = prev[prevNode].second;
+                --b;
             }
+            reverse(newPath.sequence.begin(), newPath.sequence.end());
             discoveredPaths.push_back(newPath);
         }
     }

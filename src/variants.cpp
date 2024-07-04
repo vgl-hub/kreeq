@@ -72,7 +72,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     while(explored < kcount) {
 
         mapRange = {0,0};
-        std::queue<uint64_t> targetsQueue;
+        std::deque<const uint64_t> targetsQueue;
         phmap::parallel_flat_hash_map<uint64_t,bool> targetsMap;
 
         while (mapRange[1] < mapCount) {
@@ -86,19 +86,24 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             bool isFw = false;
             
             for (uint16_t pos = 0; pos < userInput.maxSpan; ++pos) { // populate targets
-                targetsQueue.push(hash(str+pos));
-                targetsMap[hash(str+pos)];
+                if (pos < len-userInput.maxSpan) {
+                    key = hash(str+pos);
+                    targetsQueue.push_back(key);
+                    targetsMap[key];
+                }
             }
             
             for (uint64_t c = 0; c<kcount; ++c){
                 
-                if(!visited[c]) {
-                    
-                    targetsMap.erase(targetsQueue.front());
-                    targetsQueue.pop();
+                targetsMap.erase(targetsQueue.front());
+                targetsQueue.pop_front();
+                if (c < len-userInput.maxSpan) {
                     key = hash(str+c+userInput.maxSpan);
                     targetsMap[key];
-                    targetsQueue.push(key);
+                    targetsQueue.push_back(key);
+                }
+                
+                if(!visited[c]) {
                     
                     key = hash(str+c, &isFw);
                     i = key % mapCount;
@@ -121,14 +126,11 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                             }else{
                                 pair = *it;
                             }
-                            auto results = searchVariants(pair, mapRange, targetsMap, localGraphCache);
+                            auto results = searchVariants(pair, mapRange, targetsQueue, targetsMap, localGraphCache);
                             explored += results.first;
                             if (results.first) {
-                                for (DBGpath &path : results.second) {
-                                    path.pos = c;
-                                    path.type = SNV;
-                                    std::cout<<+path.pos<<" "<<+path.type<<" "<<path.sequence<<std::endl;
-                                }
+                                for (DBGpath &path : results.second)
+                                    path.pos = c+k;
                                 
                                 if (results.second.size() != 0)
                                     variants.push_back(results.second);
@@ -161,13 +163,13 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     return true;
 }
 
-std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t,DBGkmer32> source, std::array<uint16_t, 2> mapRange, phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache) { // dijkstra variant search
+std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t,DBGkmer32> source, std::array<uint16_t, 2> mapRange, const std::deque<const uint64_t> &targetsQueue, const phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache) { // dijkstra variant search
     
     bool explored = false; // true if we reached a node in the original graph
     std::vector<uint64_t> destinations;
     FibonacciHeap<std::pair<const uint64_t, DBGkmer32>*> Q; // node priority queue Q
-    phmap::parallel_flat_hash_map<uint64_t,uint8_t> dist;
-    phmap::parallel_flat_hash_map<uint64_t,std::pair<uint64_t,bool>> prev; // distance table
+    phmap::parallel_flat_hash_map<uint64_t,uint8_t> dist; // distance table
+    phmap::parallel_flat_hash_map<uint64_t,std::pair<uint64_t,bool>> prev; // path table
     std::deque<DBGpath> discoveredPaths;
     
     dist[source.first] = 1;
@@ -193,7 +195,7 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
             if (startNode == targetsMap.end()) { // if we connect to the original graph we are done
                 auto nextKmer = localGraphCache->find(key); // check if the node is in the cache (already visited)
                 
-                if (nextKmer == localGraphCache->end()) { // we cached this node before
+                if (nextKmer == localGraphCache->end()) { // we did not cache this node before
                     uint64_t m = key % mapCount;
                     if (m >= mapRange[0] && m < mapRange[1]) { // the node is in not cached but is available to visit now
                         map = maps[m];
@@ -234,8 +236,10 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
                     bool found = checkNext(key, isFw ? direction : !direction);
                     if (found) {
                         ++exploredCount;
-                        if (targetsMap.find(key) != targetsMap.end())
-                            destinations.push_back(u->first);
+                        if (key != targetsQueue.front() && targetsMap.find(key) != targetsMap.end()) {
+                            prev[key] = std::make_pair(u->first,direction);
+                            destinations.push_back(key);
+                        }
                     }
                     ++edgeCount;
                 }
@@ -252,8 +256,10 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
                     bool found = checkNext(key, isFw ? direction : !direction);
                     if (found) {
                         ++exploredCount;
-                        if (targetsMap.find(key) != targetsMap.end())
-                            destinations.push_back(u->first);
+                        if (key != targetsQueue.front() && targetsMap.find(key) != targetsMap.end()) {
+                            prev[key] = std::make_pair(u->first,direction);
+                            destinations.push_back(key);
+                        }
                     }
                     ++edgeCount;
                 }
@@ -264,16 +270,32 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
         if(edgeCount == exploredCount || depth == userInput.kmerDepth + 1 || destinations.size() >= 10) // everything explored/found, depth reached, or top10
             explored = true;
     }
-    if (destinations.size() > 1) { // traverse from target to source, the first path is the reference
+    if (destinations.size() > 0) { // traverse from target to source, the first path is the reference
         for (uint64_t destination : destinations) {
             DBGpath newPath;
-            newPath.sequence = reverseHash(destination);
-            while (destination != source.first) { // construct the shortest path with a stack S
-                
-                newPath.sequence.push_back(reverseHash(destination)[k-1]);
-                
-                dist.erase(destination);
-                destination = prev[destination].first;
+            std::string endSequence = reverseHash(destination);
+            uint16_t i = 0, refLen = std::find(targetsQueue.begin(), targetsQueue.end(), destination) - targetsQueue.begin();
+            uint64_t prevNode = prev[destination].first;
+
+            while (prevNode != source.first) { // construct the shortest path with a stack S
+                prevNode = prev[prevNode].first;
+                ++i;
+            }
+            
+            if (i == refLen)
+                newPath.type = SNV;
+            else if (i > refLen)
+                newPath.type = DEL;
+            else
+                newPath.type = INS;
+            
+            prevNode = prev[destination].first;
+            bool direction = prev[destination].second;
+            while (i >= refLen) {
+                newPath.sequence.push_back(direction ? revCom(reverseHash(prevNode))[0] : revCom(reverseHash(prevNode))[0]);
+                prevNode = prev[prevNode].first;
+                direction = prev[prevNode].second;
+                --i;
             }
             discoveredPaths.push_back(newPath);
         }

@@ -134,7 +134,9 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                                 
                                 std::cout<<inSegment->getSeqHeader()<<" "<<+path.pos<<" "<<" "<<path.sequence<<std::endl;
                                 
-                                if (path.type == SNV)
+                                if (path.type == COM)
+                                        std::cout<<"COM"<<std::endl;
+                                else if (path.type == SNV)
                                     std::cout<<"SNV"<<std::endl;
                                 else if (path.type == INS)
                                     std::cout<<"INS"<<std::endl;
@@ -293,7 +295,9 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
                 ++i;
             }
             
-            if (i == refLen)
+            if (refLen > k)
+                newPath.type = COM;
+            else if (i == refLen)
                 newPath.type = SNV;
             else if (i > refLen) {
                 newPath.type = DEL;
@@ -305,11 +309,10 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
             prevNode = prev[destination].first;
             bool direction = prev[prevNode].second;
             std::cout<<+direction<<" "<<+i<<" "<<+refLen<<std::endl;
-            while (i >= refLen) {
+            for (int16_t b = i-refLen; b >= 0; --b) {
                 newPath.sequence.push_back(direction ? reverseHash(prevNode)[0] : revCom(reverseHash(prevNode)[k-1]));
                 prevNode = prev[prevNode].first;
                 direction = prev[prevNode].second;
-                --i;
             }
             discoveredPaths.push_back(newPath);
         }

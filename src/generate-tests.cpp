@@ -35,12 +35,6 @@ int main(void) {
     const std::set<std::string> excludeExt {};
     const std::set<std::string> excludeFile {"random4.fasta", "random4.fastq", "random5.fasta", "random5.fastq", "random6.fastq", "random7.fastq", "random8.fastq", "random9.fastq", "random10.fastq", "random11.fasta", "random11.fastq", "random12.fasta", "random12.fastq", "to_correct.fasta", "to_correct.fastq", "decompressor1.fasta", "repeat1.fasta", "repeat1.fastq"};
 
-    std::vector<std::pair<std::set<std::string>, std::vector<std::string>>> file_args = {
-        {{"random1.fasta"}, {"-r testFiles/random3.N.fastq", "-d testFiles/test1.kreeq", "-d testFiles/test2.kreeq"}},
-        {{"random4.fasta"}, {"-r testFiles/random4.fastq -k3"}},
-        {{"to_correct.fasta"}, {"-r testFiles/to_correct.fastq", "-r testFiles/to_correct.fastq -o gfa", "-r testFiles/to_correct.fastq -o vcf", "-r testFiles/to_correct.fastq -o vcf -p testFiles/random1.anomalies.bed"}}
-    //  {{set of test inputs}, {list of command line args to run with}}
-    };
 
     for(const std::string &file : list_dir("testFiles")) {
         std::string ext = getFileExt(file);
@@ -53,18 +47,8 @@ int main(void) {
             }
         }
     }
-
-    std::fstream fstream;
-    for(const auto &pair : file_args) {
-        for(const std::string &file : pair.first) {
-            fstream.open("testFiles/"+file);
-            if(!fstream) continue;
-            fstream.close();
-            for(const std::string &args : pair.second) {
-                genTest("kreeq", "validate", "-f testFiles/" + file, args);
-            }
-        }
-    }
+    
+    std::vector<std::pair<std::set<std::string>, std::vector<std::string>>> file_args;
     
     // test union
     file_args = {
@@ -126,5 +110,24 @@ int main(void) {
             }
         }
     }
+    
+    // test variant calling
+    file_args = {
+        {{"to_correct.fasta"}, {"-r testFiles/to_correct.fastq -o vcf --search-depth 50 --max-span 32"}}
+    //  {{set of test inputs}, {list of command line args to run with}}
+    };
+    
+    std::fstream fstream;
+    for(const auto &pair : file_args) {
+        for(const std::string &file : pair.first) {
+            fstream.open("testFiles/"+file);
+            if(!fstream) continue;
+            fstream.close();
+            for(const std::string &args : pair.second) {
+                genTest("kreeq", "validate", "-f testFiles/" + file, args);
+            }
+        }
+    }
+    
     std::exit(EXIT_SUCCESS);
 }

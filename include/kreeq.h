@@ -167,6 +167,15 @@ public:
     
     DBG(UserInputKreeq& userInput) : Kmap{userInput}, userInput(userInput) {
         DBextension = "kreeq";
+        
+        if (userInput.kmerDepth == -1) {
+            if (userInput.travAlgorithm == "best-first") {
+                this->userInput.kmerDepth = userInput.kmerLen; // unidirectional search
+                this->userInput.maxSpan = userInput.kmerLen;
+            }
+            else if (userInput.travAlgorithm == "traversal")
+                this->userInput.kmerDepth = std::ceil((float)userInput.kmerLen/2); // kmer search is in both directions
+        }
     }
 
     ~DBG(){

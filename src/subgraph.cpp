@@ -289,12 +289,8 @@ bool DBG::DBGsubgraphFromSegment(InSegment *inSegment, std::array<uint16_t, 2> m
 
 void DBG::searchGraph() {
     if (userInput.travAlgorithm == "best-first") {
-        if (this->userInput.kmerDepth == -1)
-            userInput.kmerDepth = userInput.kmerLen; // unidirectional search
         bestFirst();
     }else if (userInput.travAlgorithm == "traversal") {
-        if (userInput.kmerDepth == -1)
-            userInput.kmerDepth = std::ceil((float)userInput.kmerLen/2); // kmer search is in both directions
         traversal();
     }else{
         fprintf(stderr, "Cannot find input algorithm (%s). Terminating.\n", userInput.travAlgorithm.c_str());

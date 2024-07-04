@@ -209,7 +209,7 @@ public:
     
     void printVCF();
     
-    bool searchGraph(std::array<uint16_t, 2> mapRange);
+    void searchGraph();
     
     std::pair<DBGkmer*,bool> findDBGkmer(uint8_t *origin);
     
@@ -228,6 +228,8 @@ public:
     bool detectAnomalies(InSegment *inSegment, std::vector<uint64_t> &anomalies);
     
     bool DBGtoVariants(InSegment *inSegment);
+    
+    std::pair<bool,std::deque<DBGpath>> searchVariants(std::pair<const uint64_t,DBGkmer32> source, std::array<uint16_t, 2> mapRange, phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache);
     
     bool variantsToGFA(InSegment *inSegment, Log &threadLog);
     

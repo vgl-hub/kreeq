@@ -167,6 +167,14 @@ void Input::read() {
                 knav.loadGenome(&genome);
             }
             knav.subgraph();
+            
+            lg.verbose("Searching graph");
+            knav.searchGraph();
+            lg.verbose("Remove missing edges");
+            knav.removeMissingEdges();
+            lg.verbose("Generating GFA");
+            knav.DBGgraphToGFA();
+            
             knav.report(); // output
             knav.cleanup(); // delete tmp files
             break;

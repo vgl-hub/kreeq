@@ -19,7 +19,7 @@ LDFLAGS := -pthread
 #gfalibs
 GFALIBS_DIR := $(CURDIR)/gfalibs
 
-SOURCES := main input graph-builder kreeq subgraph kreeq-output
+SOURCES := main input graph-builder kreeq subgraph kreeq-output variants
 OBJECTS := $(addprefix $(BINDIR)/, $(SOURCES))
 
 head: $(OBJECTS) gfalibs | $(BUILD)

@@ -89,8 +89,8 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             bool isFw = false;
             
             for (uint16_t pos = 0; pos < userInput.maxSpan; ++pos) { // populate targets
-                if (pos < kcount) {
-                    key = hash(str+pos);
+                if (pos+k < kcount) {
+                    key = hash(str+pos+k);
                     targetsQueue.push_back(key);
                     targetsMap[key];
                 }
@@ -98,10 +98,10 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             
             for (uint64_t c = 0; c<kcount; ++c){
                 
-                targetsMap.erase(targetsQueue.front());
+                targetsMap.erase(targetsQueue.front()); // update targets
                 targetsQueue.pop_front();
-                if (c < kcount-userInput.maxSpan) {
-                    key = hash(str+c+userInput.maxSpan);
+                if (c+k+userInput.maxSpan < kcount) {
+                    key = hash(str+c+k+userInput.maxSpan);
                     targetsMap[key];
                     targetsQueue.push_back(key);
                 }
@@ -129,7 +129,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                             }else{
                                 pair = *it;
                             }
-                            auto results = searchVariants(pair, mapRange, targetsQueue, targetsMap, localGraphCache);
+                            auto results = searchVariants(pair, isFw, hash(str+c+1, &isFw), mapRange, targetsQueue, targetsMap, localGraphCache);
                             explored += results.first;
                             if (results.first) {
                                 for (DBGpath &path : results.second)
@@ -166,7 +166,7 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     return true;
 }
 
-std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t,DBGkmer32> source, std::array<uint16_t, 2> mapRange, const std::deque<uint64_t> &targetsQueue, const phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache) { // dijkstra variant search
+std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t,DBGkmer32> source, bool isSourceFw, uint64_t ref, std::array<uint16_t, 2> mapRange, const std::deque<uint64_t> &targetsQueue, const phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache) { // dijkstra variant search
     
     bool explored = false; // true if we reached a node in the original graph
     std::vector<uint64_t> destinations;
@@ -178,7 +178,7 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
     dist[source.first] = 1;
     Q.insert(&source, 1); // associated priority equals dist[·]
     
-    uint64_t key;
+    uint64_t key = source.first;
     int16_t depth = 0;
     bool direction = true, isFw;
     
@@ -192,7 +192,6 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
         if (got != prev.end()) {
             direction = got->second.second;
         }
-        
         auto checkNext = [&,this] (uint64_t key, bool direction) {
             auto startNode = targetsMap.find(key);
             if (startNode == targetsMap.end()) { // if we connect to the original graph we are done
@@ -225,46 +224,34 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
             return true;
         };
         uint8_t edgeCount = 0, exploredCount = 0;
-        for (uint8_t i = 0; i<4; ++i) {
+        std::vector<std::tuple<uint64_t,bool,bool>> candidatePaths;
+        
+        for (uint8_t i = 0; i<4; ++i) { // first we collect all candidate paths
+                
+            if (depth == 0)
+                direction = isSourceFw ? true : false;
             
-            if (direction || depth == 0) { // forward edges
-                
-                if (depth == 0)
-                    direction = true;
-                
-                if (u->second.fw[i] > userInput.covCutOff) {
-                    uint8_t nextKmer[k];
-                    buildNextKmer(nextKmer, u->first, i, true); // compute next node
-                    key = hash(nextKmer, &isFw);
-                    bool found = checkNext(key, isFw ? direction : !direction);
-                    if (found) {
-                        ++exploredCount;
-                        if (key != targetsQueue.front() && targetsMap.find(key) != targetsMap.end()) {
-                            prev[key] = std::make_pair(u->first,direction);
-                            destinations.push_back(key);
-                        }
-                    }
+            if (direction ? u->second.fw[i] : u->second.bw[i] > userInput.covCutOff) {
+                uint8_t nextKmer[k];
+                buildNextKmer(nextKmer, u->first, i, direction); // compute next node
+                key = hash(nextKmer, &isFw);
+                if (key != ref) { // we never rediscover the ref path
+                    candidatePaths.push_back(std::make_tuple(key, isFw, direction));
                     ++edgeCount;
                 }
             }
-            if (!direction || depth == 0) {
-                
-                if (depth == 0)
-                    direction = false;
-                
-                if (u->second.bw[i] > userInput.covCutOff) { // backward edges
-                    uint8_t nextKmer[k];
-                    buildNextKmer(nextKmer, u->first, i, false); // compute next node
-                    key = hash(nextKmer, &isFw);
-                    bool found = checkNext(key, isFw ? direction : !direction);
-                    if (found) {
-                        ++exploredCount;
-                        if (key != targetsQueue.front() && targetsMap.find(key) != targetsMap.end()) {
-                            prev[key] = std::make_pair(u->first,direction);
-                            destinations.push_back(key);
-                        }
-                    }
-                    ++edgeCount;
+        }
+        for (std::tuple<uint64_t,bool,bool> path : candidatePaths) { // for each path, including ref, we try to explore it
+            uint64_t key = std::get<0>(path);
+            bool isFw = std::get<1>(path);
+            bool direction = std::get<2>(path);
+            
+            bool found = checkNext(key, isFw ? direction : !direction);
+            if (found) { // if the next node exists
+                ++exploredCount;
+                if (targetsMap.find(key) != targetsMap.end()) { // if we reconnected to the ref path
+                    prev[key] = std::make_pair(u->first,direction);
+                    destinations.push_back(key); // we found a new alternate path
                 }
             }
         }
@@ -273,17 +260,20 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
         if(edgeCount == exploredCount || depth == userInput.kmerDepth + 1 || destinations.size() >= 10) // everything explored/found, depth reached, or top10
             explored = true;
     }
-    if (destinations.size() > 0) { // traverse from target to source, the first path is the reference
+    if (destinations.size() > 0) { // traverse from target to source
         for (uint64_t destination : destinations) {
             DBGpath newPath;
             std::string endSequence = reverseHash(destination);
-            uint16_t i = 0, refLen = std::find(targetsQueue.begin(), targetsQueue.end(), destination) - targetsQueue.begin();
+            uint16_t i = 0, refLen = std::find(targetsQueue.begin(), targetsQueue.end(), destination) - targetsQueue.begin() + k;
             uint64_t prevNode = prev[destination].first;
 
             while (prevNode != source.first) { // construct the shortest path with a stack S
                 prevNode = prev[prevNode].first;
                 ++i;
             }
+            std::cout<<+i<<" "<<+refLen<<std::endl;
+            prevNode = prev[destination].first;
+            bool direction = prev[prevNode].second;
             int16_t b = i-refLen;
             if (refLen > k) {
                 newPath.type = COM;
@@ -295,12 +285,11 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
             else if (i > refLen) {
                 newPath.type = DEL;
                 --b;
+                prevNode = prev[prevNode].first;
+                direction = prev[prevNode].second;
             }
             else
                 newPath.type = INS;
-            
-            prevNode = prev[destination].first;
-            bool direction = prev[prevNode].second;
 
             while (b >= 0) {
                 newPath.sequence.push_back(direction ? reverseHash(prevNode)[0] : revCom(reverseHash(prevNode)[k-1]));

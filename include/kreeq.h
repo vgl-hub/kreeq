@@ -169,10 +169,8 @@ public:
         DBextension = "kreeq";
         
         if (userInput.kmerDepth == -1) {
-            if (userInput.travAlgorithm == "best-first") {
+            if (userInput.travAlgorithm == "best-first")
                 this->userInput.kmerDepth = userInput.kmerLen; // unidirectional search
-                this->userInput.maxSpan = userInput.kmerLen;
-            }
             else if (userInput.travAlgorithm == "traversal")
                 this->userInput.kmerDepth = std::ceil((float)userInput.kmerLen/2); // kmer search is in both directions
         }
@@ -238,7 +236,7 @@ public:
     
     bool DBGtoVariants(InSegment *inSegment);
     
-    std::pair<bool,std::deque<DBGpath>> searchVariants(std::pair<const uint64_t,DBGkmer32> source, std::array<uint16_t, 2> mapRange, const std::deque<uint64_t> &targetsQueue, const phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache);
+    std::pair<bool,std::deque<DBGpath>> searchVariants(std::pair<const uint64_t,DBGkmer32> source, bool isSourceFw, uint64_t ref, std::array<uint16_t, 2> mapRange, const std::deque<uint64_t> &targetsQueue, const phmap::parallel_flat_hash_map<uint64_t,bool> &targetsMap, ParallelMap32* localGraphCache);
     
     bool variantsToGFA(InSegment *inSegment, Log &threadLog);
     

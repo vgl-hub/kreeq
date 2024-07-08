@@ -271,7 +271,6 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
                 prevNode = prev[prevNode].first;
                 ++i;
             }
-            std::cout<<+i<<" "<<+refLen<<std::endl;
             prevNode = prev[destination].first;
             bool direction = prev[prevNode].second;
             int16_t b = i-refLen;
@@ -284,7 +283,7 @@ std::pair<bool,std::deque<DBGpath>> DBG::searchVariants(std::pair<const uint64_t
                 newPath.type = SNV;
             else if (i > refLen) {
                 newPath.type = DEL;
-                --b;
+                --b; // we have to account for the fact that we skipped one base
                 prevNode = prev[prevNode].first;
                 direction = prev[prevNode].second;
             }

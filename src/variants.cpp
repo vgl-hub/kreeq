@@ -77,6 +77,8 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
         mapRange = {0,0};
         std::deque<uint64_t> targetsQueue;
         phmap::parallel_flat_hash_map<uint64_t,bool> targetsMap;
+        
+        lg.verbose("Canidate paths remaing/total: " + std::to_string(explored) + "/" + std::to_string(kcount));
 
         while (mapRange[1] < mapCount) {
             

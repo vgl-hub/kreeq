@@ -97,7 +97,8 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             }
             for (uint64_t c = 0; c<kcount; ++c){
                 
-                lg.verbose("Candidate paths remaing/total: " + std::to_string(kcount-explored) + "/" + std::to_string(kcount), true);
+                if (explored % 1000 == 0)
+                    lg.verbose("Candidate paths remaing/total: " + std::to_string(kcount-explored) + "/" + std::to_string(kcount), true);
                 
                 targetsMap.erase(targetsQueue.front()); // update targets
                 targetsQueue.pop_front();

@@ -75,8 +75,6 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
     while(explored < kcount) {
 
         mapRange = {0,0};
-        std::deque<uint64_t> targetsQueue;
-        phmap::parallel_flat_hash_map<uint64_t,bool> targetsMap;
 
         while (mapRange[1] < mapCount) {
             
@@ -87,6 +85,8 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
             ParallelMap *map;
             ParallelMap32 *map32;
             bool isFw = false;
+            std::deque<uint64_t> targetsQueue;
+            phmap::parallel_flat_hash_map<uint64_t,bool> targetsMap;
             
             for (uint16_t pos = 0; pos < userInput.maxSpan; ++pos) { // populate targets
                 if (pos+k < kcount) {
@@ -95,7 +95,6 @@ bool DBG::DBGtoVariants(InSegment *inSegment) {
                     targetsMap[key];
                 }
             }
-            
             for (uint64_t c = 0; c<kcount; ++c){
                 
                 lg.verbose("Candidate paths remaing/total: " + std::to_string(kcount-explored) + "/" + std::to_string(kcount), true);

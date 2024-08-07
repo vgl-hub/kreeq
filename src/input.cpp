@@ -62,6 +62,7 @@ void Input::loadGraph() {
         std::string line;
         getline(file, line);
         file.close();
+        lg.verbose("Overriding default kmer length (" + std::to_string(userInput.kmerLen) + ") with DB kmer length (" + line + ").");
         userInput.kmerLen = stoi(line);
     }else if (userInput.kmerDB.size() > 1) {
         fprintf(stderr, "More than one DBG database provided. Merge them first. Exiting.\n");
@@ -70,7 +71,6 @@ void Input::loadGraph() {
         fprintf(stderr, "Cannot load DBG input. Exiting.\n");
         exit(EXIT_FAILURE);
     }
-    
 }
 
 void Input::read() {

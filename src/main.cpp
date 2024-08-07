@@ -319,7 +319,7 @@ int main(int argc, char **argv) {
                 int option_index = 1;
                 c = getopt_long(argc, argv, "-:c:d:f:j:m:o:p:h",
                                 long_options, &option_index);
-                
+               
                 if (c == -1) // exit the loop if run out of options
                     break;
                 
@@ -338,8 +338,15 @@ int main(int argc, char **argv) {
                     case 0: // case for long options without short options
                         if(strcmp(long_options[option_index].name,"search-depth") == 0)
                             userInput.kmerDepth = atoi(optarg);
-                        if(strcmp(long_options[option_index].name,"traversal-algorithm") == 0)
+                        else if(strcmp(long_options[option_index].name,"traversal-algorithm") == 0)
                             userInput.travAlgorithm = optarg;
+                        break;
+                    case '?': // unrecognized option
+                        if (optopt != 0)
+                            fprintf(stderr, "Unrecognized option: %c\n", optopt);
+                        else
+                            fprintf(stderr, "Unrecognized option: %s\n", argv[optind-1]);
+                        printHelp();
                         break;
                     case 'c': // coverage cutoff
                         if (!isNumber(optarg)) {
